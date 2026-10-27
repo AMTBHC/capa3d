@@ -22,7 +22,7 @@ quote_valid_days = 7
 #   Bambu A1 mini               → bed = [180, 180, 180], profile = "profiles/bambu-a1.ini"
 #   Otra (tipo Prusa / Ender)   → tu cama,               profile = "profiles/generico.ini"
 bed = [256, 256, 256]
-profile = "profiles/bambu-x1-p1.ini"
+profile = "profiles/bambu-a1.ini"
 
 [calibration]
 # Corrigen la diferencia entre el laminado de la API (PrusaSlicer) y tu Bambu Studio.
