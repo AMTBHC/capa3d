@@ -6,13 +6,13 @@ import { API_URL, printer } from "@/lib/config";
 import { Icon, ICONS } from "../Icon";
 import type { FileStatus, UploadStatus } from "./useModelFile";
 
+export const FILE_INPUT_ID = "quote-file";
+
 const SUB: Record<FileStatus, string> = {
-  idle: API_URL
-    ? "o haz clic para buscarlo · STL, OBJ, 3MF o STEP"
-    : "o haz clic para buscarlo · STL, OBJ y 3MF se analizan al instante; STEP lo revisamos manualmente",
-  reading: "Leyendo la malla y calculando medidas, volumen y peso…",
-  ok: "Analizado. Toca aquí para cambiar de archivo.",
-  manual: "Los archivos STEP los revisamos manualmente. Mientras tanto ves el estimado de ejemplo; envíanoslo por WhatsApp.",
+  idle: API_URL ? "STL, OBJ, 3MF (también proyectos de Bambu Studio) o STEP" : "STL, OBJ o 3MF · los STEP envíalos por WhatsApp",
+  reading: "Analizando tu modelo…",
+  ok: "",
+  manual: "Los archivos STEP los revisamos a mano. Envíanoslo por WhatsApp y te cotizamos.",
   error: "No pudimos leer este archivo. Expórtalo como STL u OBJ, o envíanoslo por WhatsApp.",
   big: `Supera ${printer.maxFileMB} MB. Envíanoslo por WhatsApp o con un enlace de descarga.`,
 };
@@ -24,17 +24,27 @@ interface Props {
   onFile: (f: File) => void;
 }
 
+/** Zona para soltar o elegir el archivo; con archivo cargado queda como una fila compacta. */
 export function FileDrop({ fileName, status, upload, onFile }: Props) {
   const [over, setOver] = useState(false);
-  const border = status === "ok" || over ? "var(--ac)" : status === "error" || status === "big" ? "var(--bad)" : "rgba(255,255,255,.2)";
+  const loaded = status === "ok" || status === "reading";
+  const bad = status === "error" || status === "big" || status === "manual";
+  const border = over ? "var(--ac)" : bad ? "var(--warn)" : loaded ? "var(--line)" : "rgba(255,255,255,.22)";
+
   return (
     <div
       onDragEnter={() => setOver(true)}
       onDragLeave={() => setOver(false)}
       onDrop={() => setOver(false)}
-      style={{ position: "relative", borderRadius: 24, border: `2px dashed ${border}`, background: status === "ok" || over ? "var(--ac-tint)" : "var(--surface)", padding: 28, display: "flex", flexWrap: "wrap", alignItems: "center", gap: 18 }}
+      style={{
+        position: "relative", borderRadius: 18, border: `2px ${loaded ? "solid" : "dashed"} ${border}`,
+        background: over ? "var(--ac-tint)" : "var(--surface-3)", padding: loaded ? 14 : "28px 20px",
+        display: "flex", flexDirection: loaded ? "row" : "column", alignItems: "center", gap: loaded ? 14 : 10,
+        textAlign: loaded ? "left" : "center", transition: "all .2s",
+      }}
     >
       <input
+        id={FILE_INPUT_ID}
         type="file"
         accept={ACCEPT}
         aria-label="Subir archivo 3D"
@@ -45,20 +55,25 @@ export function FileDrop({ fileName, status, upload, onFile }: Props) {
         }}
         style={{ position: "absolute", inset: 0, width: "100%", height: "100%", opacity: 0, cursor: "pointer" }}
       />
-      <span style={{ width: 56, height: 56, flex: "none", borderRadius: 16, display: "flex", alignItems: "center", justifyContent: "center", background: "var(--ac)", color: "var(--bg)" }}>
-        <Icon d={ICONS.upload} size={26} stroke={2} />
+      <span style={{ width: loaded ? 44 : 56, height: loaded ? 44 : 56, flex: "none", borderRadius: 14, display: "flex", alignItems: "center", justifyContent: "center", background: loaded ? "var(--surface)" : "var(--ac)", color: loaded ? "var(--ac)" : "var(--bg)" }}>
+        <Icon d={loaded ? ICONS.box : ICONS.upload} size={loaded ? 22 : 26} stroke={2} />
       </span>
-      <div style={{ flex: "1 1 220px" }}>
-        <div className="mono label">01 / ARCHIVO</div>
-        <div style={{ fontWeight: 600, fontSize: 17, marginTop: 4, wordBreak: "break-all" }}>{fileName || "Arrastra tu modelo aquí"}</div>
-        <div role="status" style={{ color: "var(--text-3)", fontSize: 14, marginTop: 2, lineHeight: 1.5 }}>
-          {SUB[status]}
-          {upload.status === "uploading" && status !== "reading" && " Subiendo para laminarlo…"}
-          {upload.status === "error" && status !== "error" && (
-            <span style={{ display: "block", color: "var(--warn)" }}>No pudimos subirlo para laminarlo ({upload.error}). Te mostramos el estimado.</span>
-          )}
-        </div>
-      </div>
+      {loaded ? (
+        <>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ fontWeight: 600, fontSize: 15, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{fileName}</div>
+            <div role="status" style={{ fontSize: 13, color: "var(--text-3)" }}>
+              {status === "reading" ? SUB.reading : upload.status === "error" ? "No pudimos subirlo para el precio exacto; te mostramos un estimado." : "Listo"}
+            </div>
+          </div>
+          <span style={{ flex: "none", fontSize: 13, fontWeight: 600, padding: "8px 12px", borderRadius: 10, border: "1px solid rgba(255,255,255,.18)" }}>Cambiar</span>
+        </>
+      ) : (
+        <>
+          <div style={{ fontWeight: 600, fontSize: 17 }}>{fileName && bad ? fileName : "Arrastra tu archivo aquí o haz clic para elegirlo"}</div>
+          <div role="status" style={{ fontSize: 14, color: bad ? "var(--warn)" : "var(--text-3)", lineHeight: 1.5, maxWidth: 420 }}>{SUB[status]}</div>
+        </>
+      )}
     </div>
   );
 }

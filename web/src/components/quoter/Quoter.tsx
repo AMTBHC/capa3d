@@ -10,10 +10,13 @@ import type { ProjectInfo } from "@/lib/mesh/project";
 import { scaledMetrics, unitFactor, type FileUnit } from "@/lib/units";
 import { SectionHeader } from "../SectionHeader";
 import { useModelFile } from "./useModelFile";
-import { PreviewCard } from "./PreviewCard";
 import { FileDrop } from "./FileDrop";
 import { AnalysisPanel } from "./AnalysisPanel";
-import { ColorPicker, InfillPicker, MaterialPicker, QualityPicker, SupportsPicker } from "./Options";
+import { FilamentPicker, PrintSettings } from "./Options";
+import { ViewerCard } from "./ViewerCard";
+import { PriceCard, priceStage } from "./PriceCard";
+import { MobilePriceBar } from "./MobilePriceBar";
+import { StepCard } from "./StepCard";
 import { useCatalog, useServerQuote } from "./useServer";
 
 export interface QuoteOptions {
@@ -103,55 +106,88 @@ export function Quoter() {
   const quote = (server.status === "done" && fromServer(server.quote, plates.map((p) => p.plate.id))) || estimate;
   const fileOptions = model ? optionsFromFile(model.info) : {};
 
+  const stage = priceStage(model, file.upload.status, server, report?.fits ?? true);
+  const dims = plates.length ? plates.map((p) => p.metrics) : [SAMPLE_MODEL];
+  const onQty = (q: number) => setQty(Math.min(printer.maxQty, Math.max(1, q)));
+
   return (
     <section id="quote" className="section">
       <SectionHeader
         eyebrow="// COTIZADOR"
-        title="Configura tu impresión y mira el resultado"
-        lead="Sube tu archivo y míralo en 3D sobre la cama de la impresora, con todas sus camas si es un proyecto. El precio cambia con cada elección: material, calidad de capa, relleno y color."
+        title="Cotiza tu impresión en 3 pasos"
+        lead="Sube tu archivo, elige el filamento y ajusta la impresión. Ves tu pieza en 3D y el precio exacto en segundos."
       />
-      <div className="row" style={{ gap: 24, alignItems: "flex-start" }}>
-        <PreviewCard
-          file={file}
-          opts={opts}
-          k={k}
-          plate={plate}
-          onPlate={setPlate}
-          fits={report?.plates.map((r) => r.fits) ?? []}
-          dims={plates.length ? plates.map((p) => p.metrics) : [SAMPLE_MODEL]}
-          quote={quote}
-          server={server}
-          bed={catalog.bed}
-        />
-        <div style={{ flex: "1 1 520px", minWidth: 0, display: "flex", flexDirection: "column", gap: 18 }}>
-          <FileDrop fileName={file.fileName} status={file.status} upload={file.upload} onFile={file.load} />
-          {model && report && (
-            <AnalysisPanel
-              plates={plates}
-              info={model.info}
-              quote={quote}
-              sliced={server.status === "done" && server.quote.method !== "estimate"}
-              report={report}
-              selected={plate}
-              onSelect={setPlate}
-              fileOptions={Object.keys(fileOptions).length ? () => set(fileOptions) : undefined}
-              unit={unit}
-              onUnit={setUnit}
-              scale={scale}
-              onScale={setScale}
-              qty={qty}
-              onQty={(q) => setQty(Math.min(printer.maxQty, Math.max(1, q)))}
+      <div className="quote-grid">
+        <aside className="quote-aside">
+          <ViewerCard
+            status={file.status}
+            model={model}
+            opts={opts}
+            k={k}
+            plate={plate}
+            onPlate={setPlate}
+            fits={report?.plates.map((r) => r.fits) ?? []}
+            dims={dims}
+            bed={catalog.bed}
+          />
+          <PriceCard
+            fileName={file.fileName}
+            model={model}
+            opts={opts}
+            supports={supports}
+            dims={dims}
+            quote={quote}
+            server={server}
+            stage={stage}
+            qty={qty}
+            onQty={onQty}
+          />
+        </aside>
+
+        <div className="quote-steps">
+          <StepCard id="paso-archivo" n={1} title="Sube tu modelo" sub="Lo revisamos al instante y lo ves en 3D." done={!!model}>
+            <FileDrop fileName={file.fileName} status={file.status} upload={file.upload} onFile={file.load} />
+            {model && report && (
+              <AnalysisPanel
+                plates={plates}
+                info={model.info}
+                quote={quote}
+                sliced={stage === "exact"}
+                report={report}
+                selected={plate}
+                onSelect={setPlate}
+                fileOptions={Object.keys(fileOptions).length ? () => set(fileOptions) : undefined}
+                unit={unit}
+                onUnit={setUnit}
+                scale={scale}
+                onScale={setScale}
+              />
+            )}
+          </StepCard>
+
+          <StepCard id="paso-filamento" n={2} title="Elige el filamento" sub="El material define la resistencia; el color lo ves en el visor.">
+            <FilamentPicker
+              material={opts.material}
+              color={opts.color}
+              onMaterial={(material) => set({ material })}
+              onColor={(color) => set({ color })}
             />
-          )}
-          <MaterialPicker value={opts.material} onChange={(material) => set({ material })} />
-          <div className="row" style={{ gap: 18 }}>
-            <QualityPicker value={opts.quality} onChange={(quality) => set({ quality })} />
-            <InfillPicker value={opts.infill} onChange={(infill) => set({ infill })} />
-          </div>
-          <ColorPicker value={opts.color} onChange={(color) => set({ color })} />
-          {catalog.slicing && <SupportsPicker value={supports} onChange={setSupports} />}
+          </StepCard>
+
+          <StepCard id="paso-ajustes" n={3} title="Ajusta la impresión" sub="Si no sabes qué elegir, deja los valores recomendados.">
+            <PrintSettings
+              quality={opts.quality}
+              infill={opts.infill}
+              supports={supports}
+              showSupports={catalog.slicing}
+              onQuality={(quality) => set({ quality })}
+              onInfill={(infill) => set({ infill })}
+              onSupports={setSupports}
+            />
+          </StepCard>
         </div>
       </div>
+      <MobilePriceBar total={quote.total} stage={stage} />
     </section>
   );
 }
