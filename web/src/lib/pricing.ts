@@ -13,7 +13,8 @@ export interface ModelMetrics {
 export const SAMPLE_MODEL: ModelMetrics = { dx: 60, dy: 60, dz: 90, volumeCm3: 40, areaCm2: 90 };
 
 export interface QuoteInput {
-  metrics: ModelMetrics;
+  /** Una cama o varias: cada cama es una impresión aparte. */
+  metrics: ModelMetrics | ModelMetrics[];
   material: { id: MaterialId; density: number };
   /** mm³/s efectivos que extruye la impresora con esta calidad. */
   flow: number;
@@ -23,7 +24,14 @@ export interface QuoteInput {
   rates?: typeof defaultRates;
 }
 
+export interface PrintEstimate {
+  grams: number;
+  hours: number;
+}
+
 export interface Quote {
+  /** Estimado de cada cama, en el mismo orden de entrada. */
+  plates: PrintEstimate[];
   grams: number;
   hours: number;
   pricePerGram: number;
@@ -44,22 +52,33 @@ const TIME_OVERHEAD = 1.25;
 /** Calentamiento y preparación, en horas. */
 const WARMUP_H = 0.2;
 
-/**
- * Estimado sin slicer: paredes + relleno proporcional. Sirve para dar un precio
- * inmediato; el precio final se confirma al laminar el archivo.
- */
-export function estimateQuote({ metrics, material, flow, infill, qty, rates = defaultRates }: QuoteInput): Quote {
+/** Gramos y horas de una cama, sin slicer: paredes + relleno proporcional. */
+export function estimatePrint(metrics: ModelMetrics, density: number, flow: number, infill: number): PrintEstimate {
   const vol = metrics.volumeCm3;
   const shell = Math.min(vol, metrics.areaCm2 * SHELL_CM);
   const extruded = shell + Math.max(0, vol - shell) * (infill / 100);
-  const grams = extruded * WASTE * material.density;
-  const hours = ((extruded * 1000) / flow / 3600) * TIME_OVERHEAD + WARMUP_H;
+  return {
+    grams: extruded * WASTE * density,
+    hours: ((extruded * 1000) / flow / 3600) * TIME_OVERHEAD + WARMUP_H,
+  };
+}
+
+/**
+ * Precio inmediato de un modelo o proyecto. Cada cama suma su material y su tiempo
+ * (incluido el calentamiento); el cargo base se cobra una vez por unidad del proyecto.
+ * El precio final se confirma al laminar el archivo.
+ */
+export function estimateQuote({ metrics, material, flow, infill, qty, rates = defaultRates }: QuoteInput): Quote {
+  const plates = (Array.isArray(metrics) ? metrics : [metrics]).map((m) => estimatePrint(m, material.density, flow, infill));
+  const grams = plates.reduce((s, p) => s + p.grams, 0);
+  const hours = plates.reduce((s, p) => s + p.hours, 0);
   const pricePerGram = rates.pricePerGram[material.id];
   const materialCost = grams * pricePerGram;
   const machineCost = hours * rates.machineRatePerHour;
   const unitPrice = Math.round((rates.baseFee + materialCost + machineCost) / rates.roundTo) * rates.roundTo;
   const q = Math.max(1, Math.floor(qty));
   return {
+    plates,
     grams,
     hours,
     pricePerGram,

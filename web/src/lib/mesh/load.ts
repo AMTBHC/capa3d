@@ -1,14 +1,14 @@
-import { BufferGeometry, Group, Mesh, Object3D } from "three";
+import { BufferGeometry, Mesh, Object3D } from "three";
 import { STLLoader } from "three/examples/jsm/loaders/STLLoader.js";
 import { OBJLoader } from "three/examples/jsm/loaders/OBJLoader.js";
-import { ThreeMFLoader } from "three/examples/jsm/loaders/3MFLoader.js";
-import { unzipSync, strFromU8 } from "three/examples/jsm/libs/fflate.module.js";
+import { printer } from "../config";
+import type { Bed } from "../checks";
+import { parse3mf } from "./threemf";
+import type { Project } from "./project";
 
 export const MESH_FORMATS = ["stl", "obj", "3mf"] as const;
 export const MANUAL_FORMATS = ["step", "stp"] as const;
 export const ACCEPT = ".stl,.obj,.3mf,.step,.stp";
-
-export type MeshFormat = (typeof MESH_FORMATS)[number];
 
 export function extensionOf(name: string): string {
   return (name.split(".").pop() ?? "").toLowerCase();
@@ -17,41 +17,45 @@ export function extensionOf(name: string): string {
 export class UnsupportedFormatError extends Error {}
 
 /**
- * Lee un archivo 3D y devuelve sus triángulos sin indexar
- * (9 floats por triángulo, en mm, Z hacia arriba).
+ * Lee un archivo 3D. STL y OBJ dan una sola cama con un objeto; un 3MF puede traer
+ * varias camas, varios objetos y datos del slicer.
  */
-export async function loadMesh(file: File): Promise<Float32Array> {
+export async function loadProject(file: File, bed: Bed = printer.bed): Promise<Project> {
   const ext = extensionOf(file.name);
   const buf = await file.arrayBuffer();
-  let positions: Float32Array;
+  const name = file.name.replace(/\.[^.]+$/, "");
+  let project: Project;
   switch (ext) {
     case "stl":
-      positions = geometryPositions(new STLLoader().parse(buf));
+      project = single(name, geometryPositions(new STLLoader().parse(buf)));
       break;
     case "obj": {
-      const obj = new OBJLoader().parse(new TextDecoder().decode(buf));
+      const positions = objectPositions(new OBJLoader().parse(new TextDecoder().decode(buf)));
       // OBJ viene con Y hacia arriba: (x, y, z) → (x, -z, y).
-      positions = objectPositions(obj);
       for (let i = 0; i < positions.length; i += 3) {
         const y = positions[i + 1];
         positions[i + 1] = -positions[i + 2];
         positions[i + 2] = y;
       }
+      project = single(name, positions);
       break;
     }
-    case "3mf": {
-      const group = new ThreeMFLoader().parse(buf) as Group;
-      positions = objectPositions(group);
-      const k = threeMfUnitToMm(buf);
-      if (k !== 1) for (let i = 0; i < positions.length; i++) positions[i] *= k;
+    case "3mf":
+      project = parse3mf(buf, bed);
       break;
-    }
     default:
       throw new UnsupportedFormatError(ext);
   }
-  if (positions.length < 9) throw new Error("empty mesh");
-  for (let i = 0; i < positions.length; i++) if (!Number.isFinite(positions[i])) throw new Error("invalid vertex");
-  return positions;
+  project.plates = project.plates.filter((p) => p.objects.some((o) => o.positions.length >= 9));
+  if (!project.plates.length) throw new Error("empty mesh");
+  for (const plate of project.plates)
+    for (const o of plate.objects)
+      for (let i = 0; i < o.positions.length; i++) if (!Number.isFinite(o.positions[i])) throw new Error("invalid vertex");
+  return project;
+}
+
+function single(name: string, positions: Float32Array): Project {
+  return { plates: [{ id: 1, name: "Cama 1", objects: [{ name, positions }] }], info: { platesFrom: "single", filaments: [] } };
 }
 
 function geometryPositions(g: BufferGeometry): Float32Array {
@@ -67,8 +71,7 @@ function objectPositions(root: Object3D): Float32Array {
   root.traverse((o) => {
     const m = o as Mesh;
     if (!m.isMesh || !m.geometry) return;
-    const g = m.geometry.clone().applyMatrix4(m.matrixWorld);
-    parts.push(geometryPositions(g));
+    parts.push(geometryPositions(m.geometry.clone().applyMatrix4(m.matrixWorld)));
   });
   const out = new Float32Array(parts.reduce((s, a) => s + a.length, 0));
   let off = 0;
@@ -77,27 +80,4 @@ function objectPositions(root: Object3D): Float32Array {
     off += a.length;
   }
   return out;
-}
-
-const UNIT_MM: Record<string, number> = {
-  micron: 0.001,
-  millimeter: 1,
-  centimeter: 10,
-  inch: 25.4,
-  foot: 304.8,
-  meter: 1000,
-};
-
-/** El cargador de three.js no aplica el atributo `unit` del 3MF; lo leemos aparte. */
-function threeMfUnitToMm(buf: ArrayBuffer): number {
-  try {
-    const files = unzipSync(new Uint8Array(buf), { filter: (f) => /\.model$/i.test(f.name) });
-    for (const data of Object.values(files)) {
-      const unit = strFromU8(data).match(/<model[^>]*\bunit="([^"]+)"/)?.[1];
-      if (unit) return UNIT_MM[unit] ?? 1;
-    }
-  } catch {
-    // Si no se puede leer, se asume milímetros (el valor por defecto del formato).
-  }
-  return 1;
 }

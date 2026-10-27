@@ -66,3 +66,47 @@ export function printability(m: ModelMetrics, openEdges: number, bed: Bed, scale
   );
   return { checks, verdict, fits, maxScale };
 }
+
+export interface PlateInput {
+  name: string;
+  metrics: ModelMetrics;
+  openEdges: number;
+}
+
+export interface ProjectReport extends PrintabilityReport {
+  /** Revisión de cada cama, en el mismo orden de entrada. */
+  plates: PrintabilityReport[];
+}
+
+/** Revisión de un proyecto: con una cama es la revisión normal; con varias, un resumen por cama. */
+export function projectPrintability(plates: PlateInput[], bed: Bed, scalePct: number): ProjectReport {
+  const reports = plates.map((p) => printability(p.metrics, p.openEdges, bed, scalePct));
+  if (plates.length === 1) return { ...reports[0], plates: reports };
+
+  const checks: Check[] = [];
+  const names = (pred: (i: number) => boolean) => plates.filter((_, i) => pred(i)).map((p) => p.name).join(", ");
+
+  const open = names((i) => plates[i].openEdges > 0);
+  const unknown = names((i) => plates[i].openEdges < 0);
+  if (!open && !unknown) checks.push({ level: "ok", text: "Todas las mallas están cerradas y se pueden imprimir." });
+  if (open) checks.push({ level: "warn", text: `Hay bordes abiertos en: ${open}. Los revisamos y reparamos antes de imprimir.` });
+  if (unknown) checks.push({ level: "warn", text: `Modelos muy detallados en: ${unknown}. Revisamos la malla manualmente.` });
+
+  const fits = reports.every((r) => r.fits);
+  const maxScale = Math.min(...reports.map((r) => r.maxScale));
+  if (fits) checks.push({ level: "ok", text: `Las ${plates.length} camas caben en la impresora (${bed.x} × ${bed.y} × ${bed.z} mm).` });
+  else
+    checks.push({
+      level: "bad",
+      text: `${names((i) => !reports[i].fits)} excede el volumen de impresión. Escala el proyecto a ${maxScale}% o lo repartimos en más camas.`,
+    });
+
+  reports.forEach((r, i) =>
+    r.checks
+      .filter((c) => c.level === "warn" && !/malla|detallado/i.test(c.text))
+      .forEach((c) => checks.push({ level: "warn", text: `${plates[i].name}: ${c.text}` })),
+  );
+
+  const verdict = checks.some((c) => c.level === "bad") ? "bad" : checks.some((c) => c.level === "warn") ? "warn" : "ok";
+  return { checks, verdict, fits, maxScale, plates: reports };
+}
