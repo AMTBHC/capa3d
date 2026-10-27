@@ -3,13 +3,15 @@
 import dynamic from "next/dynamic";
 import { useEffect, useState, type CSSProperties } from "react";
 import { COLORS, MATERIALS, QUALITIES, vase } from "@/lib/catalog";
-import { printer, whatsappUrl } from "@/lib/config";
+import { API_URL, whatsappUrl } from "@/lib/config";
+import type { Bed } from "@/lib/checks";
 import { duration, money, num1 } from "@/lib/format";
 import type { ModelMetrics, Quote } from "@/lib/pricing";
 import { BedPlate, LayerStack } from "../LayerStack";
 import { Icon, ICONS } from "../Icon";
 import type { QuoteOptions } from "./Quoter";
 import type { useModelFile } from "./useModelFile";
+import type { ServerQuoteState } from "./useServer";
 
 const ModelViewer = dynamic(() => import("./ModelViewer"), {
   ssr: false,
@@ -30,11 +32,13 @@ interface Props {
   /** Medidas reales de cada cama. */
   dims: ModelMetrics[];
   quote: Quote;
+  server: ServerQuoteState;
+  bed: Bed;
 }
 
 const dimText = (m: ModelMetrics) => `${num1(m.dx)} × ${num1(m.dy)} × ${num1(m.dz)} mm`;
 
-export function PreviewCard({ file, opts, k, plate, onPlate, fits, dims, quote }: Props) {
+export function PreviewCard({ file, opts, k, plate, onPlate, fits, dims, quote, server, bed }: Props) {
   const [wire, setWire] = useState(false);
   const [auto, setAuto] = useState(true);
   const [expanded, setExpanded] = useState(false);
@@ -62,6 +66,7 @@ export function PreviewCard({ file, opts, k, plate, onPlate, fits, dims, quote }
   // Sin modelo no hay nada que expandir (por ejemplo, al cambiar de archivo).
   const isExpanded = expanded && !!model;
 
+  const sliced = server.status === "done" && server.quote.method !== "estimate";
   const grams = num1(quote.grams);
   const hours = duration(quote.hours);
   const msg = [
@@ -75,7 +80,9 @@ export function PreviewCard({ file, opts, k, plate, onPlate, fits, dims, quote }
           `• Cantidad: ${quote.qty}`,
         ]
       : []),
-    `• Estimado en la web: $${money(quote.total)} COP`,
+    server.status === "done"
+      ? `• Cotización ${server.quote.id}: $${money(quote.total)} COP`
+      : `• Estimado en la web: $${money(quote.total)} COP`,
   ].join("\n");
 
   const breakdown = [
@@ -99,7 +106,7 @@ export function PreviewCard({ file, opts, k, plate, onPlate, fits, dims, quote }
   const detail = model
     ? sel >= 0
       ? `${plates[sel].plate.name} · ${plates[sel].plate.objects.length} ${plates[sel].plate.objects.length === 1 ? "pieza" : "piezas"} · ${dimText(dims[sel])}`
-      : `${plates.length} camas de ${printer.bed.x} × ${printer.bed.y} mm · ${pieces} piezas`
+      : `${plates.length} camas de ${bed.x} × ${bed.y} mm · ${pieces} piezas`
     : "";
 
   return (
@@ -114,7 +121,7 @@ export function PreviewCard({ file, opts, k, plate, onPlate, fits, dims, quote }
             wire={wire}
             autoRotate={auto}
             layerMm={quality.layerMm}
-            bed={printer.bed}
+            bed={bed}
           />
         ) : file.status !== "reading" ? (
           <div aria-hidden="true" className="turnF" style={{ position: "absolute", left: "50%", top: "62%", width: 260, height: 260, margin: "-130px 0 0 -130px" }}>
@@ -162,13 +169,17 @@ export function PreviewCard({ file, opts, k, plate, onPlate, fits, dims, quote }
       </div>
 
       <div style={{ padding: 28, borderTop: "1px solid var(--line)" }}>
-        <span className="mono label">{model ? (multi ? `PRECIO ESTIMADO DEL PROYECTO · ${plates.length} CAMAS` : "PRECIO ESTIMADO DE TU MODELO") : "ESTIMADO DE EJEMPLO"}</span>
+        <span className="mono label" style={{ display: "inline-flex", alignItems: "center", gap: 8 }}>
+          {server.status === "pending" && <span className="pulse" style={{ width: 7, height: 7, borderRadius: "50%", background: "var(--ac)" }} />}
+          {priceLabel(!!model, multi ? plates.length : 1, server)}
+        </span>
         <div style={{ display: "flex", flexWrap: "wrap", alignItems: "baseline", gap: 10, margin: "8px 0 6px" }} aria-live="polite">
           <span className="display" style={{ fontSize: "clamp(38px,5vw,54px)", fontWeight: 700, letterSpacing: -1.5 }}>${money(quote.total)}</span>
           <span className="mono muted">COP</span>
         </div>
         <p style={{ margin: "0 0 18px", color: "var(--text-3)" }}>
-          ≈ {hours} de impresión · {grams} g de {material.id}
+          {sliced ? "" : "≈ "}
+          {hours} de impresión · {grams} g de {material.id}
           {quote.qty > 1 && ` · por unidad · ${quote.qty} unidades`}
         </p>
         <div style={{ display: "flex", flexDirection: "column", marginBottom: 20, borderTop: "1px solid var(--line)" }}>
@@ -188,13 +199,42 @@ export function PreviewCard({ file, opts, k, plate, onPlate, fits, dims, quote }
           Pedir esta impresión por WhatsApp
         </a>
         <p style={{ fontSize: 12, color: "var(--text-4)", margin: "12px 0 0", lineHeight: 1.5 }}>
-          {model
-            ? "Calculado con el volumen real de tu modelo. Confirmamos el precio final al revisar el archivo."
-            : "Estimado de una pieza de ejemplo de 60 × 60 × 90 mm. Sube tu archivo para calcularlo con tu modelo."}
+          {priceNote(!!model, server, fits.every(Boolean))}
         </p>
       </div>
     </div>
   );
+}
+
+function priceLabel(hasModel: boolean, plates: number, server: ServerQuoteState): string {
+  if (!hasModel) return "ESTIMADO DE EJEMPLO";
+  const what = plates > 1 ? `DEL PROYECTO · ${plates} CAMAS` : "DE TU MODELO";
+  if (server.status === "pending") return `ESTIMADO ${what} · LAMINANDO…`;
+  if (server.status === "done" && server.quote.method !== "estimate") return `PRECIO LAMINADO ${what}`;
+  return `PRECIO ESTIMADO ${what}`;
+}
+
+function priceNote(hasModel: boolean, server: ServerQuoteState, fits: boolean): string {
+  if (!hasModel) return "Estimado de una pieza de ejemplo de 60 × 60 × 90 mm. Sube tu archivo para calcularlo con tu modelo.";
+  if (API_URL && !fits)
+    return "Algo no cabe en la impresora, así que no podemos laminarlo todavía. Ajusta la escala o escríbenos y lo repartimos en más camas.";
+  switch (server.status) {
+    case "pending":
+      return "Estamos laminando tu archivo con nuestro perfil de impresora para darte el peso y el tiempo exactos.";
+    case "done": {
+      const q = server.quote;
+      const until = new Date(q.valid_until).toLocaleDateString("es-CO", { day: "numeric", month: "long" });
+      const how =
+        q.method === "slicer"
+          ? "Peso y tiempo calculados por el slicer con nuestro perfil de impresora."
+          : "Calculado con el volumen real de tu modelo; confirmamos el precio al revisar el archivo.";
+      return `Cotización ${q.id}, válida hasta el ${until}. ${how}`;
+    }
+    case "failed":
+      return `No pudimos laminarlo (${server.error}). Te mostramos el estimado; confirmamos el precio al revisar el archivo.`;
+    default:
+      return "Calculado con el volumen real de tu modelo. Confirmamos el precio final al revisar el archivo.";
+  }
 }
 
 const iconBtn: CSSProperties = {

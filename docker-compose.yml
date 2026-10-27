@@ -1,0 +1,28 @@
+# Sitio + API en una máquina: docker compose up --build
+# Sitio en http://localhost:3000, API en http://localhost:8000
+services:
+  api:
+    build: ./api
+    environment:
+      CAPA3D_CORS_ORIGINS: http://localhost:3000
+    volumes:
+      - capa3d-data:/data
+      # Para usar tu perfil de impresora y tus precios sin reconstruir la imagen:
+      # - ./api/config:/app/config:ro
+    ports:
+      - "8000:8000"
+
+  web:
+    build:
+      context: ./web
+      args:
+        NEXT_PUBLIC_API_URL: http://localhost:8000
+        NEXT_PUBLIC_WHATSAPP: ${NEXT_PUBLIC_WHATSAPP:-}
+        NEXT_PUBLIC_EMAIL: ${NEXT_PUBLIC_EMAIL:-}
+    ports:
+      - "3000:3000"
+    depends_on:
+      - api
+
+volumes:
+  capa3d-data:

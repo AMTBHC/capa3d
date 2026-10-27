@@ -87,6 +87,8 @@ export const MATERIALS: Material[] = [
 ];
 
 export interface Quality {
+  /** Id en el catálogo de la API (api/config/catalog.toml). */
+  id: string;
   name: string;
   layerMm: number;
   /** Líneas del ícono. */
@@ -99,9 +101,9 @@ export interface Quality {
 }
 
 export const QUALITIES: Quality[] = [
-  { name: "Borrador", layerMm: 0.28, lines: 4, previewLayers: 14, previewBorder: 3, flow: 12 },
-  { name: "Estándar", layerMm: 0.2, lines: 6, previewLayers: 24, previewBorder: 2, flow: 8 },
-  { name: "Detalle", layerMm: 0.12, lines: 9, previewLayers: 38, previewBorder: 1.5, flow: 4.5 },
+  { id: "borrador", name: "Borrador", layerMm: 0.28, lines: 4, previewLayers: 14, previewBorder: 3, flow: 12 },
+  { id: "estandar", name: "Estándar", layerMm: 0.2, lines: 6, previewLayers: 24, previewBorder: 2, flow: 8 },
+  { id: "detalle", name: "Detalle", layerMm: 0.12, lines: 9, previewLayers: 38, previewBorder: 1.5, flow: 4.5 },
 ];
 
 export interface FilamentColor {

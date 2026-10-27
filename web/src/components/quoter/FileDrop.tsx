@@ -2,12 +2,14 @@
 
 import { useState } from "react";
 import { ACCEPT } from "@/lib/mesh/load";
-import { printer } from "@/lib/config";
+import { API_URL, printer } from "@/lib/config";
 import { Icon, ICONS } from "../Icon";
-import type { FileStatus } from "./useModelFile";
+import type { FileStatus, UploadStatus } from "./useModelFile";
 
 const SUB: Record<FileStatus, string> = {
-  idle: "o haz clic para buscarlo · STL, OBJ y 3MF se analizan al instante; STEP lo revisamos manualmente",
+  idle: API_URL
+    ? "o haz clic para buscarlo · STL, OBJ, 3MF o STEP"
+    : "o haz clic para buscarlo · STL, OBJ y 3MF se analizan al instante; STEP lo revisamos manualmente",
   reading: "Leyendo la malla y calculando medidas, volumen y peso…",
   ok: "Analizado. Toca aquí para cambiar de archivo.",
   manual: "Los archivos STEP los revisamos manualmente. Mientras tanto ves el estimado de ejemplo; envíanoslo por WhatsApp.",
@@ -18,10 +20,11 @@ const SUB: Record<FileStatus, string> = {
 interface Props {
   fileName: string;
   status: FileStatus;
+  upload: { status: UploadStatus; error?: string };
   onFile: (f: File) => void;
 }
 
-export function FileDrop({ fileName, status, onFile }: Props) {
+export function FileDrop({ fileName, status, upload, onFile }: Props) {
   const [over, setOver] = useState(false);
   const border = status === "ok" || over ? "var(--ac)" : status === "error" || status === "big" ? "var(--bad)" : "rgba(255,255,255,.2)";
   return (
@@ -48,7 +51,13 @@ export function FileDrop({ fileName, status, onFile }: Props) {
       <div style={{ flex: "1 1 220px" }}>
         <div className="mono label">01 / ARCHIVO</div>
         <div style={{ fontWeight: 600, fontSize: 17, marginTop: 4, wordBreak: "break-all" }}>{fileName || "Arrastra tu modelo aquí"}</div>
-        <div role="status" style={{ color: "var(--text-3)", fontSize: 14, marginTop: 2, lineHeight: 1.5 }}>{SUB[status]}</div>
+        <div role="status" style={{ color: "var(--text-3)", fontSize: 14, marginTop: 2, lineHeight: 1.5 }}>
+          {SUB[status]}
+          {upload.status === "uploading" && status !== "reading" && " Subiendo para laminarlo…"}
+          {upload.status === "error" && status !== "error" && (
+            <span style={{ display: "block", color: "var(--warn)" }}>No pudimos subirlo para laminarlo ({upload.error}). Te mostramos el estimado.</span>
+          )}
+        </div>
       </div>
     </div>
   );
