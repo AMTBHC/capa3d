@@ -23,7 +23,7 @@ api/                 API de cotización (Python + FastAPI + PrusaSlicer)
     catalog.toml     ← Precios, tarifas, materiales, calidades y cama (fuente de verdad)
     profiles/        ← Perfiles de impresora (Bambu X1/P1, Bambu A1, genérico)
   capa3d_api/
-    main.py          Rutas HTTP
+    main.py          Rutas HTTP (incluye el panel: /api/admin/…)
     service.py       Subida, análisis, cotización y laminado en segundo plano
     slicer.py        PrusaSlicer por línea de comandos (G-code, STEP → STL)
     calibrate.py     Ajusta tiempo y gramos para que coincidan con Bambu Studio
@@ -87,12 +87,23 @@ Con Docker, sitio y API juntos: `docker compose up --build` (sitio en :3000, API
 | Tu impresora (cama y perfil) | `api/config/catalog.toml` → `[printer]`. Viene con la Bambu X1C/P1S; ahí mismo están las líneas para A1 y A1 mini |
 | Corrección de tiempo y gramos frente a Bambu Studio | `api/config/catalog.toml` → `[calibration]`. Se calcula con `calibrate` (ver abajo) |
 | Temperaturas y densidad de cada material | `api/config/catalog.toml` → `[materials.*]` |
-| Orígenes permitidos (CORS), carpeta de datos, límites | `api/.env` (ver `api/.env.example`) |
+| Orígenes permitidos (CORS), carpeta de datos, límites, clave del panel | `api/.env` (ver `api/.env.example`) |
 | Materiales, calidades (altura de capa y velocidad), colores | `web/src/lib/catalog.ts` |
 | Galería (fotos en `web/public/`), FAQ, pasos | `web/src/lib/catalog.ts` |
 | Precios de los planes | `web/src/components/Plans.tsx` |
 
 Textos pendientes de completar: busca `[TU` en `web/src`.
+
+## Recibir los pedidos
+
+WhatsApp no deja adjuntar archivos desde un enlace. Por eso el archivo del cliente queda en la API y el mensaje de WhatsApp trae el número de cotización (por ejemplo `QE909DD9F`).
+
+1. Entra al panel: **http://localhost:3000/admin** (en producción, `tusitio.com/admin`).
+2. Escribe la clave del panel. `iniciar` la genera la primera vez, la muestra al arrancar y la guarda en `api/.env` como `CAPA3D_ADMIN_TOKEN`.
+3. En **"Pedidas por WhatsApp"** aparecen las cotizaciones donde el cliente tocó el botón, con el material, el color, la calidad, el relleno, la cantidad y el precio. En **"Todas las cotizaciones"** están también las que solo cotizó.
+4. **Descargar** baja un zip con el archivo original del cliente, el G-code de cada cama y un `resumen.txt`.
+
+En producción, usa una clave larga y difícil de adivinar.
 
 ## Calibrar con Bambu Studio
 

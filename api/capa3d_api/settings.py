@@ -23,8 +23,16 @@ class Settings(BaseSettings):
     max_upload_mb: int = 100
     # Límite al descomprimir un 3MF, contra archivos zip maliciosos.
     max_unzipped_mb: int = 1024
+    # Clave del panel de administración (/admin en la web). Vacía = panel desactivado.
+    admin_token: str = ""
     # Lista separada por comas: "https://capa3d.co,https://www.capa3d.co".
     cors_origins: Annotated[list[str], NoDecode] = ["http://localhost:3000"]
+
+    @field_validator("data_dir", "catalog_path")
+    @classmethod
+    def absolute(cls, v: Path) -> Path:
+        # PrusaSlicer corre en otra carpeta: las rutas relativas del .env dejarían de apuntar al archivo.
+        return v.expanduser().resolve()
 
     @field_validator("cors_origins", mode="before")
     @classmethod

@@ -145,3 +145,55 @@ export function getQuote(id: string): Promise<ServerQuote> {
 }
 
 export const defaultCatalog: ServerCatalog = { rates: pricing, bed: printer.bed, slicing: false };
+
+/** El cliente tocó "Pedir por WhatsApp": la cotización queda marcada en el panel. */
+export function markRequested(quoteId: string, color: string): void {
+  fetch(`${API_URL}/api/quotes/${quoteId}/request`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ color }),
+    // Sigue aunque la página se vaya a WhatsApp.
+    keepalive: true,
+  }).catch(() => {});
+}
+
+// Panel de administración
+
+export interface AdminQuote {
+  id: string;
+  status: "pending" | "done" | "failed";
+  created_at: string;
+  valid_until: string;
+  requested_at: string | null;
+  color: string | null;
+  file_name: string;
+  file_format: string;
+  plates: number;
+  pieces: number;
+  params: QuoteParams & { file_id: string };
+  method: "slicer" | "estimate" | "mixed" | null;
+  grams: number | null;
+  hours: number | null;
+  total: number | null;
+  currency: string | null;
+  error: string | null;
+}
+
+const auth = (token: string) => ({ Authorization: `Bearer ${token}` });
+
+export function listAdminQuotes(token: string, requestedOnly: boolean): Promise<AdminQuote[]> {
+  return request<AdminQuote[]>(`/api/admin/quotes?limit=200${requestedOnly ? "&requested=true" : ""}`, {
+    headers: auth(token),
+  });
+}
+
+/** Descarga el zip del pedido (archivo del cliente, G-code y resumen). */
+export async function downloadQuote(token: string, quoteId: string): Promise<{ blob: Blob; name: string }> {
+  const res = await fetch(`${API_URL}/api/admin/quotes/${quoteId}/download`, { headers: auth(token) });
+  if (!res.ok) throw new ApiError(res.statusText, res.status);
+  const disposition = res.headers.get("content-disposition") ?? "";
+  const encoded = disposition.match(/filename\*=utf-8''([^;]+)/i)?.[1];
+  const plain = disposition.match(/filename="?([^";]+)"?/i)?.[1];
+  const name = encoded ? decodeURIComponent(encoded) : plain ?? `${quoteId}.zip`;
+  return { blob: await res.blob(), name };
+}

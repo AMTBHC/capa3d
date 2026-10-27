@@ -2,6 +2,7 @@
 
 import { COLORS, MATERIALS, QUALITIES } from "@/lib/catalog";
 import { API_URL, printer, whatsappUrl } from "@/lib/config";
+import { markRequested } from "@/lib/api";
 import { duration, money, num1 } from "@/lib/format";
 import type { ModelMetrics, Quote } from "@/lib/pricing";
 import { Icon, ICONS } from "../Icon";
@@ -50,7 +51,9 @@ export function PriceCard({ fileName, model, opts, supports, dims, quote, server
 
   const msg = [
     "Hola Capa3D, quiero cotizar esta impresión:",
-    `• Archivo: ${fileName || "(lo envío por aquí)"}`,
+    quoteId
+      ? `• Ya subí el archivo en la web: ${fileName} (cotización ${quoteId})`
+      : `• Archivo: ${fileName || "(lo envío por aquí)"}`,
     `• Filamento: ${material.id} ${color.name}`,
     `• Calidad: ${quality.name} (${quality.layerMm} mm), relleno ${opts.infill}%${supports ? ", con soportes" : ""}`,
     ...(model
@@ -119,12 +122,13 @@ export function PriceCard({ fileName, model, opts, supports, dims, quote, server
       </details>
 
       <a className="btn btn-primary glow" href={whatsappUrl(msg)} target="_blank" rel="noopener noreferrer"
+        onClick={() => quoteId && markRequested(quoteId, color.name)}
         style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 10, marginTop: 16, padding: 15, borderRadius: 16, fontSize: 16 }}>
         <Icon d={ICONS.chat} size={20} stroke={2} />
         {model ? "Pedir por WhatsApp" : "Cotizar por WhatsApp"}
       </a>
       <p style={{ fontSize: 12, color: "var(--text-4)", margin: "8px 0 0", textAlign: "center" }}>
-        {quoteId ? `Tu mensaje incluye la cotización ${quoteId}.` : "Confirmamos el pedido y el pago por WhatsApp."}
+        {quoteId ? `Tu archivo ya nos llegó con la cotización ${quoteId}.` : "Confirmamos el pedido y el pago por WhatsApp."}
       </p>
     </div>
   );

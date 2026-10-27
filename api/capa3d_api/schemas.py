@@ -86,3 +86,23 @@ class QuoteOut(BaseModel):
     error: str | None = None
     created_at: str
     valid_until: str
+
+
+class AdminQuote(BaseModel):
+    id: str
+    status: Literal["pending", "done", "failed"]
+    created_at: str
+    valid_until: str
+    requested_at: str | None
+    color: str | None
+    file_name: str
+    file_format: str
+    plates: int
+    pieces: int
+    params: QuoteRequest
+    method: Literal["slicer", "estimate", "mixed"] | None = None
+    grams: float | None = None
+    hours: float | None = None
+    total: int | None = None
+    currency: str | None = None
+    error: str | None = None

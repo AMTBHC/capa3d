@@ -29,6 +29,11 @@ if [ ! -f web/node_modules/.listo ]; then
   touch web/node_modules/.listo
 fi
 
+# Configuración de la API con una clave para el panel de pedidos.
+[ -f api/.env ] || cp api/.env.example api/.env
+grep -q "^CAPA3D_ADMIN_TOKEN=." api/.env || api/.venv/bin/python -c "import secrets; print('CAPA3D_ADMIN_TOKEN=' + secrets.token_urlsafe(9))" >> api/.env
+ADMIN=$(grep "^CAPA3D_ADMIN_TOKEN=." api/.env | tail -1 | cut -d= -f2-)
+
 # La web debe saber dónde está la API.
 grep -q "^NEXT_PUBLIC_API_URL=http" web/.env.local 2>/dev/null || echo "NEXT_PUBLIC_API_URL=http://localhost:8000" >> web/.env.local
 
@@ -48,6 +53,9 @@ if curl -s http://localhost:8000/api/health | grep -q '"slicer":null'; then
   echo
 fi
 
+echo
 echo "▶ Iniciando el sitio… se abrirá en http://localhost:3000"
+echo "  Panel de pedidos: http://localhost:3000/admin   Clave: $ADMIN"
+echo
 (sleep 6 && abrir http://localhost:3000) &
 cd web && npm run dev

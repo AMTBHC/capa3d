@@ -30,6 +30,12 @@ CREATE TABLE IF NOT EXISTS quotes (
 CREATE INDEX IF NOT EXISTS quotes_key ON quotes(file_id, params_key);
 """
 
+# Columnas agregadas después de la primera versión: (tabla, columna, tipo).
+MIGRATIONS = [
+    ("quotes", "requested_at", "TEXT"),
+    ("quotes", "requested_color", "TEXT"),
+]
+
 
 def now() -> str:
     return datetime.now(UTC).isoformat(timespec="seconds")
@@ -43,6 +49,10 @@ class Store:
         self._lock = threading.Lock()
         with self._lock:
             self._db.executescript(SCHEMA)
+            for table, column, kind in MIGRATIONS:
+                cols = {r["name"] for r in self._db.execute(f"PRAGMA table_info({table})")}
+                if column not in cols:
+                    self._db.execute(f"ALTER TABLE {table} ADD COLUMN {column} {kind}")
             # Trabajos que quedaron a medias si el servidor se reinició.
             self._db.execute(
                 "UPDATE quotes SET status='failed', error='El servidor se reinició' WHERE status='pending'"
@@ -95,6 +105,28 @@ class Store:
             (file_id, key, now()),
         )
         return _quote(rows[0]) if rows else None
+
+    def mark_requested(self, id: str, color: str | None) -> bool:
+        """El cliente tocó "Pedir por WhatsApp" con esta cotización."""
+        with self._lock:
+            cur = self._db.execute("UPDATE quotes SET requested_at=?, requested_color=? WHERE id=?", (now(), color, id))
+            self._db.commit()
+            return cur.rowcount > 0
+
+    def list_quotes(self, limit: int, requested_only: bool) -> list[dict[str, Any]]:
+        """Cotizaciones más recientes primero, con el nombre del archivo."""
+        where = "WHERE q.requested_at IS NOT NULL" if requested_only else ""
+        rows = self._exec(
+            f"SELECT q.*, f.name AS file_name, f.format AS file_format, f.summary AS file_summary FROM quotes q "
+            f"JOIN files f ON f.id = q.file_id {where} ORDER BY q.created_at DESC, q.rowid DESC LIMIT ?",
+            (limit,),
+        )
+        out = []
+        for row in rows:
+            q = _quote(row)
+            q["file_summary"] = json.loads(q["file_summary"])
+            out.append(q)
+        return out
 
 
 def _quote(row: sqlite3.Row) -> dict[str, Any]:

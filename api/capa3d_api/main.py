@@ -1,13 +1,17 @@
+import secrets
+import tempfile
 from contextlib import asynccontextmanager
+from pathlib import Path
 from typing import Annotated
 
-from fastapi import FastAPI, File, HTTPException, Request, UploadFile
+from fastapi import BackgroundTasks, Depends, FastAPI, File, Header, HTTPException, Query, Request, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, JSONResponse
+from pydantic import BaseModel, Field
 from starlette.concurrency import run_in_threadpool
 
 from .catalog import load_catalog
-from .schemas import FileOut, QuoteOut, QuoteRequest
+from .schemas import AdminQuote, FileOut, QuoteOut, QuoteRequest
 from .service import QuoteService, UploadError
 from .settings import Settings, get_settings
 from .slicer import PrusaSlicer
@@ -32,7 +36,9 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         CORSMiddleware,
         allow_origins=settings.cors_origins,
         allow_methods=["GET", "POST"],
-        allow_headers=["Content-Type"],
+        allow_headers=["Content-Type", "Authorization"],
+        # Para que el panel lea el nombre del zip al descargarlo.
+        expose_headers=["Content-Disposition"],
     )
 
     @app.exception_handler(UploadError)
@@ -87,5 +93,40 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         if q is None:
             raise HTTPException(404, "Cotización no encontrada")
         return service.quote_out(q)
+
+    class OrderRequest(BaseModel):
+        color: str | None = Field(default=None, max_length=40)
+
+    @app.post("/api/quotes/{quote_id}/request", status_code=204)
+    def request_order(quote_id: str, body: OrderRequest):
+        """El cliente tocó "Pedir por WhatsApp": queda marcada para el panel."""
+        if not quote_id.isalnum() or not store.mark_requested(quote_id, body.color):
+            raise HTTPException(404, "Cotización no encontrada")
+
+    # Administración: requiere CAPA3D_ADMIN_TOKEN y el encabezado Authorization: Bearer <clave>.
+
+    def admin(authorization: Annotated[str | None, Header()] = None) -> None:
+        token = settings.admin_token
+        if not token:
+            raise HTTPException(503, "Panel desactivado: define CAPA3D_ADMIN_TOKEN en la API")
+        given = (authorization or "").removeprefix("Bearer ").strip()
+        if not secrets.compare_digest(given.encode(), token.encode()):
+            raise HTTPException(401, "Clave incorrecta")
+
+    @app.get("/api/admin/quotes", response_model=list[AdminQuote], dependencies=[Depends(admin)])
+    def admin_quotes(
+        limit: Annotated[int, Query(ge=1, le=500)] = 100,
+        requested: bool = False,
+    ):
+        return [service.admin_quote_out(q) for q in store.list_quotes(limit, requested)]
+
+    @app.get("/api/admin/quotes/{quote_id}/download", dependencies=[Depends(admin)])
+    def admin_download(quote_id: str, background: BackgroundTasks):
+        if not quote_id.isalnum() or store.get_quote(quote_id) is None:
+            raise HTTPException(404, "Cotización no encontrada")
+        tmp = Path(tempfile.mkstemp(suffix=".zip")[1])
+        name = service.order_zip(quote_id, tmp)
+        background.add_task(tmp.unlink, missing_ok=True)
+        return FileResponse(tmp, media_type="application/zip", filename=name)
 
     return app
