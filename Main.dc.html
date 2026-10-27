@@ -1,0 +1,580 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<title>Capa3D — Impresión 3D</title>
+<script src="./vendor/react.js"></script>
+<script src="./vendor/react-dom.js"></script>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Unbounded:wght@500;600;700&amp;family=Inter:wght@400;500;600&amp;family=JetBrains+Mono:wght@400;500&amp;display=swap">
+<style>
+body{margin:0;background:#0B0B0D;color:#F2F2EE;font-family:Inter,system-ui,sans-serif}
+h1,h2,h3{font-family:Unbounded,system-ui,sans-serif;font-weight:600}
+.mono{font-family:'JetBrains Mono',ui-monospace,monospace}
+button,input{font-family:inherit}
+a{color:#F2F2EE}a:hover{color:#ffffff}
+.btn{transition:transform .2s,box-shadow .2s}.btn:hover{transform:translateY(-2px)}
+.tilt{transition:transform .45s cubic-bezier(.2,.8,.2,1),border-color .3s}.tilt:hover{transform:perspective(900px) rotateX(5deg) rotateY(-7deg) translateY(-6px);border-color:rgba(255,255,255,.22)}
+.pcard{transition:transform .3s}.pcard:hover{transform:translateY(-8px)}
+.tile .pic{transition:transform .6s cubic-bezier(.2,.8,.2,1)}.tile:hover .pic{transform:scale(1.12) rotate(-3deg)}
+.flo{animation:flo 5s ease-in-out infinite}@keyframes flo{50%{transform:translateY(-12px)}}
+.turn{transform-style:preserve-3d;animation:turn 22s linear infinite}@keyframes turn{from{transform:rotateX(62deg) rotateZ(0deg)}to{transform:rotateX(62deg) rotateZ(360deg)}}
+.turnF{transform-style:preserve-3d;animation:turnF 12s linear infinite}@keyframes turnF{from{transform:rotateX(64deg) rotateZ(0deg)}to{transform:rotateX(64deg) rotateZ(360deg)}}
+.nozY{animation:nozY 9s linear infinite}@keyframes nozY{0%,4%{transform:translateY(0)}72%,90%{transform:translateY(-156px)}100%{transform:translateY(0)}}
+.nozX{animation:nozX 1.3s ease-in-out infinite alternate}@keyframes nozX{from{transform:translateX(-54px)}to{transform:translateX(54px)}}
+.marq{animation:marq 28s linear infinite}@keyframes marq{to{transform:translateX(-50%)}}
+.gscroll{animation:gs 14s linear infinite}@keyframes gs{to{transform:translateY(-50%)}}
+.pulse{animation:pul 1.4s ease-in-out infinite}@keyframes pul{50%{opacity:.25}}
+.rot{animation:rot 5s linear infinite}@keyframes rot{to{transform:rotate(360deg)}}
+.wob{animation:wob 6s ease-in-out infinite}@keyframes wob{0%,100%{transform:perspective(800px) rotateY(-16deg)}50%{transform:perspective(800px) rotateY(16deg)}}
+.bar{transition:width .35s linear}
+.k0{animation:k0 9s linear infinite}@keyframes k0{0%,4.00%{opacity:0;transform:scale(1.2)}6.50%,90%{opacity:1;transform:scale(1)}96%,100%{opacity:0;transform:scale(1)}}
+.k1{animation:k1 9s linear infinite}@keyframes k1{0%,5.45%{opacity:0;transform:scale(1.2)}7.95%,90%{opacity:1;transform:scale(1)}96%,100%{opacity:0;transform:scale(1)}}
+.k2{animation:k2 9s linear infinite}@keyframes k2{0%,6.89%{opacity:0;transform:scale(1.2)}9.39%,90%{opacity:1;transform:scale(1)}96%,100%{opacity:0;transform:scale(1)}}
+.k3{animation:k3 9s linear infinite}@keyframes k3{0%,8.34%{opacity:0;transform:scale(1.2)}10.84%,90%{opacity:1;transform:scale(1)}96%,100%{opacity:0;transform:scale(1)}}
+.k4{animation:k4 9s linear infinite}@keyframes k4{0%,9.79%{opacity:0;transform:scale(1.2)}12.29%,90%{opacity:1;transform:scale(1)}96%,100%{opacity:0;transform:scale(1)}}
+.k5{animation:k5 9s linear infinite}@keyframes k5{0%,11.23%{opacity:0;transform:scale(1.2)}13.73%,90%{opacity:1;transform:scale(1)}96%,100%{opacity:0;transform:scale(1)}}
+.k6{animation:k6 9s linear infinite}@keyframes k6{0%,12.68%{opacity:0;transform:scale(1.2)}15.18%,90%{opacity:1;transform:scale(1)}96%,100%{opacity:0;transform:scale(1)}}
+.k7{animation:k7 9s linear infinite}@keyframes k7{0%,14.13%{opacity:0;transform:scale(1.2)}16.63%,90%{opacity:1;transform:scale(1)}96%,100%{opacity:0;transform:scale(1)}}
+.k8{animation:k8 9s linear infinite}@keyframes k8{0%,15.57%{opacity:0;transform:scale(1.2)}18.07%,90%{opacity:1;transform:scale(1)}96%,100%{opacity:0;transform:scale(1)}}
+.k9{animation:k9 9s linear infinite}@keyframes k9{0%,17.02%{opacity:0;transform:scale(1.2)}19.52%,90%{opacity:1;transform:scale(1)}96%,100%{opacity:0;transform:scale(1)}}
+.k10{animation:k10 9s linear infinite}@keyframes k10{0%,18.47%{opacity:0;transform:scale(1.2)}20.97%,90%{opacity:1;transform:scale(1)}96%,100%{opacity:0;transform:scale(1)}}
+.k11{animation:k11 9s linear infinite}@keyframes k11{0%,19.91%{opacity:0;transform:scale(1.2)}22.41%,90%{opacity:1;transform:scale(1)}96%,100%{opacity:0;transform:scale(1)}}
+.k12{animation:k12 9s linear infinite}@keyframes k12{0%,21.36%{opacity:0;transform:scale(1.2)}23.86%,90%{opacity:1;transform:scale(1)}96%,100%{opacity:0;transform:scale(1)}}
+.k13{animation:k13 9s linear infinite}@keyframes k13{0%,22.81%{opacity:0;transform:scale(1.2)}25.31%,90%{opacity:1;transform:scale(1)}96%,100%{opacity:0;transform:scale(1)}}
+.k14{animation:k14 9s linear infinite}@keyframes k14{0%,24.26%{opacity:0;transform:scale(1.2)}26.76%,90%{opacity:1;transform:scale(1)}96%,100%{opacity:0;transform:scale(1)}}
+.k15{animation:k15 9s linear infinite}@keyframes k15{0%,25.70%{opacity:0;transform:scale(1.2)}28.20%,90%{opacity:1;transform:scale(1)}96%,100%{opacity:0;transform:scale(1)}}
+.k16{animation:k16 9s linear infinite}@keyframes k16{0%,27.15%{opacity:0;transform:scale(1.2)}29.65%,90%{opacity:1;transform:scale(1)}96%,100%{opacity:0;transform:scale(1)}}
+.k17{animation:k17 9s linear infinite}@keyframes k17{0%,28.60%{opacity:0;transform:scale(1.2)}31.10%,90%{opacity:1;transform:scale(1)}96%,100%{opacity:0;transform:scale(1)}}
+.k18{animation:k18 9s linear infinite}@keyframes k18{0%,30.04%{opacity:0;transform:scale(1.2)}32.54%,90%{opacity:1;transform:scale(1)}96%,100%{opacity:0;transform:scale(1)}}
+.k19{animation:k19 9s linear infinite}@keyframes k19{0%,31.49%{opacity:0;transform:scale(1.2)}33.99%,90%{opacity:1;transform:scale(1)}96%,100%{opacity:0;transform:scale(1)}}
+.k20{animation:k20 9s linear infinite}@keyframes k20{0%,32.94%{opacity:0;transform:scale(1.2)}35.44%,90%{opacity:1;transform:scale(1)}96%,100%{opacity:0;transform:scale(1)}}
+.k21{animation:k21 9s linear infinite}@keyframes k21{0%,34.38%{opacity:0;transform:scale(1.2)}36.88%,90%{opacity:1;transform:scale(1)}96%,100%{opacity:0;transform:scale(1)}}
+.k22{animation:k22 9s linear infinite}@keyframes k22{0%,35.83%{opacity:0;transform:scale(1.2)}38.33%,90%{opacity:1;transform:scale(1)}96%,100%{opacity:0;transform:scale(1)}}
+.k23{animation:k23 9s linear infinite}@keyframes k23{0%,37.28%{opacity:0;transform:scale(1.2)}39.78%,90%{opacity:1;transform:scale(1)}96%,100%{opacity:0;transform:scale(1)}}
+.k24{animation:k24 9s linear infinite}@keyframes k24{0%,38.72%{opacity:0;transform:scale(1.2)}41.22%,90%{opacity:1;transform:scale(1)}96%,100%{opacity:0;transform:scale(1)}}
+.k25{animation:k25 9s linear infinite}@keyframes k25{0%,40.17%{opacity:0;transform:scale(1.2)}42.67%,90%{opacity:1;transform:scale(1)}96%,100%{opacity:0;transform:scale(1)}}
+.k26{animation:k26 9s linear infinite}@keyframes k26{0%,41.62%{opacity:0;transform:scale(1.2)}44.12%,90%{opacity:1;transform:scale(1)}96%,100%{opacity:0;transform:scale(1)}}
+.k27{animation:k27 9s linear infinite}@keyframes k27{0%,43.06%{opacity:0;transform:scale(1.2)}45.56%,90%{opacity:1;transform:scale(1)}96%,100%{opacity:0;transform:scale(1)}}
+.k28{animation:k28 9s linear infinite}@keyframes k28{0%,44.51%{opacity:0;transform:scale(1.2)}47.01%,90%{opacity:1;transform:scale(1)}96%,100%{opacity:0;transform:scale(1)}}
+.k29{animation:k29 9s linear infinite}@keyframes k29{0%,45.96%{opacity:0;transform:scale(1.2)}48.46%,90%{opacity:1;transform:scale(1)}96%,100%{opacity:0;transform:scale(1)}}
+.k30{animation:k30 9s linear infinite}@keyframes k30{0%,47.40%{opacity:0;transform:scale(1.2)}49.90%,90%{opacity:1;transform:scale(1)}96%,100%{opacity:0;transform:scale(1)}}
+.k31{animation:k31 9s linear infinite}@keyframes k31{0%,48.85%{opacity:0;transform:scale(1.2)}51.35%,90%{opacity:1;transform:scale(1)}96%,100%{opacity:0;transform:scale(1)}}
+.k32{animation:k32 9s linear infinite}@keyframes k32{0%,50.30%{opacity:0;transform:scale(1.2)}52.80%,90%{opacity:1;transform:scale(1)}96%,100%{opacity:0;transform:scale(1)}}
+.k33{animation:k33 9s linear infinite}@keyframes k33{0%,51.74%{opacity:0;transform:scale(1.2)}54.24%,90%{opacity:1;transform:scale(1)}96%,100%{opacity:0;transform:scale(1)}}
+.k34{animation:k34 9s linear infinite}@keyframes k34{0%,53.19%{opacity:0;transform:scale(1.2)}55.69%,90%{opacity:1;transform:scale(1)}96%,100%{opacity:0;transform:scale(1)}}
+.k35{animation:k35 9s linear infinite}@keyframes k35{0%,54.64%{opacity:0;transform:scale(1.2)}57.14%,90%{opacity:1;transform:scale(1)}96%,100%{opacity:0;transform:scale(1)}}
+.k36{animation:k36 9s linear infinite}@keyframes k36{0%,56.09%{opacity:0;transform:scale(1.2)}58.59%,90%{opacity:1;transform:scale(1)}96%,100%{opacity:0;transform:scale(1)}}
+.k37{animation:k37 9s linear infinite}@keyframes k37{0%,57.53%{opacity:0;transform:scale(1.2)}60.03%,90%{opacity:1;transform:scale(1)}96%,100%{opacity:0;transform:scale(1)}}
+.k38{animation:k38 9s linear infinite}@keyframes k38{0%,58.98%{opacity:0;transform:scale(1.2)}61.48%,90%{opacity:1;transform:scale(1)}96%,100%{opacity:0;transform:scale(1)}}
+.k39{animation:k39 9s linear infinite}@keyframes k39{0%,60.43%{opacity:0;transform:scale(1.2)}62.93%,90%{opacity:1;transform:scale(1)}96%,100%{opacity:0;transform:scale(1)}}
+.k40{animation:k40 9s linear infinite}@keyframes k40{0%,61.87%{opacity:0;transform:scale(1.2)}64.37%,90%{opacity:1;transform:scale(1)}96%,100%{opacity:0;transform:scale(1)}}
+.k41{animation:k41 9s linear infinite}@keyframes k41{0%,63.32%{opacity:0;transform:scale(1.2)}65.82%,90%{opacity:1;transform:scale(1)}96%,100%{opacity:0;transform:scale(1)}}
+.k42{animation:k42 9s linear infinite}@keyframes k42{0%,64.77%{opacity:0;transform:scale(1.2)}67.27%,90%{opacity:1;transform:scale(1)}96%,100%{opacity:0;transform:scale(1)}}
+.k43{animation:k43 9s linear infinite}@keyframes k43{0%,66.21%{opacity:0;transform:scale(1.2)}68.71%,90%{opacity:1;transform:scale(1)}96%,100%{opacity:0;transform:scale(1)}}
+.k44{animation:k44 9s linear infinite}@keyframes k44{0%,67.66%{opacity:0;transform:scale(1.2)}70.16%,90%{opacity:1;transform:scale(1)}96%,100%{opacity:0;transform:scale(1)}}
+.k45{animation:k45 9s linear infinite}@keyframes k45{0%,69.11%{opacity:0;transform:scale(1.2)}71.61%,90%{opacity:1;transform:scale(1)}96%,100%{opacity:0;transform:scale(1)}}
+.k46{animation:k46 9s linear infinite}@keyframes k46{0%,70.55%{opacity:0;transform:scale(1.2)}73.05%,90%{opacity:1;transform:scale(1)}96%,100%{opacity:0;transform:scale(1)}}
+.k47{animation:k47 9s linear infinite}@keyframes k47{0%,72.00%{opacity:0;transform:scale(1.2)}74.50%,90%{opacity:1;transform:scale(1)}96%,100%{opacity:0;transform:scale(1)}}
+@media (prefers-reduced-motion:reduce){*{animation:none!important}}
+</style>
+</helmet>
+<div style="position:relative;isolation:isolate;overflow:hidden;width:100%;box-sizing:border-box;background:#0B0B0D">
+<div aria-hidden="true" style="position:absolute;z-index:-1;inset:0 0 auto 0;height:900px;background-image:linear-gradient(rgba(255,255,255,.045) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.045) 1px,transparent 1px);background-size:48px 48px;-webkit-mask-image:radial-gradient(ellipse at 70% 30%,#000 20%,transparent 70%);mask-image:radial-gradient(ellipse at 70% 30%,#000 20%,transparent 70%)"></div>
+<div aria-hidden="true" style="position:absolute;z-index:-1;right:-200px;top:-200px;width:800px;height:800px;border-radius:50%;background:radial-gradient(circle,{{acSoft}},transparent 65%)"></div>
+
+<div style="max-width:1240px;margin:0 auto;padding:18px 24px 0;box-sizing:border-box">
+<nav style="display:flex;flex-wrap:wrap;gap:16px;align-items:center;justify-content:space-between;padding:12px 14px 12px 20px;border-radius:20px;background:rgba(20,20,23,.7);backdrop-filter:blur(14px);border:1px solid rgba(255,255,255,.08)">
+<a href="#" style="display:flex;align-items:center;gap:10px;text-decoration:none;color:#F2F2EE">
+<span style="width:34px;height:34px;border-radius:10px;display:flex;align-items:center;justify-content:center;background:{{ac}};color:#0B0B0D"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M5 18h14 M6.5 14h11 M8 10h8 M9.5 6h5"></path></svg></span>
+<span style="font-family:Unbounded,sans-serif;font-weight:700;font-size:20px;letter-spacing:-.5px">Capa3D</span></a>
+<div style="display:flex;flex-wrap:wrap;gap:6px;font-size:14px">
+<a href="#quote" style="padding:10px 14px;text-decoration:none;color:#C9C9C3">Cotizador</a>
+<a href="#work" style="padding:10px 14px;text-decoration:none;color:#C9C9C3">Galería</a>
+<a href="#materiales" style="padding:10px 14px;text-decoration:none;color:#C9C9C3">Materiales</a>
+<a href="#how" style="padding:10px 14px;text-decoration:none;color:#C9C9C3">Proceso</a>
+</div>
+<a class="btn" href="#quote" style="padding:12px 20px;border-radius:12px;background:{{ac}};color:#0B0B0D;font-weight:600;text-decoration:none;font-size:14px">Cotizar ahora</a>
+</nav>
+</div>
+
+<section style="max-width:1240px;margin:0 auto;padding:56px 24px 72px;display:flex;flex-wrap:wrap;gap:40px;align-items:center;box-sizing:border-box">
+<div style="flex:1 1 480px;min-width:0">
+<span class="mono" style="display:inline-flex;align-items:center;gap:10px;padding:8px 14px;border-radius:99px;border:1px solid rgba(255,255,255,.14);font-size:12px;letter-spacing:1px;color:#C9C9C3"><span class="pulse" style="width:8px;height:8px;border-radius:50%;background:{{ac}}"></span>IMPRESIÓN 3D FDM · COLOMBIA</span>
+<h1 style="font-size:clamp(40px,6.2vw,80px);line-height:1;margin:26px 0 24px;letter-spacing:-2.5px;font-weight:700">Da vida a tus ideas, <span style="color:{{ac}};text-shadow:0 1px 0 rgba(0,0,0,.35),0 2px 0 rgba(0,0,0,.35),0 3px 0 rgba(0,0,0,.35),0 4px 0 rgba(0,0,0,.35),0 5px 0 rgba(0,0,0,.35),0 6px 0 rgba(0,0,0,.35),0 14px 24px rgba(0,0,0,.6)">capa por capa.</span></h1>
+<p style="font-size:19px;line-height:1.6;color:#A6A6A0;max-width:540px;margin:0 0 36px">Sube tu modelo 3D, elige material, calidad y color, y conoce tu precio en segundos. Prototipos, repuestos, miniaturas y decoración con acabado profesional.</p>
+<div style="display:flex;flex-wrap:wrap;gap:12px">
+<a class="btn" href="#quote" style="display:inline-flex;align-items:center;gap:10px;padding:18px 28px;border-radius:16px;background:{{ac}};color:#0B0B0D;font-weight:600;text-decoration:none;box-shadow:0 10px 40px {{acGlow}}"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 16V4 M7 9l5-5 5 5 M4 16v4h16v-4"></path></svg>Subir archivo 3D</a>
+<a class="btn" href="#work" style="padding:18px 26px;border-radius:16px;border:1px solid rgba(255,255,255,.22);color:#F2F2EE;font-weight:500;text-decoration:none">Ver galería</a>
+</div>
+<div class="mono" style="display:flex;flex-wrap:wrap;gap:22px;margin-top:40px;font-size:12px;letter-spacing:1px;color:#A6A6A0">
+<span>.STL · .OBJ · .3MF · .STEP</span><span>PLA · PETG · ABS · TPU</span><span>RESPUESTA POR WHATSAPP</span>
+</div>
+</div>
+
+<div onMouseMove="{{onTilt}}" onMouseLeave="{{offTilt}}" style="flex:1 1 460px;min-width:0;position:relative;height:540px;border-radius:32px;overflow:hidden;background:radial-gradient(circle at 50% 62%,{{acSoft}},transparent 60%),#111114;border:1px solid rgba(255,255,255,.08);perspective:1200px">
+<div style="position:absolute;inset:0;transform-style:preserve-3d;transition:transform .25s ease-out;transform:{{tiltT}}">
+<div class="turn" style="position:absolute;left:50%;top:60%;width:340px;height:340px;margin:-170px 0 0 -170px">
+<div style="position:absolute;inset:0;border-radius:24px;border:1px solid rgba(255,255,255,.18);background-color:#17171B;background-image:linear-gradient(rgba(255,255,255,.07) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.07) 1px,transparent 1px);background-size:20px 20px;box-shadow:0 0 60px rgba(0,0,0,.6)"></div>
+<sc-for list="{{hero}}" as="l" hint-placeholder-count="36"><div style="{{l.o}}"><div class="{{l.cls}}" style="{{l.r}}"></div></div></sc-for>
+</div>
+<div class="nozY" style="position:absolute;left:0;right:0;top:calc(60% - 104px);height:104px">
+<div style="position:absolute;left:6%;right:6%;top:14px;height:8px;border-radius:4px;background:linear-gradient(90deg,#26262B,#3A3A42,#26262B);box-shadow:0 4px 18px rgba(0,0,0,.6)"></div>
+<div style="position:absolute;left:50%;top:0;width:64px;margin-left:-32px">
+<div class="nozX">
+<svg width="64" height="104" viewBox="0 0 64 104" aria-hidden="true"><rect x="8" y="2" width="48" height="40" rx="8" fill="#2E2E35" stroke="rgba(255,255,255,.25)"></rect><rect x="16" y="12" width="32" height="6" rx="3" fill="#0B0B0D"></rect><rect x="22" y="42" width="20" height="30" rx="3" fill="#3A3A42"></rect><path d="M24 72h16l-5 22h-6z" fill="#C9C9C3"></path><circle cx="32" cy="98" r="5" fill="{{ac}}"></circle></svg>
+</div></div></div>
+</div>
+<div style="position:absolute;left:18px;top:18px;right:18px;display:flex;flex-wrap:wrap;gap:10px;justify-content:space-between;pointer-events:none">
+<span class="mono" style="display:inline-flex;align-items:center;gap:8px;padding:8px 12px;border-radius:10px;background:rgba(11,11,13,.75);border:1px solid rgba(255,255,255,.1);font-size:11px;letter-spacing:1px"><span class="pulse" style="width:7px;height:7px;border-radius:50%;background:#3DDC84"></span>SIMULACIÓN EN VIVO</span>
+<span class="mono" style="padding:8px 12px;border-radius:10px;background:rgba(11,11,13,.75);border:1px solid rgba(255,255,255,.1);font-size:11px;letter-spacing:1px">CAPA {{layerNow}} / 240</span>
+</div>
+<div style="position:absolute;left:18px;right:18px;bottom:18px;padding:16px;border-radius:16px;background:rgba(11,11,13,.8);backdrop-filter:blur(10px);border:1px solid rgba(255,255,255,.1)">
+<div class="mono" style="display:flex;flex-wrap:wrap;justify-content:space-between;gap:8px;font-size:11px;letter-spacing:1px;color:#A6A6A0;margin-bottom:10px"><span>BOQUILLA 215 °C</span><span>CAMA 60 °C</span><span style="color:{{ac}}">{{progTxt}}%</span></div>
+<div style="height:6px;border-radius:3px;background:rgba(255,255,255,.1);overflow:hidden"><div class="bar" style="height:6px;border-radius:3px;background:{{ac}};width:{{progTxt}}%;box-shadow:0 0 12px {{ac}}"></div></div>
+</div>
+<div aria-hidden="true" style="position:absolute;right:18px;top:64px;width:190px;height:120px;overflow:hidden;border-radius:12px;background:rgba(11,11,13,.6);border:1px solid rgba(255,255,255,.08);-webkit-mask-image:linear-gradient(transparent,#000 25%,#000 75%,transparent);mask-image:linear-gradient(transparent,#000 25%,#000 75%,transparent)">
+<div class="gscroll mono" style="padding:8px 12px;font-size:10px;line-height:1.7">
+<sc-for list="{{gcode}}" as="g" hint-placeholder-count="12"><div style="{{g.st}}">{{g.l}}</div></sc-for>
+</div></div>
+</div>
+</section>
+
+<div aria-hidden="true" style="border-top:1px solid rgba(255,255,255,.08);border-bottom:1px solid rgba(255,255,255,.08);padding:22px 0;overflow:hidden;background:#0E0E11">
+<div class="marq" style="display:flex;width:max-content;font-family:Unbounded,sans-serif;font-weight:700;font-size:clamp(26px,4vw,44px);white-space:nowrap">
+<sc-for list="{{marq}}" as="m" hint-placeholder-count="12"><span style="{{m.st}}">{{m.t}}</span></sc-for>
+</div></div>
+
+<section style="max-width:1240px;margin:0 auto;padding:40px 24px 96px;box-sizing:border-box"><div style="max-width:720px;margin-bottom:40px"><span class="mono" style="font-size:12px;letter-spacing:2px;color:{{ac}}">// POR QUÉ CAPA3D</span><h2 style="font-size:clamp(28px,4.4vw,48px);line-height:1.08;margin:14px 0 0;letter-spacing:-1px">Del archivo a la pieza, sin complicaciones</h2><p style="color:#A6A6A0;font-size:17px;line-height:1.6;margin:16px 0 0">Un proceso claro para que sepas qué recibes, cuánto cuesta y cuándo llega.</p></div><div style="display:flex;flex-wrap:wrap;gap:20px"><div class="tilt" style="flex:2 1 520px;min-width:0;min-height:300px;position:relative;overflow:hidden;border-radius:28px;background:#141417;border:1px solid rgba(255,255,255,.08);padding:36px;box-sizing:border-box;display:flex;flex-direction:column;justify-content:flex-end"><div aria-hidden="true" style="position:absolute;right:-40px;top:-30px;width:360px;height:300px;background:repeating-linear-gradient(0deg,{{acLine}} 0 2px,transparent 2px 9px);-webkit-mask-image:radial-gradient(circle at 60% 40%,#000,transparent 70%);mask-image:radial-gradient(circle at 60% 40%,#000,transparent 70%)"></div><div style="position:relative;width:56px;height:56px;border-radius:16px;display:flex;align-items:center;justify-content:center;background:{{ac}};color:#0B0B0D"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M13 2L4 14h7l-1 8 9-12h-7z"></path></svg></div><h3 style="position:relative;font-size:30px;margin:24px 0 10px;letter-spacing:-.5px">Precio al instante</h3><p style="position:relative;margin:0;color:#A6A6A0;font-size:17px;line-height:1.6;max-width:440px">Sube tu modelo, elige material, calidad y color, y ve el precio y el tiempo antes de pedir. Sin esperar correos.</p></div><div class="tilt" style="flex:1 1 260px;min-width:0;border-radius:28px;background:#141417;border:1px solid rgba(255,255,255,.08);padding:30px;box-sizing:border-box"><div style="width:48px;height:48px;border-radius:14px;display:flex;align-items:center;justify-content:center;border:1px solid {{acGlow}};color:{{ac}};background:{{acSoft}}"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 12l5 5L20 6"></path></svg></div><h3 style="font-size:19px;margin:22px 0 8px">Revisión de archivo</h3><p style="margin:0;color:#A6A6A0;line-height:1.6">Verificamos que tu modelo se pueda imprimir y te avisamos si hay que ajustar algo.</p></div><div class="tilt" style="flex:1 1 260px;min-width:0;border-radius:28px;background:#141417;border:1px solid rgba(255,255,255,.08);padding:30px;box-sizing:border-box"><div style="width:48px;height:48px;border-radius:14px;display:flex;align-items:center;justify-content:center;border:1px solid {{acGlow}};color:{{ac}};background:{{acSoft}}"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 4v6h6 M20 20v-6h-6 M5.5 15a7.5 7.5 0 0 0 13 2.5 M18.5 9A7.5 7.5 0 0 0 5.5 6.5"></path></svg></div><h3 style="font-size:19px;margin:22px 0 8px">Prototipos que iteran</h3><p style="margin:0;color:#A6A6A0;line-height:1.6">Corrige el diseño y vuelve a imprimir hasta que la pieza encaje como necesitas.</p></div><div class="tilt" style="flex:1 1 260px;min-width:0;border-radius:28px;background:#141417;border:1px solid rgba(255,255,255,.08);padding:30px;box-sizing:border-box"><div style="width:48px;height:48px;border-radius:14px;display:flex;align-items:center;justify-content:center;border:1px solid {{acGlow}};color:{{ac}};background:{{acSoft}}"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l9 5-9 5-9-5z M3 13l9 5 9-5 M3 17.5l9 5 9-5"></path></svg></div><h3 style="font-size:19px;margin:22px 0 8px">Cuatro materiales</h3><p style="margin:0;color:#A6A6A0;line-height:1.6">PLA, PETG, ABS y TPU: del prototipo rápido a la pieza que aguanta uso real.</p></div><div class="tilt" style="flex:1 1 260px;min-width:0;border-radius:28px;background:#141417;border:1px solid rgba(255,255,255,.08);padding:30px;box-sizing:border-box"><div style="width:48px;height:48px;border-radius:14px;display:flex;align-items:center;justify-content:center;border:1px solid {{acGlow}};color:{{ac}};background:{{acSoft}}"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 7l9-4 9 4v10l-9 4-9-4z M3 7l9 4 9-4 M12 11v10"></path></svg></div><h3 style="font-size:19px;margin:22px 0 8px">Empaque cuidado</h3><p style="margin:0;color:#A6A6A0;line-height:1.6">Tus piezas llegan protegidas. [TUS COBERTURAS DE ENVÍO]</p></div><div class="tilt" style="flex:1 1 260px;min-width:0;border-radius:28px;background:#141417;border:1px solid rgba(255,255,255,.08);padding:30px;box-sizing:border-box"><div style="width:48px;height:48px;border-radius:14px;display:flex;align-items:center;justify-content:center;border:1px solid {{acGlow}};color:{{ac}};background:{{acSoft}}"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 5h16v11H9l-5 4z"></path></svg></div><h3 style="font-size:19px;margin:22px 0 8px">Hablas con quien imprime</h3><p style="margin:0;color:#A6A6A0;line-height:1.6">Asesoría directa por WhatsApp, antes y después de tu pedido.</p></div></div></section>
+
+
+<section id="quote" style="max-width:1240px;margin:0 auto;padding:40px 24px 96px;box-sizing:border-box">
+<div style="max-width:720px;margin-bottom:40px"><span class="mono" style="font-size:12px;letter-spacing:2px;color:{{ac}}">// COTIZADOR</span><h2 style="font-size:clamp(28px,4.4vw,48px);line-height:1.08;margin:14px 0 0;letter-spacing:-1px">Configura tu impresión y mira el resultado</h2><p style="color:#A6A6A0;font-size:17px;line-height:1.6;margin:16px 0 0">La vista previa cambia con cada elección: color, calidad de capa, relleno y modo sólido o malla.</p></div>
+<div style="display:flex;flex-wrap:wrap;gap:24px;align-items:flex-start">
+
+<div style="flex:1 1 420px;min-width:0;border-radius:28px;background:#111114;border:1px solid rgba(255,255,255,.08);overflow:hidden">
+<div style="position:relative;height:400px;perspective:1000px;background:radial-gradient(circle at 50% 65%,{{pvGlow}},transparent 60%)">
+<sc-if value="{{noModel}}" hint-placeholder-val="{{ true }}">
+<div class="turnF" style="position:absolute;left:50%;top:62%;width:260px;height:260px;margin:-130px 0 0 -130px">
+<div style="position:absolute;inset:0;border-radius:20px;border:1px solid rgba(255,255,255,.16);background-color:#17171B;background-image:linear-gradient(rgba(255,255,255,.07) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.07) 1px,transparent 1px);background-size:16px 16px"></div>
+<sc-for list="{{pv}}" as="l" hint-placeholder-count="24"><div style="{{l.o}}"><div style="{{l.r}}"></div></div></sc-for>
+</div>
+</sc-if>
+<sc-if value="{{hasModel}}" hint-placeholder-val="{{ false }}">
+<canvas ref="{{cvRef}}" onPointerDown="{{cvDown}}" onPointerMove="{{cvMove}}" onPointerUp="{{cvUp}}" onPointerCancel="{{cvUp}}" role="img" aria-label="Vista 3D de tu modelo. Arrastra para girarlo." style="position:absolute;inset:0;width:100%;height:100%;cursor:grab;touch-action:none"></canvas>
+<span class="mono" style="position:absolute;left:50%;bottom:14px;transform:translateX(-50%);font-size:11px;letter-spacing:1px;color:#A6A6A0;pointer-events:none;white-space:nowrap">ARRASTRA PARA GIRAR</span>
+</sc-if>
+<sc-if value="{{isReading}}" hint-placeholder-val="{{ false }}">
+<div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;background:rgba(11,11,13,.7)"><span class="rot" style="width:44px;height:44px;border-radius:50%;border:3px solid rgba(255,255,255,.12);border-top-color:{{ac}}"></span><span class="mono" style="font-size:12px;letter-spacing:1px">ANALIZANDO MALLA…</span></div>
+</sc-if>
+<div style="position:absolute;left:16px;top:16px;display:flex;flex-wrap:wrap;gap:8px;max-width:70%">
+<button onClick="{{setSolid}}" style="{{solidBtn}}">Sólido</button>
+<button onClick="{{setWire}}" style="{{wireBtn}}">Malla</button>
+<sc-if value="{{hasModel}}" hint-placeholder-val="{{ false }}"><button onClick="{{toggleAuto}}" style="{{autoBtn}}">Girar solo</button></sc-if>
+</div>
+<span class="mono" style="position:absolute;right:16px;top:16px;padding:8px 12px;border-radius:10px;background:rgba(11,11,13,.75);border:1px solid rgba(255,255,255,.1);font-size:11px;letter-spacing:1px">{{pvLabel}}</span>
+</div>
+<div style="padding:28px;border-top:1px solid rgba(255,255,255,.08)">
+<span class="mono" style="font-size:11px;letter-spacing:2px;color:#A6A6A0">{{estLabel}}</span>
+<div style="display:flex;flex-wrap:wrap;align-items:baseline;gap:10px;margin:8px 0 6px"><span style="font-family:Unbounded,sans-serif;font-size:clamp(38px,5vw,54px);font-weight:700;letter-spacing:-1.5px">${{price}}</span><span class="mono" style="color:#A6A6A0">COP</span></div>
+<p style="margin:0 0 18px;color:#A6A6A0">{{unitLine}}</p>
+<div style="display:flex;flex-direction:column;margin-bottom:20px;border-top:1px solid rgba(255,255,255,.08)">
+<sc-for list="{{breakdown}}" as="b" hint-placeholder-count="4"><div style="display:flex;justify-content:space-between;gap:12px;padding:10px 0;border-bottom:1px solid rgba(255,255,255,.06);font-size:14px"><span style="color:#A6A6A0">{{b.k}}</span><span class="mono">{{b.v}}</span></div></sc-for>
+</div>
+<div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:24px">
+<span class="mono" style="padding:7px 12px;border-radius:99px;border:1px solid rgba(255,255,255,.14);font-size:12px">{{matName}}</span>
+<span class="mono" style="padding:7px 12px;border-radius:99px;border:1px solid rgba(255,255,255,.14);font-size:12px">{{qName}}</span>
+<span class="mono" style="padding:7px 12px;border-radius:99px;border:1px solid rgba(255,255,255,.14);font-size:12px">Relleno {{infill}}%</span>
+<span class="mono" style="padding:7px 12px;border-radius:99px;border:1px solid rgba(255,255,255,.14);font-size:12px">{{colorName}}</span>
+</div>
+<a class="btn" href="{{waOrder}}" style="display:block;text-align:center;padding:18px;border-radius:16px;background:{{ac}};color:#0B0B0D;font-weight:600;text-decoration:none;box-shadow:0 10px 40px {{acGlow}}">Pedir esta impresión por WhatsApp</a>
+<p style="font-size:12px;color:#8C8C86;margin:12px 0 0;line-height:1.5">{{priceNote}}</p>
+</div>
+</div>
+
+<div style="flex:1 1 520px;min-width:0;display:flex;flex-direction:column;gap:18px">
+<div style="position:relative;border-radius:24px;border:2px dashed {{dropBorder}};background:{{dropBg}};padding:28px;display:flex;flex-wrap:wrap;align-items:center;gap:18px">
+<input type="file" accept=".stl,.obj,.3mf,.step,.stp" aria-label="Subir archivo 3D" onChange="{{onFile}}" style="position:absolute;inset:0;width:100%;height:100%;opacity:0;cursor:pointer">
+<span style="width:56px;height:56px;flex:none;border-radius:16px;display:flex;align-items:center;justify-content:center;background:{{ac}};color:#0B0B0D"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 16V4 M7 9l5-5 5 5 M4 16v4h16v-4"></path></svg></span>
+<div style="flex:1 1 220px"><div class="mono" style="font-size:11px;letter-spacing:2px;color:#A6A6A0">01 / ARCHIVO</div><div style="font-weight:600;font-size:17px;margin-top:4px;word-break:break-all">{{fileTitle}}</div><div style="color:#A6A6A0;font-size:14px;margin-top:2px;line-height:1.5">{{fileSub}}</div></div>
+</div>
+
+<sc-if value="{{hasModel}}" hint-placeholder-val="{{ false }}">
+<div style="border-radius:24px;background:#111114;border:1px solid rgba(255,255,255,.08);padding:24px">
+<div style="display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:10px;margin-bottom:18px"><span class="mono" style="font-size:11px;letter-spacing:2px;color:#A6A6A0">REVISIÓN AUTOMÁTICA DEL ARCHIVO</span><span class="mono" style="{{verdictSt}}">{{verdict}}</span></div>
+<div style="display:flex;flex-wrap:wrap;gap:10px">
+<sc-for list="{{anStats}}" as="a" hint-placeholder-count="5"><div style="flex:1 1 150px;min-width:0;padding:14px;border-radius:14px;background:#17171B;border:1px solid rgba(255,255,255,.06)"><div class="mono" style="font-size:10px;letter-spacing:1px;color:#A6A6A0">{{a.k}}</div><div style="font-weight:600;font-size:16px;margin-top:6px">{{a.v}}</div></div></sc-for>
+</div>
+<div style="display:flex;flex-direction:column;gap:10px;margin-top:16px">
+<sc-for list="{{anChecks}}" as="c" hint-placeholder-count="3"><div style="display:flex;gap:12px;align-items:flex-start"><span class="mono" style="{{c.st}}">{{c.sym}}</span><span style="color:#D8D8D2;font-size:14px;line-height:1.5;padding-top:2px">{{c.t}}</span></div></sc-for>
+</div>
+<div style="display:flex;flex-wrap:wrap;gap:20px;margin-top:22px;padding-top:20px;border-top:1px solid rgba(255,255,255,.08)">
+<div style="flex:1 1 200px;min-width:0">
+<div class="mono" style="font-size:10px;letter-spacing:1px;color:#A6A6A0;margin-bottom:10px">UNIDADES DEL ARCHIVO</div>
+<div style="display:flex;gap:6px"><sc-for list="{{units}}" as="u" hint-placeholder-count="3"><button onClick="{{u.pick}}" style="{{u.style}}">{{u.n}}</button></sc-for></div>
+</div>
+<div style="flex:2 1 260px;min-width:0">
+<div style="display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:6px"><span class="mono" style="font-size:10px;letter-spacing:1px;color:#A6A6A0">ESCALA · {{scale}}%</span>
+<sc-if value="{{showFitBtn}}" hint-placeholder-val="{{ false }}"><button onClick="{{fitScale}}" style="padding:8px 12px;border-radius:10px;border:1px solid {{ac}};background:transparent;color:{{ac}};font-size:12px;cursor:pointer">Ajustar a la impresora</button></sc-if>
+</div>
+<input type="range" min="10" max="400" step="5" value="{{scale}}" onInput="{{onScale}}" aria-label="Escala del modelo" style="width:100%;accent-color:{{ac}}">
+</div>
+<div style="flex:0 0 auto">
+<div class="mono" style="font-size:10px;letter-spacing:1px;color:#A6A6A0;margin-bottom:10px">CANTIDAD</div>
+<div style="display:flex;align-items:center;border-radius:12px;border:1px solid rgba(255,255,255,.15);overflow:hidden"><button onClick="{{qtyDown}}" aria-label="Quitar una unidad" style="width:44px;height:44px;border:0;background:#17171B;color:#F2F2EE;font-size:20px;cursor:pointer">−</button><span class="mono" style="min-width:48px;text-align:center;font-size:16px">{{qty}}</span><button onClick="{{qtyUp}}" aria-label="Agregar una unidad" style="width:44px;height:44px;border:0;background:#17171B;color:#F2F2EE;font-size:20px;cursor:pointer">+</button></div>
+</div>
+</div>
+</div>
+</sc-if>
+
+<div style="border-radius:24px;background:#111114;border:1px solid rgba(255,255,255,.08);padding:24px">
+<div class="mono" style="font-size:11px;letter-spacing:2px;color:#A6A6A0;margin-bottom:16px">02 / MATERIAL</div>
+<div style="display:flex;flex-wrap:wrap;gap:12px">
+<sc-for list="{{mats}}" as="m" hint-placeholder-count="4">
+<button onClick="{{m.pick}}" style="{{m.style}}">
+<span style="display:flex;justify-content:space-between;align-items:center;width:100%"><span style="font-family:Unbounded,sans-serif;font-weight:700;font-size:20px">{{m.n}}</span><span style="{{m.dot}}"></span></span>
+<span style="font-size:13px;color:#A6A6A0;margin:4px 0 14px">{{m.tag}}</span>
+<sc-for list="{{m.meters}}" as="mt" hint-placeholder-count="3">
+<span class="mono" style="font-size:10px;letter-spacing:1px;color:#A6A6A0;margin-top:6px">{{mt.lb}}</span>
+<span style="display:flex;gap:3px;width:100%;margin-top:4px"><sc-for list="{{mt.segs}}" as="sg" hint-placeholder-count="5"><span style="{{sg.st}}"></span></sc-for></span>
+</sc-for>
+</button>
+</sc-for>
+</div></div>
+
+<div style="display:flex;flex-wrap:wrap;gap:18px">
+<div style="flex:1 1 280px;border-radius:24px;background:#111114;border:1px solid rgba(255,255,255,.08);padding:24px">
+<div class="mono" style="font-size:11px;letter-spacing:2px;color:#A6A6A0;margin-bottom:16px">03 / CALIDAD DE CAPA</div>
+<div style="display:flex;gap:10px">
+<sc-for list="{{quals}}" as="q" hint-placeholder-count="3">
+<button onClick="{{q.pick}}" style="{{q.style}}">
+<span style="display:flex;flex-direction:column;gap:3px;width:40px;margin-bottom:10px"><sc-for list="{{q.lines}}" as="ln" hint-placeholder-count="5"><span style="{{ln.st}}"></span></sc-for></span>
+<span style="font-weight:600;font-size:14px">{{q.n}}</span><span class="mono" style="font-size:11px;color:#A6A6A0">{{q.sub}}</span>
+</button>
+</sc-for>
+</div></div>
+<div style="flex:1 1 220px;border-radius:24px;background:#111114;border:1px solid rgba(255,255,255,.08);padding:24px">
+<div class="mono" style="font-size:11px;letter-spacing:2px;color:#A6A6A0;margin-bottom:12px">04 / RELLENO</div>
+<div style="display:flex;align-items:center;gap:16px">
+<div style="width:68px;height:68px;flex:none;border-radius:12px;border:2px solid {{ac}};background:{{infillBg}}"></div>
+<span style="font-family:Unbounded,sans-serif;font-size:34px;font-weight:700">{{infill}}%</span>
+</div>
+<input type="range" min="0" max="100" step="5" value="{{infill}}" onInput="{{onInfill}}" aria-label="Densidad de relleno" style="width:100%;margin-top:16px;accent-color:{{ac}}">
+</div>
+</div>
+
+<div style="border-radius:24px;background:#111114;border:1px solid rgba(255,255,255,.08);padding:24px">
+<div class="mono" style="font-size:11px;letter-spacing:2px;color:#A6A6A0;margin-bottom:16px">05 / COLOR DEL FILAMENTO · {{colorName}}</div>
+<div style="display:flex;flex-wrap:wrap;gap:14px">
+<sc-for list="{{colors}}" as="c" hint-placeholder-count="8"><button aria-label="{{c.name}}" onClick="{{c.pick}}" style="{{c.style}}"></button></sc-for>
+</div></div>
+</div>
+</div>
+</section>
+
+<section id="work" style="max-width:1240px;margin:0 auto;padding:40px 24px 96px;box-sizing:border-box">
+<div style="max-width:720px;margin-bottom:32px"><span class="mono" style="font-size:12px;letter-spacing:2px;color:{{ac}}">// GALERÍA</span><h2 style="font-size:clamp(28px,4.4vw,48px);line-height:1.08;margin:14px 0 0;letter-spacing:-1px">Lo que podemos imprimir para ti</h2><p style="color:#A6A6A0;font-size:17px;line-height:1.6;margin:16px 0 0">Toca cualquier pieza para verla de cerca.</p></div>
+<div style="display:flex;flex-wrap:wrap;gap:10px;margin-bottom:28px">
+<sc-for list="{{filters}}" as="f" hint-placeholder-count="5"><button onClick="{{f.pick}}" style="{{f.style}}">{{f.name}}</button></sc-for>
+</div>
+<div style="display:flex;flex-wrap:wrap;gap:20px">
+<sc-for list="{{works}}" as="w" hint-placeholder-count="8">
+<button class="tile tilt" onClick="{{w.open}}" style="flex:1 1 260px;min-width:0;height:320px;position:relative;overflow:hidden;cursor:pointer;text-align:left;color:#F2F2EE;padding:0;border-radius:24px;background:radial-gradient(circle at 50% 45%,rgba(255,255,255,.07),transparent 60%),#141417;border:1px solid rgba(255,255,255,.08)">
+<span aria-hidden="true" style="position:absolute;left:-20%;right:-20%;bottom:-40px;height:160px;background-image:linear-gradient(rgba(255,255,255,.08) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.08) 1px,transparent 1px);background-size:28px 28px;transform:perspective(400px) rotateX(62deg);-webkit-mask-image:linear-gradient(transparent,#000);mask-image:linear-gradient(transparent,#000)"></span>
+<span class="flo" style="{{w.floSt}}"><img class="pic" src="{{w.img}}" alt="{{w.name}}" style="display:block;width:100%;height:100%;object-fit:contain"></span>
+<span style="position:absolute;left:18px;right:18px;bottom:16px;display:flex;justify-content:space-between;align-items:flex-end;gap:10px"><span><span class="mono" style="display:block;font-size:11px;letter-spacing:1px;color:{{ac}}">{{w.cat}}</span><span style="display:block;font-weight:600;font-size:17px;margin-top:4px">{{w.name}}</span></span><span style="width:36px;height:36px;flex:none;border-radius:50%;display:flex;align-items:center;justify-content:center;border:1px solid rgba(255,255,255,.2)"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M15 3h6v6 M9 21H3v-6 M21 3l-7 7 M3 21l7-7"></path></svg></span></span>
+</button>
+</sc-for>
+</div>
+
+<div style="display:flex;flex-wrap:wrap;gap:32px;align-items:center;margin-top:56px;border-radius:28px;background:#111114;border:1px solid rgba(255,255,255,.08);padding:32px">
+<div style="flex:1 1 280px;min-width:0">
+<span class="mono" style="font-size:12px;letter-spacing:2px;color:{{ac}}">// ACABADO</span>
+<h3 style="font-size:28px;margin:12px 0 12px;letter-spacing:-.5px">Cruda vs. posprocesada</h3>
+<p style="color:#A6A6A0;line-height:1.6;margin:0 0 20px">Desliza para ver la diferencia entre una pieza recién salida de la impresora, con líneas de capa visibles, y la misma pieza lijada y con acabado liso.</p>
+<input type="range" min="0" max="100" value="{{cmp}}" onInput="{{onCmp}}" aria-label="Comparar pieza cruda y acabada" style="width:100%;accent-color:{{ac}}">
+</div>
+<div style="flex:1 1 420px;min-width:0;position:relative;height:340px;border-radius:20px;overflow:hidden;background:radial-gradient(circle at 50% 55%,rgba(255,106,26,.16),transparent 60%),#17171B">
+<img src="./assets/4674f67eb8550e3cfb48873c4fdb6c43.svg" alt="Pieza con acabado liso" style="position:absolute;inset:0;width:100%;height:100%;object-fit:contain">
+<img src="./assets/f5fdf233262d1ac063c63e2d7fee99e0.svg" alt="Pieza cruda con líneas de capa" style="position:absolute;inset:0;width:100%;height:100%;object-fit:contain;clip-path:{{rawClip}}">
+<div style="position:absolute;top:0;bottom:0;width:2px;background:#F2F2EE;left:{{cmp}}%;box-shadow:0 0 16px rgba(255,255,255,.6)"><span style="position:absolute;top:50%;left:-19px;width:40px;height:40px;margin-top:-20px;border-radius:50%;background:#F2F2EE;color:#0B0B0D;display:flex;align-items:center;justify-content:center"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l-6 6 6 6 M15 6l6 6-6 6"></path></svg></span></div>
+<span class="mono" style="position:absolute;left:14px;bottom:14px;font-size:11px;letter-spacing:1px;padding:6px 10px;border-radius:8px;background:rgba(11,11,13,.8)">CRUDA</span>
+<span class="mono" style="position:absolute;right:14px;bottom:14px;font-size:11px;letter-spacing:1px;padding:6px 10px;border-radius:8px;background:rgba(11,11,13,.8)">ACABADA</span>
+</div>
+</div>
+</section>
+
+<section id="materiales" style="max-width:1240px;margin:0 auto;padding:40px 24px 96px;box-sizing:border-box">
+<div style="max-width:720px;margin-bottom:32px"><span class="mono" style="font-size:12px;letter-spacing:2px;color:{{ac}}">// MATERIALES</span><h2 style="font-size:clamp(28px,4.4vw,48px);line-height:1.08;margin:14px 0 0;letter-spacing:-1px">Cuatro materiales, cada uno para un trabajo</h2></div>
+<div style="display:flex;flex-wrap:wrap;gap:10px;margin-bottom:20px">
+<sc-for list="{{mtabs}}" as="tb" hint-placeholder-count="4"><button onClick="{{tb.pick}}" style="{{tb.style}}">{{tb.n}}</button></sc-for>
+</div>
+<div style="display:flex;flex-wrap:wrap;border-radius:28px;background:#111114;border:1px solid rgba(255,255,255,.08);overflow:hidden">
+<div style="flex:1 1 360px;min-width:0;position:relative;height:380px;perspective:1000px;background:radial-gradient(circle at 50% 60%,{{mtGlow}},transparent 60%),#0E0E11">
+<div class="turnF" style="position:absolute;left:50%;top:62%;width:240px;height:240px;margin:-120px 0 0 -120px">
+<sc-for list="{{mtLayers}}" as="l" hint-placeholder-count="24"><div style="{{l.o}}"><div style="{{l.r}}"></div></div></sc-for>
+</div>
+<span aria-hidden="true" style="position:absolute;left:24px;bottom:12px;font-family:Unbounded,sans-serif;font-weight:700;font-size:96px;line-height:1;color:transparent;-webkit-text-stroke:1px rgba(255,255,255,.18)">{{mtName}}</span>
+</div>
+<div style="flex:1 1 420px;min-width:0;padding:36px;box-sizing:border-box">
+<h3 style="font-size:34px;margin:0 0 12px">{{mtName}}</h3>
+<p style="color:#C9C9C3;font-size:17px;line-height:1.6;margin:0 0 24px">{{mtDesc}}</p>
+<sc-for list="{{mtSpecs}}" as="r" hint-placeholder-count="4">
+<div style="display:flex;flex-wrap:wrap;justify-content:space-between;gap:8px;padding:14px 0;border-top:1px solid rgba(255,255,255,.08)"><span class="mono" style="font-size:12px;letter-spacing:1px;color:#A6A6A0">{{r.k}}</span><span style="font-weight:500;text-align:right">{{r.v}}</span></div>
+</sc-for>
+<p class="mono" style="font-size:11px;color:#8C8C86;margin:16px 0 0">Valores aproximados de referencia. Volumen máximo de impresión: {{bedTxt}}</p>
+</div>
+</div>
+</section>
+
+<section id="how" style="max-width:1240px;margin:0 auto;padding:40px 24px 96px;box-sizing:border-box">
+<div style="max-width:720px;margin-bottom:40px"><span class="mono" style="font-size:12px;letter-spacing:2px;color:{{ac}}">// PROCESO</span><h2 style="font-size:clamp(28px,4.4vw,48px);line-height:1.08;margin:14px 0 0;letter-spacing:-1px">Del archivo a tu puerta en 4 pasos</h2></div>
+<div style="display:flex;flex-wrap:wrap;gap:16px">
+<sc-for list="{{steps}}" as="p" hint-placeholder-count="4">
+<button onClick="{{p.pick}}" style="{{p.style}}">
+<span style="display:block;height:4px;border-radius:2px;background:rgba(255,255,255,.1);overflow:hidden;width:100%"><span class="bar" style="{{p.fill}}"></span></span>
+<span style="display:flex;justify-content:space-between;align-items:center;width:100%;margin-top:24px"><span style="{{p.node}}"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="{{p.icon}}"></path></svg></span><span class="mono" style="font-size:12px;color:#A6A6A0">{{p.n}}</span></span>
+<span style="font-family:Unbounded,sans-serif;font-weight:600;font-size:19px;margin-top:22px">{{p.title}}</span>
+<span style="font-size:15px;color:#A6A6A0;margin-top:8px;line-height:1.5">{{p.text}}</span>
+</button>
+</sc-for>
+</div>
+</section>
+
+<section id="planes" style="max-width:1240px;margin:0 auto;padding:40px 24px 96px;box-sizing:border-box"><div style="max-width:720px;margin-bottom:40px"><span class="mono" style="font-size:12px;letter-spacing:2px;color:{{ac}}">// OPCIONES</span><h2 style="font-size:clamp(28px,4.4vw,48px);line-height:1.08;margin:14px 0 0;letter-spacing:-1px">Elige cómo quieres imprimir</h2><p style="color:#A6A6A0;font-size:17px;line-height:1.6;margin:16px 0 0">Desde una sola pieza de prueba hasta producción por lotes.</p></div><div style="display:flex;flex-wrap:wrap;gap:24px;align-items:stretch"><div class="pcard" style="flex:1 1 300px;min-width:0;border-radius:28px;padding:1px;background:rgba(255,255,255,.1)"><div style="position:relative;height:100%;box-sizing:border-box;border-radius:26px;background:#111114;padding:34px;display:flex;flex-direction:column"><span class="mono" style="font-size:11px;letter-spacing:1px;color:#A6A6A0;margin-bottom:14px">PLAN</span><h3 style="margin:0;font-size:28px">Prueba</h3><p style="margin:8px 0 24px;color:#A6A6A0">Una pieza para validar tu idea</p><div style="font-family:Unbounded,sans-serif;font-size:30px;font-weight:600;margin-bottom:24px">[TU PRECIO]</div><div style="display:flex;flex-direction:column;gap:14px;flex:1;margin-bottom:30px"><span style="display:flex;gap:10px;align-items:flex-start;color:#D8D8D2"><span style="color:{{ac}};flex:none"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 12l5 5L20 6"></path></svg></span>1 pieza en PLA o PETG</span><span style="display:flex;gap:10px;align-items:flex-start;color:#D8D8D2"><span style="color:{{ac}};flex:none"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 12l5 5L20 6"></path></svg></span>Revisión de archivo</span><span style="display:flex;gap:10px;align-items:flex-start;color:#D8D8D2"><span style="color:{{ac}};flex:none"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 12l5 5L20 6"></path></svg></span>Color a elección</span></div><a class="btn" href="#quote" style="text-align:center;padding:16px;border-radius:14px;text-decoration:none;font-weight:600;border:1px solid rgba(255,255,255,.25);color:#F2F2EE">Cotizar</a></div></div><div class="pcard" style="flex:1 1 300px;min-width:0;position:relative;overflow:hidden;border-radius:28px;padding:2px;box-shadow:0 0 60px {{acGlow}}"><div aria-hidden="true" class="rot" style="position:absolute;left:-50%;top:-50%;width:200%;height:200%;background:conic-gradient({{ac}},transparent 25%,transparent 50%,{{ac}} 75%,transparent)"></div><div style="position:relative;height:100%;box-sizing:border-box;border-radius:26px;background:#111114;padding:34px;display:flex;flex-direction:column"><span class="mono" style="align-self:flex-start;padding:5px 12px;border-radius:99px;background:{{ac}};color:#0B0B0D;font-size:11px;font-weight:500;letter-spacing:1px;margin-bottom:14px">EL MÁS PEDIDO POR EMPRENDEDORES</span><h3 style="margin:0;font-size:28px">Prototipo</h3><p style="margin:8px 0 24px;color:#A6A6A0">Iteraciones hasta acertar</p><div style="font-family:Unbounded,sans-serif;font-size:30px;font-weight:600;margin-bottom:24px">[TU PRECIO]</div><div style="display:flex;flex-direction:column;gap:14px;flex:1;margin-bottom:30px"><span style="display:flex;gap:10px;align-items:flex-start;color:#D8D8D2"><span style="color:{{ac}};flex:none"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 12l5 5L20 6"></path></svg></span>Varias versiones de tu diseño</span><span style="display:flex;gap:10px;align-items:flex-start;color:#D8D8D2"><span style="color:{{ac}};flex:none"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 12l5 5L20 6"></path></svg></span>Los cuatro materiales</span><span style="display:flex;gap:10px;align-items:flex-start;color:#D8D8D2"><span style="color:{{ac}};flex:none"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 12l5 5L20 6"></path></svg></span>Asesoría por WhatsApp</span></div><a class="btn" href="#quote" style="text-align:center;padding:16px;border-radius:14px;text-decoration:none;font-weight:600;background:{{ac}};color:#0B0B0D">Cotizar</a></div></div><div class="pcard" style="flex:1 1 300px;min-width:0;border-radius:28px;padding:1px;background:rgba(255,255,255,.1)"><div style="position:relative;height:100%;box-sizing:border-box;border-radius:26px;background:#111114;padding:34px;display:flex;flex-direction:column"><span class="mono" style="font-size:11px;letter-spacing:1px;color:#A6A6A0;margin-bottom:14px">PLAN</span><h3 style="margin:0;font-size:28px">Lotes</h3><p style="margin:8px 0 24px;color:#A6A6A0">Producción por cantidad</p><div style="font-family:Unbounded,sans-serif;font-size:30px;font-weight:600;margin-bottom:24px">[TU PRECIO]</div><div style="display:flex;flex-direction:column;gap:14px;flex:1;margin-bottom:30px"><span style="display:flex;gap:10px;align-items:flex-start;color:#D8D8D2"><span style="color:{{ac}};flex:none"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 12l5 5L20 6"></path></svg></span>Precio por unidad que baja con el volumen</span><span style="display:flex;gap:10px;align-items:flex-start;color:#D8D8D2"><span style="color:{{ac}};flex:none"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 12l5 5L20 6"></path></svg></span>Acabado consistente</span><span style="display:flex;gap:10px;align-items:flex-start;color:#D8D8D2"><span style="color:{{ac}};flex:none"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 12l5 5L20 6"></path></svg></span>Entrega programada</span></div><a class="btn" href="#quote" style="text-align:center;padding:16px;border-radius:14px;text-decoration:none;font-weight:600;border:1px solid rgba(255,255,255,.25);color:#F2F2EE">Cotizar</a></div></div></div></section>
+
+
+<section style="max-width:880px;margin:0 auto;padding:40px 24px 96px;box-sizing:border-box">
+<div style="margin-bottom:32px"><span class="mono" style="font-size:12px;letter-spacing:2px;color:{{ac}}">// PREGUNTAS</span><h2 style="font-size:clamp(28px,4.4vw,48px);line-height:1.08;margin:14px 0 0;letter-spacing:-1px">Resolvemos tus dudas</h2></div>
+<sc-for list="{{faqs}}" as="q" hint-placeholder-count="6">
+<div style="border-bottom:1px solid rgba(255,255,255,.1)">
+<button onClick="{{q.pick}}" style="width:100%;text-align:left;cursor:pointer;background:transparent;border:0;color:#F2F2EE;padding:24px 0;display:flex;justify-content:space-between;align-items:center;gap:16px;font-size:18px;font-weight:500"><span>{{q.q}}</span><span style="{{q.signSt}}">+</span></button>
+<div style="{{q.aStyle}}">{{q.a}}</div>
+</div>
+</sc-for>
+</section>
+
+<section style="max-width:1240px;margin:0 auto;padding:0 24px 96px;box-sizing:border-box">
+<div style="position:relative;overflow:hidden;border-radius:32px;padding:2px">
+<div aria-hidden="true" class="rot" style="position:absolute;left:-50%;top:-50%;width:200%;height:200%;background:conic-gradient({{ac}},transparent 20%,transparent 50%,{{ac}} 70%,transparent 90%)"></div>
+<div style="position:relative;border-radius:30px;background:#111114;padding:72px 32px;text-align:center;overflow:hidden">
+<img class="flo" src="./assets/22ccbb5fc7061580bb18b843f94ef01c.svg" alt="" style="position:absolute;left:-30px;top:20px;width:220px;opacity:.85">
+<img class="flo" src="./assets/b5abefe48db96cd298f21d6d642a2e94.svg" alt="" style="position:absolute;right:-30px;bottom:10px;width:220px;opacity:.85;animation-delay:-2.5s">
+<h2 style="position:relative;font-size:clamp(30px,5.4vw,64px);line-height:1.02;margin:0 0 18px;letter-spacing:-2px">¿Tienes una pieza<br>en mente?</h2>
+<p style="position:relative;font-size:18px;color:#C9C9C3;margin:0 auto 34px;max-width:560px;line-height:1.6">Sube tu archivo y recibe tu cotización ahora, o escríbenos y la armamos juntos.</p>
+<div style="position:relative;display:flex;flex-wrap:wrap;gap:12px;justify-content:center">
+<a class="btn" href="#quote" style="padding:18px 30px;border-radius:16px;background:{{ac}};color:#0B0B0D;font-weight:600;text-decoration:none;box-shadow:0 10px 40px {{acGlow}}">Cotizar mi pieza</a>
+<a class="btn" href="{{wa}}" style="padding:18px 30px;border-radius:16px;border:1px solid rgba(255,255,255,.25);color:#F2F2EE;font-weight:500;text-decoration:none">Escribir por WhatsApp</a>
+</div></div></div>
+</section>
+
+<footer style="border-top:1px solid rgba(255,255,255,.08);padding:56px 24px 40px;box-sizing:border-box">
+<div style="max-width:1240px;margin:0 auto;display:flex;flex-wrap:wrap;gap:40px;justify-content:space-between">
+<div style="flex:1 1 260px"><div style="font-family:Unbounded,sans-serif;font-size:24px;font-weight:700">Capa3D</div><p style="color:#A6A6A0;margin:12px 0 0;line-height:1.6">Impresión 3D FDM para prototipos, repuestos y diseño.<br>[TU CORREO] · [TU WHATSAPP]</p></div>
+<div style="flex:1 1 200px"><div class="mono" style="font-size:11px;letter-spacing:2px;color:#A6A6A0;margin-bottom:14px">FORMATOS ADMITIDOS</div><div class="mono" style="display:flex;flex-wrap:wrap;gap:8px;font-size:12px"><span style="padding:6px 10px;border-radius:8px;border:1px solid rgba(255,255,255,.15)">.STL</span><span style="padding:6px 10px;border-radius:8px;border:1px solid rgba(255,255,255,.15)">.OBJ</span><span style="padding:6px 10px;border-radius:8px;border:1px solid rgba(255,255,255,.15)">.3MF</span><span style="padding:6px 10px;border-radius:8px;border:1px solid rgba(255,255,255,.15)">.STEP</span></div></div>
+<div style="display:flex;flex-direction:column;gap:10px"><div class="mono" style="font-size:11px;letter-spacing:2px;color:#A6A6A0;margin-bottom:4px">ENLACES</div><a href="#" style="color:#C9C9C3">Preguntas frecuentes</a><a href="#" style="color:#C9C9C3">Instagram</a><a href="#" style="color:#C9C9C3">TikTok</a></div>
+</div>
+<div class="mono" style="max-width:1240px;margin:40px auto 0;font-size:11px;letter-spacing:1px;color:#8C8C86">© 2026 CAPA3D</div>
+</footer>
+
+<a class="btn" href="{{wa}}" aria-label="Escribir por WhatsApp" style="position:fixed;right:20px;bottom:20px;z-index:20;display:flex;align-items:center;gap:8px;padding:14px 20px;border-radius:99px;background:#25D366;color:#06210F;font-weight:600;text-decoration:none;box-shadow:0 10px 30px rgba(37,211,102,.35)"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 5h16v11H9l-5 4z"></path></svg>WhatsApp</a>
+
+<sc-if value="{{hasSel}}" hint-placeholder-val="{{ false }}">
+<div style="position:fixed;inset:0;z-index:30;display:flex;align-items:center;justify-content:center;padding:20px;background:rgba(5,5,7,.78);backdrop-filter:blur(12px)">
+<div style="position:relative;width:100%;max-width:920px;max-height:90vh;overflow:auto;display:flex;flex-wrap:wrap;border-radius:28px;background:#111114;border:1px solid rgba(255,255,255,.12)">
+<button onClick="{{closeSel}}" aria-label="Cerrar" style="position:absolute;right:14px;top:14px;z-index:2;width:44px;height:44px;border-radius:50%;border:1px solid rgba(255,255,255,.2);background:#0B0B0D;color:#F2F2EE;cursor:pointer;display:flex;align-items:center;justify-content:center"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12 M18 6L6 18"></path></svg></button>
+<div style="flex:1 1 380px;min-width:0;height:420px;display:flex;align-items:center;justify-content:center;background:radial-gradient(circle at 50% 50%,rgba(255,255,255,.08),transparent 60%),#17171B">
+<img class="wob" src="{{selImg}}" alt="{{selName}}" style="width:88%;height:88%;object-fit:contain">
+</div>
+<div style="flex:1 1 320px;min-width:0;padding:40px 32px;box-sizing:border-box">
+<span class="mono" style="font-size:12px;letter-spacing:2px;color:{{ac}}">{{selCat}}</span>
+<h3 style="font-size:30px;margin:12px 0 12px">{{selName}}</h3>
+<p style="color:#C9C9C3;line-height:1.6;margin:0 0 24px">{{selDesc}}</p>
+<div style="display:flex;justify-content:space-between;padding:14px 0;border-top:1px solid rgba(255,255,255,.08)"><span class="mono" style="font-size:12px;color:#A6A6A0">MATERIAL SUGERIDO</span><span>{{selMat}}</span></div>
+<a class="btn" href="#quote" onClick="{{closeSel}}" style="display:block;text-align:center;margin-top:20px;padding:16px;border-radius:14px;background:{{ac}};color:#0B0B0D;font-weight:600;text-decoration:none">Cotizar algo así</a>
+</div>
+</div></div>
+</sc-if>
+
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"accent":{"editor":"color","default":"#FF5A1F","options":["#FF5A1F","#C6FF3D","#3D8BFF","#F2F2EE"],"section":"Marca"},"whatsapp":{"editor":"text","default":"","section":"Contacto"},"precioPLA":{"editor":"int","default":120,"min":0,"max":5000,"unit":"COP/g","section":"Tarifas"},"precioPETG":{"editor":"int","default":140,"min":0,"max":5000,"unit":"COP/g","section":"Tarifas"},"precioABS":{"editor":"int","default":140,"min":0,"max":5000,"unit":"COP/g","section":"Tarifas"},"precioTPU":{"editor":"int","default":250,"min":0,"max":5000,"unit":"COP/g","section":"Tarifas"},"tarifaHora":{"editor":"int","default":2500,"min":0,"max":100000,"unit":"COP/h","section":"Tarifas"},"cargoBase":{"editor":"int","default":5000,"min":0,"max":200000,"unit":"COP","section":"Tarifas"},"camaX":{"editor":"int","default":220,"min":50,"max":1000,"unit":"mm","section":"Impresora"},"camaY":{"editor":"int","default":220,"min":50,"max":1000,"unit":"mm","section":"Impresora"},"camaZ":{"editor":"int","default":250,"min":50,"max":1000,"unit":"mm","section":"Impresora"},"$preview":{"width":1360,"height":8900}}'>
+class Component extends DCLogic {
+constructor(p){super(p);var self=this;
+this.state={tx:0,ty:0,t:0,mat:0,q:1,infill:20,color:3,wire:false,filter:'Todos',cmp:50,mtab:0,step:0,lock:false,faq:-1,file:'',sel:-1,status:'',an:null,unit:0,scale:100,qty:1,auto:true};
+this.mesh=null;this.ang=0.7;this.elev=0.5;this.need=false;this.lt=0;this.drag=null;
+this.cvRef=function(el){self.cv=el;if(el)self.need=true;};
+var g=[];for(var i=0;i<24;i++){var x=(110+48*Math.sin(i*0.7)).toFixed(2),y=(110+48*Math.cos(i*0.53)).toFixed(2);g.push(i%6===0?('G0 X'+x+' Y'+y+' F9000'):('G1 X'+x+' Y'+y+' E'+(0.021+i*0.013).toFixed(4)));if(i%8===7)g.push(';CAPA '+(i*10+12));}
+this.gl=g.concat(g);
+}
+componentDidMount(){var self=this;this.iv=setInterval(function(){self.setState({t:self.state.t+1});},350);
+var loop=function(ts){self.raf=requestAnimationFrame(loop);if(!self.mesh||!self.cv)return;var heavy=self.mesh.n>60000,gap=heavy?150:33;if(ts-self.lt<gap)return;var dt=self.lt?Math.min(100,ts-self.lt):0;self.lt=ts;if(self.state.auto&&!self.drag&&!heavy){self.ang+=dt*0.0006;self.need=true;}if(self.need){self.need=false;self.draw();}};
+this.raf=requestAnimationFrame(loop);}
+componentWillUnmount(){clearInterval(this.iv);cancelAnimationFrame(this.raf);}
+componentDidUpdate(pp,ps){var s=this.state;if(ps.color!==s.color||ps.wire!==s.wire||ps.an!==s.an)this.need=true;}
+parseSTL(buf){var dv=new DataView(buf);if(buf.byteLength>=84){var n=dv.getUint32(80,true);if(84+n*50===buf.byteLength){var p=new Float32Array(n*9);for(var i=0;i<n;i++){var o=84+i*50+12;for(var k=0;k<9;k++)p[i*9+k]=dv.getFloat32(o+k*4,true);}return p;}}
+var txt=new TextDecoder().decode(buf),re=/vertex\s+([-+\d.eE]+)\s+([-+\d.eE]+)\s+([-+\d.eE]+)/g,a=[],m;while((m=re.exec(txt)))a.push(+m[1],+m[2],+m[3]);a.length-=a.length%9;return new Float32Array(a);}
+parseOBJ(txt){var v=[],out=[],lines=txt.split('\n');for(var i=0;i<lines.length;i++){var l=lines[i].trim();if(l.charAt(0)==='v'&&l.charAt(1)===' '){var q=l.split(/\s+/);v.push(+q[1],-q[3],+q[2]);}else if(l.charAt(0)==='f'&&l.charAt(1)===' '){var nv=v.length/3;var f=l.split(/\s+/).slice(1).map(function(t){var k=parseInt(t,10);return k<0?nv+k:k-1;});for(var j=1;j+1<f.length;j++){var tri=[f[0],f[j],f[j+1]];for(var z=0;z<3;z++){var ix=tri[z];out.push(v[ix*3],v[ix*3+1],v[ix*3+2]);}}}}return new Float32Array(out);}
+async parse3MF(buf){var dv=new DataView(buf),L=buf.byteLength,e=-1,dec=new TextDecoder();for(var i=L-22;i>=Math.max(0,L-70000);i--){if(dv.getUint32(i,true)===0x06054b50){e=i;break;}}if(e<0)throw new Error('zip');
+var cnt=dv.getUint16(e+10,true),off=dv.getUint32(e+16,true),best=null;for(var k=0;k<cnt;k++){if(dv.getUint32(off,true)!==0x02014b50)break;var meth=dv.getUint16(off+10,true),cs=dv.getUint32(off+20,true),nl=dv.getUint16(off+28,true),el=dv.getUint16(off+30,true),cl=dv.getUint16(off+32,true),lo=dv.getUint32(off+42,true),nm=dec.decode(new Uint8Array(buf,off+46,nl));if(/\.model$/i.test(nm)&&(!best||/3dmodel/i.test(nm)))best={meth:meth,cs:cs,lo:lo};off+=46+nl+el+cl;}
+if(!best)throw new Error('model');var ln=dv.getUint16(best.lo+26,true),le=dv.getUint16(best.lo+28,true),data=new Uint8Array(buf,best.lo+30+ln+le,best.cs),xml;
+if(best.meth===0)xml=dec.decode(data);else xml=await new Response(new Blob([data]).stream().pipeThrough(new DecompressionStream('deflate-raw'))).text();
+var um={micron:.001,millimeter:1,centimeter:10,inch:25.4,foot:304.8,meter:1000}[(xml.match(/<model[^>]*\bunit="([^"]+)"/)||[])[1]||'millimeter']||1;
+var out=[],mr=/<mesh\b[^>]*>([\s\S]*?)<\/mesh>/g,mm;var at=function(a,n){var r=a.match(new RegExp('\\b'+n+'="([^"]+)"'));return r?+r[1]:0;};
+while((mm=mr.exec(xml))){var body=mm[1],vs=[],r=/<vertex\b([^>]*)>/g,x;while((x=r.exec(body)))vs.push(at(x[1],'x')*um,at(x[1],'y')*um,at(x[1],'z')*um);var tr=/<triangle\b([^>]*)>/g;while((x=tr.exec(body))){var ids=[at(x[1],'v1'),at(x[1],'v2'),at(x[1],'v3')];for(var z=0;z<3;z++)out.push(vs[ids[z]*3],vs[ids[z]*3+1],vs[ids[z]*3+2]);}}
+return new Float32Array(out);}
+analyze(p){var n=p.length/9|0,mnx=1e30,mny=1e30,mnz=1e30,mxx=-1e30,mxy=-1e30,mxz=-1e30,vol=0,area=0;
+for(var i=0;i<n;i++){var o=i*9,ax=p[o],ay=p[o+1],az=p[o+2],bx=p[o+3],by=p[o+4],bz=p[o+5],cx=p[o+6],cy=p[o+7],cz=p[o+8];
+mnx=Math.min(mnx,ax,bx,cx);mny=Math.min(mny,ay,by,cy);mnz=Math.min(mnz,az,bz,cz);mxx=Math.max(mxx,ax,bx,cx);mxy=Math.max(mxy,ay,by,cy);mxz=Math.max(mxz,az,bz,cz);
+var ux=bx-ax,uy=by-ay,uz=bz-az,vx=cx-ax,vy=cy-ay,vz=cz-az,nx=uy*vz-uz*vy,ny=uz*vx-ux*vz,nz=ux*vy-uy*vx;area+=Math.sqrt(nx*nx+ny*ny+nz*nz)/2;
+vol+=(ax*(by*cz-bz*cy)-ay*(bx*cz-bz*cx)+az*(bx*cy-by*cx))/6;}
+var open=-1;if(n<=250000){var ids=new Map(),tri=new Uint32Array(n*3);for(var j=0;j<n*3;j++){var key=Math.round(p[j*3]*1000)+','+Math.round(p[j*3+1]*1000)+','+Math.round(p[j*3+2]*1000),id=ids.get(key);if(id===undefined){id=ids.size;ids.set(key,id);}tri[j]=id;}
+var ec=new Map(),add=function(a,b){if(a===b)return;var k=a<b?a*4294967296+b:b*4294967296+a;ec.set(k,(ec.get(k)||0)+1);};for(var t=0;t<n;t++){add(tri[t*3],tri[t*3+1]);add(tri[t*3+1],tri[t*3+2]);add(tri[t*3+2],tri[t*3]);}open=0;ec.forEach(function(c){if(c!==2)open++;});}
+var dx=mxx-mnx,dy=mxy-mny,dz=mxz-mnz;
+return {n:n,dx:dx,dy:dy,dz:dz,vol:Math.abs(vol)/1000,area:area/100,open:open,cx:(mnx+mxx)/2,cy:(mny+mxy)/2,cz:(mnz+mxz)/2,minz:mnz,diag:Math.sqrt(dx*dx+dy*dy+dz*dz)||1};}
+loadFile(f){var self=this,ext=(f.name.split('.').pop()||'').toLowerCase();this.mesh=null;
+this.setState({file:f.name,status:'reading',an:null,scale:100,unit:0,qty:1});
+if(ext==='step'||ext==='stp'){this.setState({status:'manual'});return;}
+if(['stl','obj','3mf'].indexOf(ext)<0){this.setState({status:'error'});return;}
+if(f.size>100*1024*1024){this.setState({status:'big'});return;}
+f.arrayBuffer().then(function(buf){return new Promise(function(res){setTimeout(function(){res(buf);},40);});})
+.then(function(buf){if(ext==='stl')return self.parseSTL(buf);if(ext==='obj')return self.parseOBJ(new TextDecoder().decode(buf));return self.parse3MF(buf);})
+.then(function(p){if(!p||p.length<9)throw new Error('empty');for(var i=0;i<p.length;i++){if(!isFinite(p[i]))throw new Error('nan');}var an=self.analyze(p);self.mesh={p:p,n:an.n,cx:an.cx,cy:an.cy,cz:an.cz,minz:an.minz,diag:an.diag};self.need=true;self.setState({status:'ok',an:an});})
+.catch(function(){self.mesh=null;self.setState({status:'error',an:null});});}
+draw(){var cv=this.cv,M=this.mesh;if(!cv||!M)return;var dpr=window.devicePixelRatio||1,W=cv.clientWidth,H=cv.clientHeight;if(!W||!H)return;
+if(cv.width!==Math.round(W*dpr)||cv.height!==Math.round(H*dpr)){cv.width=Math.round(W*dpr);cv.height=Math.round(H*dpr);}
+var c=cv.getContext('2d');c.setTransform(dpr,0,0,dpr,0,0);c.clearRect(0,0,W,H);
+var fil=[['#4A4A52'],['#F2F2EE'],['#8A8F98'],['#FF5A1F'],['#4F82FF'],['#3DDC84'],['#EF4F52'],['#FFD23F']][this.state.color][0];
+var R=parseInt(fil.substr(1,2),16),G=parseInt(fil.substr(3,2),16),Bc=parseInt(fil.substr(5,2),16);
+var ca=Math.cos(this.ang),sa=Math.sin(this.ang),ce=Math.cos(this.elev),se=Math.sin(this.elev),sc=Math.min(W,H*1.15)*0.62/M.diag,ox=W/2,oy=H/2+H*0.04;
+var P=function(x,y,z){var xr=x*ca-y*sa,yr=x*sa+y*ca;return [ox+xr*sc,oy-(yr*se+z*ce)*sc,yr*ce-z*se];};
+var g=M.diag*0.75,st=g/6,zf=M.minz-M.cz;c.strokeStyle='rgba(255,255,255,.07)';c.lineWidth=1;c.beginPath();for(var q=-6;q<=6;q++){var a1=P(q*st,-g,zf),a2=P(q*st,g,zf),b1=P(-g,q*st,zf),b2=P(g,q*st,zf);c.moveTo(a1[0],a1[1]);c.lineTo(a2[0],a2[1]);c.moveTo(b1[0],b1[1]);c.lineTo(b2[0],b2[1]);}c.stroke();
+var p=M.p,n=M.n,sx=new Float32Array(n*3),sy=new Float32Array(n*3),dep=new Float32Array(n),sh=new Uint8Array(n),Lx=-0.45,Ly=-0.62,Lz=0.64;
+for(var i=0;i<n;i++){var o=i*9,rx=[0,0,0],ry=[0,0,0],rz=[0,0,0],d=0;for(var k=0;k<3;k++){var x=p[o+k*3]-M.cx,y=p[o+k*3+1]-M.cy,z=p[o+k*3+2]-M.cz,xr=x*ca-y*sa,yr=x*sa+y*ca,y2=yr*ce-z*se,z2=yr*se+z*ce;rx[k]=xr;ry[k]=y2;rz[k]=z2;sx[i*3+k]=ox+xr*sc;sy[i*3+k]=oy-z2*sc;d+=y2;}dep[i]=d;
+var ux=rx[1]-rx[0],uy=ry[1]-ry[0],uz=rz[1]-rz[0],vx=rx[2]-rx[0],vy=ry[2]-ry[0],vz=rz[2]-rz[0],nx=uy*vz-uz*vy,ny=uz*vx-ux*vz,nz=ux*vy-uy*vx,nl=Math.sqrt(nx*nx+ny*ny+nz*nz)||1;
+sh[i]=Math.round(Math.min(1,0.3+0.7*Math.abs((nx*Lx+ny*Ly+nz*Lz)/nl))*31);}
+if(this.state.wire){c.strokeStyle='rgba('+R+','+G+','+Bc+',.45)';c.lineWidth=0.6;c.beginPath();for(var w=0;w<n;w++){c.moveTo(sx[w*3],sy[w*3]);c.lineTo(sx[w*3+1],sy[w*3+1]);c.lineTo(sx[w*3+2],sy[w*3+2]);c.closePath();}c.stroke();return;}
+var ord=new Uint32Array(n);for(var h=0;h<n;h++)ord[h]=h;ord.sort(function(a,b){return dep[b]-dep[a];});
+var pal=[];for(var s2=0;s2<32;s2++){var f2=s2/31;pal.push('rgb('+Math.round(R*f2)+','+Math.round(G*f2)+','+Math.round(Bc*f2)+')');}
+c.lineWidth=0.6;c.lineJoin='round';for(var t=0;t<n;t++){var ti=ord[t],col=pal[sh[ti]];c.fillStyle=col;c.strokeStyle=col;c.beginPath();c.moveTo(sx[ti*3],sy[ti*3]);c.lineTo(sx[ti*3+1],sy[ti*3+1]);c.lineTo(sx[ti*3+2],sy[ti*3+2]);c.closePath();c.fill();c.stroke();}}
+renderVals(){
+var s=this.state,self=this;var ac=this.props.accent??'#FF5A1F';
+var set=function(o){return function(){self.setState(o);};};
+var pat=function(col,inf){if(inf<=0)return 'transparent';if(inf>=100)return col;var gp=Math.round(4+(100-inf)/100*16);return 'repeating-linear-gradient(45deg,'+col+' 0 1.5px,transparent 1.5px '+gp+'px),repeating-linear-gradient(-45deg,'+col+' 0 1.5px,transparent 1.5px '+gp+'px)';};
+var pill=function(on){return 'padding:11px 18px;border-radius:99px;cursor:pointer;font-size:14px;font-weight:500;color:'+(on?'#0B0B0D':'#F2F2EE')+';border:1px solid '+(on?ac:'rgba(255,255,255,.2)')+';background:'+(on?ac:'transparent');};
+var stack=function(n,size,h,prof,col,opts){var out=[];for(var i=0;i<n;i++){var u=n>1?i/(n-1):0;var w=Math.round(prof(u));var c=size/2;var top=i===n-1;out.push({o:'position:absolute;left:0;top:0;width:'+size+'px;height:'+size+'px;transform-style:preserve-3d;transform:translateZ('+(u*h).toFixed(1)+'px)',cls:opts.anim?('k'+Math.round(u*47)):'',r:'position:absolute;left:'+(c-w/2)+'px;top:'+(c-w/2)+'px;width:'+w+'px;height:'+w+'px;border-radius:'+opts.rad+';box-sizing:border-box;border:'+opts.bw+'px solid '+col+';background:'+(top?pat(col,opts.inf):(opts.wire?'transparent':col+opts.alpha))+';box-shadow:'+(opts.wire?'none':'0 0 12px '+col+'40')});}return out;};
+var vase=function(base,amp,taper){return function(u){return base+amp*Math.sin(Math.PI*(0.12+0.76*u))-taper*u;};};
+// hero
+var hero=stack(36,340,175,vase(96,120,46),ac,{anim:true,rad:'50%',bw:2,inf:30,wire:false,alpha:'14'});
+var cyc=((s.t*0.35)%9)/9;var f=Math.min(1,Math.max(0,(cyc-0.04)/0.68));
+var gcode=this.gl.map(function(l){return {l:l,st:l.charAt(0)===';'?('color:'+ac):(l.charAt(1)==='0'?'color:#F2F2EE':'color:#8C8C86')};});
+var mw=['PLA','PETG','ABS','TPU','PROTOTIPOS','REPUESTOS','MINIATURAS','DECORACIÓN'];
+var marq=[];for(var r=0;r<2;r++){mw.forEach(function(w,i){marq.push({t:w,st:'padding:0 24px;'+(i%2===0?('color:'+ac):'color:transparent;-webkit-text-stroke:1px rgba(242,242,238,.45)')});marq.push({t:'✦',st:'padding:0 24px;color:#3A3A42'});});}
+// materials
+var mats=[
+{n:'PLA',tag:'Fácil y versátil',v:[3,1,2],r:.05,d:1.24,col:'#FF5A1F',desc:'El material más versátil: preciso, económico y con gran variedad de colores. Ideal para empezar.',temp:'Hasta ~55 °C',ideal:'Prototipos, figuras, decoración',fin:'Mate o brillante, buen detalle',rad:'50%',prof:vase(70,96,36)},
+{n:'PETG',tag:'Tenaz y resistente',v:[4,2,3],r:.06,d:1.27,col:'#3D8BFF',desc:'Más tenaz que el PLA y resistente a la humedad y a muchos químicos. Para piezas que se usan.',temp:'Hasta ~75 °C',ideal:'Piezas funcionales, exteriores, contenedores',fin:'Brillante y liso',rad:'50%',prof:function(u){return 128-12*u;}},
+{n:'ABS',tag:'Aguanta calor',v:[4,2,5],r:.06,d:1.04,col:'#C9C9C3',desc:'Soporta temperaturas altas y golpes. Se puede lijar y dar acabado para uso exigente.',temp:'Hasta ~95 °C',ideal:'Carcasas, piezas mecánicas, automotriz',fin:'Mate, se puede lijar',rad:'14px',prof:function(u){return 132;}},
+{n:'TPU',tag:'Flexible',v:[2,5,3],r:.09,d:1.21,col:'#3DDC84',desc:'Elástico y resistente al desgaste: se dobla y vuelve a su forma sin romperse.',temp:'Hasta ~60 °C',ideal:'Fundas, sellos, agarres, amortiguadores',fin:'Tacto tipo caucho',rad:'50%',prof:function(u){return 112+24*Math.sin(u*Math.PI*4);}}];
+var labels=['RESISTENCIA','FLEXIBILIDAD','CALOR'];
+var m=mats[s.mat];
+var fils=[['Negro','#1A1A1D','#4A4A52'],['Blanco','#F2F2EE','#F2F2EE'],['Gris','#8A8F98','#8A8F98'],['Naranja','#FF5A1F','#FF5A1F'],['Azul','#2F6BFF','#4F82FF'],['Verde','#3DDC84','#3DDC84'],['Rojo','#E5383B','#EF4F52'],['Amarillo','#FFD23F','#FFD23F']];
+var fl=fils[s.color],pcol=fl[2];
+var qs=[{n:'Borrador',sub:'0.28 mm',k:4,layers:14,bw:3,flow:12},{n:'Estándar',sub:'0.20 mm',k:6,layers:24,bw:2,flow:8},{n:'Detalle',sub:'0.12 mm',k:9,layers:38,bw:1.5,flow:4.5}];
+var q=qs[s.q];
+var pv=stack(q.layers,260,150,vase(70,96,36),pcol,{anim:false,rad:'50%',bw:q.bw,inf:s.infill,wire:s.wire,alpha:'2e'});
+var P=this.props,num=function(v,d){v=+v;return isFinite(v)&&v>0?v:d;};
+var ppg=[num(P.precioPLA,120),num(P.precioPETG,140),num(P.precioABS,140),num(P.precioTPU,250)][s.mat],rate=num(P.tarifaHora,2500),base=+(P.cargoBase??5000)||0;
+var bed=[num(P.camaX,220),num(P.camaY,220),num(P.camaZ,250)];
+var f1=function(x){return (+x).toLocaleString('es-CO',{maximumFractionDigits:1});},fmt=function(x){return Math.round(x).toLocaleString('es-CO');};
+var fh=function(h){if(h<1)return Math.max(1,Math.round(h*60))+' min';var hh=Math.floor(h),mi=Math.round((h-hh)*60);return hh+' h'+(mi?' '+mi+' min':'');};
+var an=s.status==='ok'?s.an:null,kk=[1,10,25.4][s.unit]*s.scale/100;
+var md=an?{dx:an.dx*kk,dy:an.dy*kk,dz:an.dz*kk,vol:an.vol*kk*kk*kk,area:an.area*kk*kk}:{dx:60,dy:60,dz:90,vol:40,area:90};
+var shell=Math.min(md.vol,md.area*0.12),extr=shell+Math.max(0,md.vol-shell)*s.infill/100;
+var gramsN=extr*1.1*m.d,hrs=extr*1000/q.flow/3600*1.25+0.2;
+var cMat=gramsN*ppg,cMach=hrs*rate,unitP=Math.round((base+cMat+cMach)/100)*100,qty=an?s.qty:1,totalP=unitP*qty;
+var price=fmt(totalP),grams=f1(gramsN),hours=fh(hrs);
+var dims=[md.dx,md.dy,md.dz],ds=dims.slice().sort(function(a,b){return a-b;}),bs=bed.slice().sort(function(a,b){return a-b;});
+var fitDirect=md.dx<=bed[0]&&md.dy<=bed[1]&&md.dz<=bed[2],fitRot=ds[0]<=bs[0]&&ds[1]<=bs[1]&&ds[2]<=bs[2];
+var maxScale=Math.max(10,Math.floor(Math.min(bs[0]/ds[0],bs[1]/ds[1],bs[2]/ds[2])*s.scale/5)*5);
+var dimTxt=f1(md.dx)+' × '+f1(md.dy)+' × '+f1(md.dz)+' mm';
+var checks=[];if(an){
+ if(an.open===0)checks.push(['ok','Malla cerrada: el modelo es sólido y se puede imprimir.']);else if(an.open>0)checks.push(['warn','La malla tiene '+an.open.toLocaleString('es-CO')+' bordes abiertos. La revisamos y reparamos antes de imprimir.']);else checks.push(['warn','Modelo muy detallado: revisamos la malla manualmente.']);
+ if(fitDirect)checks.push(['ok','Cabe en la impresora ('+bed.join(' × ')+' mm).']);else if(fitRot)checks.push(['ok','Cabe en la impresora girándolo sobre la cama.']);else checks.push(['bad','Excede el volumen de impresión. Escálalo a '+maxScale+'% o lo imprimimos en partes.']);
+ if(ds[2]<5)checks.push(['warn','Mide menos de 5 mm. Si tu archivo está en cm o pulgadas, cámbialo en Unidades.']);else if(ds[0]<0.8)checks.push(['warn','Su lado más delgado mide '+f1(ds[0])+' mm; puede quedar frágil.']);}
+var worst=checks.reduce(function(w,c){return c[0]==='bad'?'bad':(c[0]==='warn'&&w!=='bad'?'warn':w);},'ok');
+var vc={ok:['#3DDC84','LISTO PARA IMPRIMIR'],warn:['#FFD23F','REQUIERE REVISIÓN'],bad:['#EF4F52','NO CABE ASÍ']}[worst];
+var wnum=String(P.whatsapp??'').replace(/\D/g,''),wa='https://wa.me/'+wnum;
+var msg='Hola Capa3D, quiero cotizar esta impresión:\n• Archivo: '+(s.file||'(lo envío por aquí)')+'\n• Material: '+m.n+', color '+fl[0]+'\n• Calidad: '+q.n+', relleno '+s.infill+'%'+(an?'\n• Tamaño: '+dimTxt+'\n• Cantidad: '+qty:'')+'\n• Estimado en la web: $'+price+' COP';
+// gallery
+var cats=['Prototipos','Miniaturas','Funcionales','Arte y decoración'];
+var U=function(x){return '/_blob/'+x;};
+var wk=[['Carcasa electrónica',0,U('9697432caea56e9a79a160a0068dd7c5'),'PLA blanco','Caja con tapa a presión para proyectos de electrónica y sensores.'],['Figura de colección',1,U('0b904b37904cf0e58a2613ce372a4d00'),'PLA gris','Miniatura de 28 mm lista para pintar, con base integrada.'],['Engranaje de transmisión',2,U('22ccbb5fc7061580bb18b843f94ef01c'),'PETG o ABS','Repuesto funcional con dientes precisos para mecanismos.'],['Jarrón en espiral',3,U('b5abefe48db96cd298f21d6d642a2e94'),'PLA azul','Pieza decorativa de pared continua, ligera y llamativa.'],['Clip de sujeción',0,U('7d24a0887899e1189519d9d97791212b'),'TPU','Prototipo flexible que encaja y suelta sin romperse.'],['Torre de ajedrez',1,U('14a3e20c7f73627fd7d9cdd1b6feb4ad'),'PLA grafito','Pieza de juego con detalle en almenas y base estable.'],['Soporte de montaje',2,U('b08c73a03b075c9bcf4b0792feadd9b1'),'ABS','Escuadra con perforaciones para tornillos, resistente al calor.'],['Relieve decorativo',3,U('f3852cd814e3a5f295552a5220fce3b5'),'PLA rojo','Pieza de pared con anillos concéntricos para decoración.']];
+var works=[];wk.forEach(function(w,i){if(s.filter==='Todos'||cats[w[1]]===s.filter){works.push({name:w[0],cat:cats[w[1]].toUpperCase(),img:w[2],open:set({sel:i}),floSt:'position:absolute;left:12%;right:12%;top:24px;bottom:84px;display:block;animation-delay:-'+(i*0.8).toFixed(1)+'s'});}});
+var sw=s.sel>=0?wk[s.sel]:wk[0];
+// materials tabs
+var mt=mats[s.mtab];
+var mtLayers=stack(24,240,140,mt.prof,mt.col,{anim:false,rad:mt.rad,bw:2,inf:25,wire:false,alpha:'26'});
+// steps
+var st=[['01','Sube tu archivo','Carga tu STL, OBJ, 3MF o STEP desde el cotizador.','M12 16V4 M7 9l5-5 5 5 M4 16v4h16v-4'],['02','Personaliza','Elige material, calidad, relleno y color.','M4 6h10 M18 6h2 M4 12h4 M12 12h8 M4 18h12 M20 18h0 M14 4v4 M8 10v4 M16 16v4'],['03','Revisión e impresión','Confirmas el precio, revisamos el archivo e imprimimos.','M5 18h14 M6.5 14h11 M8 10h8 M9.5 6h5'],['04','Entrega','Pieza posprocesada, empacada y enviada.','M3 7l9-4 9 4v10l-9 4-9-4z M3 7l9 4 9-4 M12 11v10']];
+var auto=Math.floor(s.t/8)%4,cur=s.lock?s.step:auto,sub=s.lock?100:Math.min(100,Math.round((s.t%8)/7*100));
+var fq=[['¿Qué formatos de archivo aceptan?','Aceptamos .STL, .OBJ, .3MF y .STEP. Si todavía no tienes el modelo, escríbenos y vemos cómo ayudarte.'],['¿Qué material me conviene?','PLA para prototipos y decoración, PETG para piezas funcionales, ABS para piezas que soportan calor y TPU para piezas flexibles.'],['¿Revisan mi archivo antes de imprimir?','Sí. Revisamos que el modelo sea imprimible y te avisamos si hace falta ajustar algo antes de empezar.'],['¿Puedo pedir varias unidades?','Sí. Para lotes el precio por unidad baja con la cantidad. Escríbenos por WhatsApp con tu archivo y cuántas necesitas.'],['¿Cuánto tarda y cómo envían?','[TUS TIEMPOS DE PRODUCCIÓN Y ENVÍO]'],['¿Cómo pago?','[TUS MEDIOS DE PAGO]']];
+return {
+ac:ac,acGlow:ac+'55',acSoft:ac+'22',acLine:ac+'40',
+tiltT:'rotateX('+s.ty.toFixed(2)+'deg) rotateY('+s.tx.toFixed(2)+'deg)',
+onTilt:function(e){var b=e.currentTarget.getBoundingClientRect();self.setState({tx:((e.clientX-b.left)/b.width-.5)*18,ty:-((e.clientY-b.top)/b.height-.5)*12});},
+offTilt:set({tx:0,ty:0}),
+hero:hero,layerNow:Math.round(f*240),progTxt:Math.round(f*100),gcode:gcode,marq:marq,
+setSolid:set({wire:false}),setWire:set({wire:true}),solidBtn:pill(!s.wire),wireBtn:pill(s.wire),
+pv:pv,pvGlow:pcol+'33',pvLabel:an?(an.n.toLocaleString('es-CO')+' TRIÁNGULOS · '+fl[0].toUpperCase()):(q.layers*10+' CAPAS · '+fl[0].toUpperCase()),
+noModel:!an&&s.status!=='reading',hasModel:!!an,isReading:s.status==='reading',
+cvRef:this.cvRef,
+cvDown:function(e){self.drag={x:e.clientX,y:e.clientY,a:self.ang,el:self.elev};try{e.currentTarget.setPointerCapture(e.pointerId);}catch(_){}},
+cvMove:function(e){var d=self.drag;if(!d)return;self.ang=d.a+(e.clientX-d.x)*0.01;self.elev=Math.max(-0.3,Math.min(1.45,d.el+(e.clientY-d.y)*0.008));self.need=true;},
+cvUp:function(){self.drag=null;},
+toggleAuto:set({auto:!s.auto}),autoBtn:pill(s.auto),
+price:price,hours:hours,grams:grams,matName:m.n,qName:q.n,colorName:fl[0],
+estLabel:an?'PRECIO ESTIMADO DE TU MODELO':'ESTIMADO DE EJEMPLO',
+unitLine:'≈ '+hours+' de impresión · '+grams+' g de '+m.n+(qty>1?(' · por unidad · '+qty+' unidades'):''),
+breakdown:[{k:'Material ('+grams+' g × $'+fmt(ppg)+'/g)',v:'$'+fmt(cMat)},{k:'Tiempo de máquina ('+hours+')',v:'$'+fmt(cMach)},{k:'Cargo base',v:'$'+fmt(base)},{k:'Precio por unidad × '+qty,v:'$'+fmt(unitP)}],
+priceNote:an?'Calculado con el volumen real de tu modelo. Confirmamos el precio final al revisar el archivo.':'Estimado de una pieza de ejemplo de 60 × 60 × 90 mm. Sube tu archivo para calcularlo con tu modelo.',
+wa:wa,waOrder:wa+'?text='+encodeURIComponent(msg),
+fileTitle:s.file?s.file:'Arrastra tu modelo aquí',
+fileSub:{'':'o haz clic para buscarlo · STL, OBJ y 3MF se analizan al instante; STEP lo revisamos manualmente',reading:'Leyendo la malla y calculando medidas, volumen y peso…',ok:'Analizado. Toca aquí para cambiar de archivo.',manual:'Los archivos STEP los revisamos manualmente. Mientras tanto ves el estimado de ejemplo; envíanoslo por WhatsApp.',error:'No pudimos leer este archivo. Expórtalo como STL u OBJ, o envíanoslo por WhatsApp.',big:'Supera 100 MB. Envíanoslo por WhatsApp o con un enlace de descarga.'}[s.status],
+dropBorder:s.status==='ok'?ac:(s.status==='error'||s.status==='big'?'#EF4F52':'rgba(255,255,255,.2)'),dropBg:s.status==='ok'?ac+'14':'#111114',
+onFile:function(e){var x=e.target.files&&e.target.files[0];if(x)self.loadFile(x);try{e.target.value='';}catch(_){}},
+verdict:vc[1],verdictSt:'padding:6px 12px;border-radius:99px;font-size:11px;letter-spacing:1px;color:'+vc[0]+';border:1px solid '+vc[0]+';background:'+vc[0]+'14',
+anStats:an?[{k:'DIMENSIONES',v:dimTxt},{k:'VOLUMEN',v:f1(md.vol)+' cm³'},{k:'PESO ESTIMADO',v:grams+' g'},{k:'TIEMPO ESTIMADO',v:hours},{k:'TRIÁNGULOS',v:an.n.toLocaleString('es-CO')}]:[],
+anChecks:checks.map(function(c){var col={ok:'#3DDC84',warn:'#FFD23F',bad:'#EF4F52'}[c[0]];return {sym:{ok:'✓',warn:'!',bad:'×'}[c[0]],t:c[1],st:'flex:none;width:24px;height:24px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:500;color:#0B0B0D;background:'+col};}),
+units:['mm','cm','pulgadas'].map(function(x,i){var on=i===s.unit;return {n:x,pick:set({unit:i}),style:'flex:1;min-height:44px;padding:0 10px;border-radius:10px;cursor:pointer;font-size:13px;color:'+(on?'#0B0B0D':'#F2F2EE')+';background:'+(on?ac:'#17171B')+';border:1px solid '+(on?ac:'rgba(255,255,255,.12)')};}),
+scale:s.scale,onScale:function(e){self.setState({scale:+e.target.value});},
+showFitBtn:!!an&&!fitRot,fitScale:set({scale:Math.min(400,maxScale)}),
+qty:s.qty,qtyDown:set({qty:Math.max(1,s.qty-1)}),qtyUp:set({qty:Math.min(500,s.qty+1)}),
+bedTxt:bed.join(' × ')+' mm',
+mats:mats.map(function(x,i){var on=i===s.mat;return {n:x.n,tag:x.tag,pick:set({mat:i}),
+ dot:'width:14px;height:14px;border-radius:50%;border:2px solid '+(on?ac:'rgba(255,255,255,.3)')+';background:'+(on?ac:'transparent')+';box-shadow:'+(on?'0 0 12px '+ac:'none'),
+ meters:x.v.map(function(v,j){return {lb:labels[j],segs:[0,1,2,3,4].map(function(k){return {st:'flex:1;height:6px;border-radius:2px;background:'+(k<v?(on?ac:'#C9C9C3'):'rgba(255,255,255,.1)')};})};}),
+ style:'flex:1 1 140px;min-width:0;text-align:left;cursor:pointer;color:#F2F2EE;display:flex;flex-direction:column;align-items:flex-start;padding:18px;border-radius:18px;transition:all .25s;background:'+(on?ac+'14':'#17171B')+';border:1px solid '+(on?ac:'rgba(255,255,255,.08)')+';box-shadow:'+(on?'0 0 30px '+ac+'33':'none')+';transform:'+(on?'translateY(-3px)':'none')};}),
+quals:qs.map(function(x,i){var on=i===s.q;var hh=Math.max(2,Math.round(18/x.k));var lines=[];for(var k=0;k<x.k;k++)lines.push({st:'display:block;height:'+hh+'px;border-radius:1px;background:'+(on?ac:'#6A6A70')});return {n:x.n,sub:x.sub,lines:lines,pick:set({q:i}),style:'flex:1;min-width:0;cursor:pointer;color:#F2F2EE;display:flex;flex-direction:column;align-items:flex-start;padding:14px;border-radius:16px;text-align:left;background:'+(on?ac+'14':'#17171B')+';border:1px solid '+(on?ac:'rgba(255,255,255,.08)')};}),
+infill:s.infill,onInfill:function(e){self.setState({infill:+e.target.value});},infillBg:pat(ac,s.infill),
+colors:fils.map(function(x,i){var on=i===s.color;return {name:x[0],pick:set({color:i}),style:'width:52px;height:52px;border-radius:50%;cursor:pointer;padding:0;transition:transform .2s;background:radial-gradient(circle,#0B0B0D 0 18%,#2A2A30 19% 24%,transparent 25%),repeating-radial-gradient(circle,'+x[1]+' 0 2px,'+x[2]+'cc 2px 3px);border:'+(on?'3px solid '+ac:'1px solid rgba(255,255,255,.18)')+';box-shadow:'+(on?'0 0 0 4px #0B0B0D,0 0 22px '+x[2]+'99':'none')+';transform:'+(on?'scale(1.08)':'none')};}),
+filters:['Todos'].concat(cats).map(function(x){return {name:x,pick:set({filter:x}),style:pill(s.filter===x)};}),
+works:works,hasSel:s.sel>=0,closeSel:set({sel:-1}),selImg:sw[2],selName:sw[0],selCat:cats[sw[1]].toUpperCase(),selDesc:sw[4],selMat:sw[3],
+cmp:s.cmp,onCmp:function(e){self.setState({cmp:+e.target.value});},rawClip:'inset(0 '+(100-s.cmp)+'% 0 0)',
+mtabs:mats.map(function(x,i){return {n:x.n,pick:set({mtab:i}),style:pill(i===s.mtab)};}),
+mtName:mt.n,mtDesc:mt.desc,mtLayers:mtLayers,mtGlow:mt.col+'33',
+mtSpecs:[{k:'TEMPERATURA DE USO',v:mt.temp},{k:'IDEAL PARA',v:mt.ideal},{k:'ACABADO',v:mt.fin},{k:'FLEXIBILIDAD',v:['Baja','Media','Media','Muy alta'][s.mtab]}],
+steps:st.map(function(x,i){var on=i===cur,done=i<cur;return {n:x[0],title:x[1],text:x[2],icon:x[3],pick:function(){self.setState({step:i,lock:true});},
+ fill:'display:block;height:4px;border-radius:2px;background:'+ac+';box-shadow:0 0 10px '+ac+';width:'+(done?100:(on?sub:0))+'%',
+ node:'width:52px;height:52px;border-radius:16px;display:flex;align-items:center;justify-content:center;color:'+(on||done?'#0B0B0D':'#A6A6A0')+';background:'+(on||done?ac:'#17171B')+';box-shadow:'+(on?'0 0 30px '+ac+'88':'none'),
+ style:'flex:1 1 230px;min-width:0;text-align:left;cursor:pointer;color:#F2F2EE;display:flex;flex-direction:column;align-items:flex-start;padding:24px;border-radius:24px;transition:all .3s;background:#111114;border:1px solid '+(on?ac+'99':'rgba(255,255,255,.08)')+';transform:'+(on?'translateY(-6px)':'none')};}),
+faqs:fq.map(function(x,i){var on=s.faq===i;return {q:x[0],a:x[1],pick:set({faq:on?-1:i}),signSt:'flex:none;width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:22px;transition:transform .3s;color:'+(on?'#0B0B0D':ac)+';background:'+(on?ac:'transparent')+';border:1px solid '+ac+';transform:'+(on?'rotate(45deg)':'none'),aStyle:on?'padding:0 0 24px;color:#A6A6A0;line-height:1.7;max-width:720px':'display:none'};})
+};
+}}
+</script>
+</body>
+</html>
