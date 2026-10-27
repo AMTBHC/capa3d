@@ -1,0 +1,171 @@
+/* Tokens de diseño — valores tomados de design/reference/Main.dc.html */
+:root {
+  --bg: #0b0b0d;
+  --bg-2: #0e0e11;
+  --surface: #111114;
+  --surface-2: #141417;
+  --surface-3: #17171b;
+  --text: #f2f2ee;
+  --text-2: #c9c9c3;
+  --text-3: #a6a6a0;
+  --text-4: #8c8c86;
+  --line: rgba(255, 255, 255, 0.08);
+  --line-2: rgba(255, 255, 255, 0.14);
+  --ok: #3ddc84;
+  --warn: #ffd23f;
+  --bad: #ef4f52;
+  --ac: #ff5a1f;
+  --ac-glow: #ff5a1f55;
+  --ac-soft: #ff5a1f22;
+  --ac-line: #ff5a1f40;
+  --ac-tint: #ff5a1f14;
+}
+
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-body), system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+h1, h2, h3 { font-family: var(--font-display), system-ui, sans-serif; font-weight: 600; }
+button, input { font-family: inherit; }
+a { color: var(--text); }
+a:hover { color: #fff; }
+img { max-width: 100%; }
+:focus-visible { outline: 2px solid var(--ac); outline-offset: 3px; }
+
+.mono { font-family: var(--font-mono), ui-monospace, monospace; }
+.display { font-family: var(--font-display), system-ui, sans-serif; }
+.sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+
+/* Layout */
+.page { position: relative; isolation: isolate; overflow: hidden; width: 100%; background: var(--bg); }
+.wrap { max-width: 1240px; margin: 0 auto; padding-left: 24px; padding-right: 24px; }
+.section { max-width: 1240px; margin: 0 auto; padding: 40px 24px 96px; scroll-margin-top: 16px; }
+.row { display: flex; flex-wrap: wrap; }
+
+/* Tipografía */
+.eyebrow { font-size: 12px; letter-spacing: 2px; color: var(--ac); }
+.h2 { font-size: clamp(28px, 4.4vw, 48px); line-height: 1.08; margin: 14px 0 0; letter-spacing: -1px; }
+.lead { color: var(--text-3); font-size: 17px; line-height: 1.6; margin: 16px 0 0; }
+.label { font-size: 11px; letter-spacing: 2px; color: var(--text-3); }
+.label-sm { font-size: 10px; letter-spacing: 1px; color: var(--text-3); }
+.muted { color: var(--text-3); }
+
+/* Superficies */
+.card { border-radius: 24px; background: var(--surface); border: 1px solid var(--line); padding: 24px; }
+.tag {
+  padding: 8px 12px; border-radius: 10px; background: rgba(11, 11, 13, 0.75);
+  border: 1px solid rgba(255, 255, 255, 0.1); font-size: 11px; letter-spacing: 1px;
+}
+.chip { padding: 7px 12px; border-radius: 99px; border: 1px solid var(--line-2); font-size: 12px; }
+
+/* Botones */
+.btn { display: inline-block; text-decoration: none; cursor: pointer; transition: transform 0.2s, box-shadow 0.2s; }
+.btn:hover { transform: translateY(-2px); }
+.btn-primary { background: var(--ac); color: var(--bg); font-weight: 600; border: 0; }
+.btn-primary:hover { color: var(--bg); }
+.btn-ghost { border: 1px solid rgba(255, 255, 255, 0.22); color: var(--text); font-weight: 500; background: transparent; }
+.glow { box-shadow: 0 10px 40px var(--ac-glow); }
+.pill {
+  padding: 11px 18px; border-radius: 99px; cursor: pointer; font-size: 14px; font-weight: 500;
+  color: var(--text); border: 1px solid rgba(255, 255, 255, 0.2); background: transparent;
+}
+.pill[aria-pressed="true"],
+.pill[aria-selected="true"] { color: var(--bg); border-color: var(--ac); background: var(--ac); }
+.option {
+  min-width: 0; cursor: pointer; color: var(--text); display: flex; flex-direction: column; align-items: flex-start;
+  text-align: left; background: var(--surface-3); border: 1px solid var(--line); transition: all 0.25s;
+}
+.option[aria-pressed="true"] { background: var(--ac-tint); border-color: var(--ac); }
+
+input[type="range"] { width: 100%; accent-color: var(--ac); }
+
+/* Interacción */
+.tilt { transition: transform 0.45s cubic-bezier(0.2, 0.8, 0.2, 1), border-color 0.3s; }
+.tilt:hover { transform: perspective(900px) rotateX(5deg) rotateY(-7deg) translateY(-6px); border-color: rgba(255, 255, 255, 0.22); }
+.pcard { transition: transform 0.3s; }
+.pcard:hover { transform: translateY(-8px); }
+.tile .pic { transition: transform 0.6s cubic-bezier(0.2, 0.8, 0.2, 1); }
+.tile:hover .pic { transform: scale(1.12) rotate(-3deg); }
+
+/* Animaciones */
+.flo { animation: flo 5s ease-in-out infinite; }
+@keyframes flo { 50% { transform: translateY(-12px); } }
+.turn { transform-style: preserve-3d; animation: turn 22s linear infinite; }
+@keyframes turn { from { transform: rotateX(62deg) rotateZ(0deg); } to { transform: rotateX(62deg) rotateZ(360deg); } }
+.turnF { transform-style: preserve-3d; animation: turnF 12s linear infinite; }
+@keyframes turnF { from { transform: rotateX(64deg) rotateZ(0deg); } to { transform: rotateX(64deg) rotateZ(360deg); } }
+.nozY { animation: nozY 9s linear infinite; }
+@keyframes nozY { 0%, 4% { transform: translateY(0); } 72%, 90% { transform: translateY(-156px); } 100% { transform: translateY(0); } }
+.nozX { animation: nozX 1.3s ease-in-out infinite alternate; }
+@keyframes nozX { from { transform: translateX(-54px); } to { transform: translateX(54px); } }
+.marq { animation: marq 28s linear infinite; }
+@keyframes marq { to { transform: translateX(-50%); } }
+.gscroll { animation: gs 14s linear infinite; }
+@keyframes gs { to { transform: translateY(-50%); } }
+.pulse { animation: pul 1.4s ease-in-out infinite; }
+@keyframes pul { 50% { opacity: 0.25; } }
+.rot { animation: rot 5s linear infinite; }
+@keyframes rot { to { transform: rotate(360deg); } }
+.wob { animation: wob 6s ease-in-out infinite; }
+@keyframes wob { 0%, 100% { transform: perspective(800px) rotateY(-16deg); } 50% { transform: perspective(800px) rotateY(16deg); } }
+.bar { transition: width 0.35s linear; }
+
+/* Capas apareciendo en la animación del hero (una regla por capa) */
+.k0{animation:k0 9s linear infinite}@keyframes k0{0%,4.00%{opacity:0;transform:scale(1.2)}6.50%,90%{opacity:1;transform:scale(1)}96%,100%{opacity:0;transform:scale(1)}}
+.k1{animation:k1 9s linear infinite}@keyframes k1{0%,5.45%{opacity:0;transform:scale(1.2)}7.95%,90%{opacity:1;transform:scale(1)}96%,100%{opacity:0;transform:scale(1)}}
+.k2{animation:k2 9s linear infinite}@keyframes k2{0%,6.89%{opacity:0;transform:scale(1.2)}9.39%,90%{opacity:1;transform:scale(1)}96%,100%{opacity:0;transform:scale(1)}}
+.k3{animation:k3 9s linear infinite}@keyframes k3{0%,8.34%{opacity:0;transform:scale(1.2)}10.84%,90%{opacity:1;transform:scale(1)}96%,100%{opacity:0;transform:scale(1)}}
+.k4{animation:k4 9s linear infinite}@keyframes k4{0%,9.79%{opacity:0;transform:scale(1.2)}12.29%,90%{opacity:1;transform:scale(1)}96%,100%{opacity:0;transform:scale(1)}}
+.k5{animation:k5 9s linear infinite}@keyframes k5{0%,11.23%{opacity:0;transform:scale(1.2)}13.73%,90%{opacity:1;transform:scale(1)}96%,100%{opacity:0;transform:scale(1)}}
+.k6{animation:k6 9s linear infinite}@keyframes k6{0%,12.68%{opacity:0;transform:scale(1.2)}15.18%,90%{opacity:1;transform:scale(1)}96%,100%{opacity:0;transform:scale(1)}}
+.k7{animation:k7 9s linear infinite}@keyframes k7{0%,14.13%{opacity:0;transform:scale(1.2)}16.63%,90%{opacity:1;transform:scale(1)}96%,100%{opacity:0;transform:scale(1)}}
+.k8{animation:k8 9s linear infinite}@keyframes k8{0%,15.57%{opacity:0;transform:scale(1.2)}18.07%,90%{opacity:1;transform:scale(1)}96%,100%{opacity:0;transform:scale(1)}}
+.k9{animation:k9 9s linear infinite}@keyframes k9{0%,17.02%{opacity:0;transform:scale(1.2)}19.52%,90%{opacity:1;transform:scale(1)}96%,100%{opacity:0;transform:scale(1)}}
+.k10{animation:k10 9s linear infinite}@keyframes k10{0%,18.47%{opacity:0;transform:scale(1.2)}20.97%,90%{opacity:1;transform:scale(1)}96%,100%{opacity:0;transform:scale(1)}}
+.k11{animation:k11 9s linear infinite}@keyframes k11{0%,19.91%{opacity:0;transform:scale(1.2)}22.41%,90%{opacity:1;transform:scale(1)}96%,100%{opacity:0;transform:scale(1)}}
+.k12{animation:k12 9s linear infinite}@keyframes k12{0%,21.36%{opacity:0;transform:scale(1.2)}23.86%,90%{opacity:1;transform:scale(1)}96%,100%{opacity:0;transform:scale(1)}}
+.k13{animation:k13 9s linear infinite}@keyframes k13{0%,22.81%{opacity:0;transform:scale(1.2)}25.31%,90%{opacity:1;transform:scale(1)}96%,100%{opacity:0;transform:scale(1)}}
+.k14{animation:k14 9s linear infinite}@keyframes k14{0%,24.26%{opacity:0;transform:scale(1.2)}26.76%,90%{opacity:1;transform:scale(1)}96%,100%{opacity:0;transform:scale(1)}}
+.k15{animation:k15 9s linear infinite}@keyframes k15{0%,25.70%{opacity:0;transform:scale(1.2)}28.20%,90%{opacity:1;transform:scale(1)}96%,100%{opacity:0;transform:scale(1)}}
+.k16{animation:k16 9s linear infinite}@keyframes k16{0%,27.15%{opacity:0;transform:scale(1.2)}29.65%,90%{opacity:1;transform:scale(1)}96%,100%{opacity:0;transform:scale(1)}}
+.k17{animation:k17 9s linear infinite}@keyframes k17{0%,28.60%{opacity:0;transform:scale(1.2)}31.10%,90%{opacity:1;transform:scale(1)}96%,100%{opacity:0;transform:scale(1)}}
+.k18{animation:k18 9s linear infinite}@keyframes k18{0%,30.04%{opacity:0;transform:scale(1.2)}32.54%,90%{opacity:1;transform:scale(1)}96%,100%{opacity:0;transform:scale(1)}}
+.k19{animation:k19 9s linear infinite}@keyframes k19{0%,31.49%{opacity:0;transform:scale(1.2)}33.99%,90%{opacity:1;transform:scale(1)}96%,100%{opacity:0;transform:scale(1)}}
+.k20{animation:k20 9s linear infinite}@keyframes k20{0%,32.94%{opacity:0;transform:scale(1.2)}35.44%,90%{opacity:1;transform:scale(1)}96%,100%{opacity:0;transform:scale(1)}}
+.k21{animation:k21 9s linear infinite}@keyframes k21{0%,34.38%{opacity:0;transform:scale(1.2)}36.88%,90%{opacity:1;transform:scale(1)}96%,100%{opacity:0;transform:scale(1)}}
+.k22{animation:k22 9s linear infinite}@keyframes k22{0%,35.83%{opacity:0;transform:scale(1.2)}38.33%,90%{opacity:1;transform:scale(1)}96%,100%{opacity:0;transform:scale(1)}}
+.k23{animation:k23 9s linear infinite}@keyframes k23{0%,37.28%{opacity:0;transform:scale(1.2)}39.78%,90%{opacity:1;transform:scale(1)}96%,100%{opacity:0;transform:scale(1)}}
+.k24{animation:k24 9s linear infinite}@keyframes k24{0%,38.72%{opacity:0;transform:scale(1.2)}41.22%,90%{opacity:1;transform:scale(1)}96%,100%{opacity:0;transform:scale(1)}}
+.k25{animation:k25 9s linear infinite}@keyframes k25{0%,40.17%{opacity:0;transform:scale(1.2)}42.67%,90%{opacity:1;transform:scale(1)}96%,100%{opacity:0;transform:scale(1)}}
+.k26{animation:k26 9s linear infinite}@keyframes k26{0%,41.62%{opacity:0;transform:scale(1.2)}44.12%,90%{opacity:1;transform:scale(1)}96%,100%{opacity:0;transform:scale(1)}}
+.k27{animation:k27 9s linear infinite}@keyframes k27{0%,43.06%{opacity:0;transform:scale(1.2)}45.56%,90%{opacity:1;transform:scale(1)}96%,100%{opacity:0;transform:scale(1)}}
+.k28{animation:k28 9s linear infinite}@keyframes k28{0%,44.51%{opacity:0;transform:scale(1.2)}47.01%,90%{opacity:1;transform:scale(1)}96%,100%{opacity:0;transform:scale(1)}}
+.k29{animation:k29 9s linear infinite}@keyframes k29{0%,45.96%{opacity:0;transform:scale(1.2)}48.46%,90%{opacity:1;transform:scale(1)}96%,100%{opacity:0;transform:scale(1)}}
+.k30{animation:k30 9s linear infinite}@keyframes k30{0%,47.40%{opacity:0;transform:scale(1.2)}49.90%,90%{opacity:1;transform:scale(1)}96%,100%{opacity:0;transform:scale(1)}}
+.k31{animation:k31 9s linear infinite}@keyframes k31{0%,48.85%{opacity:0;transform:scale(1.2)}51.35%,90%{opacity:1;transform:scale(1)}96%,100%{opacity:0;transform:scale(1)}}
+.k32{animation:k32 9s linear infinite}@keyframes k32{0%,50.30%{opacity:0;transform:scale(1.2)}52.80%,90%{opacity:1;transform:scale(1)}96%,100%{opacity:0;transform:scale(1)}}
+.k33{animation:k33 9s linear infinite}@keyframes k33{0%,51.74%{opacity:0;transform:scale(1.2)}54.24%,90%{opacity:1;transform:scale(1)}96%,100%{opacity:0;transform:scale(1)}}
+.k34{animation:k34 9s linear infinite}@keyframes k34{0%,53.19%{opacity:0;transform:scale(1.2)}55.69%,90%{opacity:1;transform:scale(1)}96%,100%{opacity:0;transform:scale(1)}}
+.k35{animation:k35 9s linear infinite}@keyframes k35{0%,54.64%{opacity:0;transform:scale(1.2)}57.14%,90%{opacity:1;transform:scale(1)}96%,100%{opacity:0;transform:scale(1)}}
+.k36{animation:k36 9s linear infinite}@keyframes k36{0%,56.08%{opacity:0;transform:scale(1.2)}58.58%,90%{opacity:1;transform:scale(1)}96%,100%{opacity:0;transform:scale(1)}}
+.k37{animation:k37 9s linear infinite}@keyframes k37{0%,57.53%{opacity:0;transform:scale(1.2)}60.03%,90%{opacity:1;transform:scale(1)}96%,100%{opacity:0;transform:scale(1)}}
+.k38{animation:k38 9s linear infinite}@keyframes k38{0%,58.98%{opacity:0;transform:scale(1.2)}61.48%,90%{opacity:1;transform:scale(1)}96%,100%{opacity:0;transform:scale(1)}}
+.k39{animation:k39 9s linear infinite}@keyframes k39{0%,60.43%{opacity:0;transform:scale(1.2)}62.93%,90%{opacity:1;transform:scale(1)}96%,100%{opacity:0;transform:scale(1)}}
+.k40{animation:k40 9s linear infinite}@keyframes k40{0%,61.87%{opacity:0;transform:scale(1.2)}64.37%,90%{opacity:1;transform:scale(1)}96%,100%{opacity:0;transform:scale(1)}}
+.k41{animation:k41 9s linear infinite}@keyframes k41{0%,63.32%{opacity:0;transform:scale(1.2)}65.82%,90%{opacity:1;transform:scale(1)}96%,100%{opacity:0;transform:scale(1)}}
+.k42{animation:k42 9s linear infinite}@keyframes k42{0%,64.77%{opacity:0;transform:scale(1.2)}67.27%,90%{opacity:1;transform:scale(1)}96%,100%{opacity:0;transform:scale(1)}}
+.k43{animation:k43 9s linear infinite}@keyframes k43{0%,66.21%{opacity:0;transform:scale(1.2)}68.71%,90%{opacity:1;transform:scale(1)}96%,100%{opacity:0;transform:scale(1)}}
+.k44{animation:k44 9s linear infinite}@keyframes k44{0%,67.66%{opacity:0;transform:scale(1.2)}70.16%,90%{opacity:1;transform:scale(1)}96%,100%{opacity:0;transform:scale(1)}}
+.k45{animation:k45 9s linear infinite}@keyframes k45{0%,69.11%{opacity:0;transform:scale(1.2)}71.61%,90%{opacity:1;transform:scale(1)}96%,100%{opacity:0;transform:scale(1)}}
+.k46{animation:k46 9s linear infinite}@keyframes k46{0%,70.55%{opacity:0;transform:scale(1.2)}73.05%,90%{opacity:1;transform:scale(1)}96%,100%{opacity:0;transform:scale(1)}}
+.k47{animation:k47 9s linear infinite}@keyframes k47{0%,72.00%{opacity:0;transform:scale(1.2)}74.50%,90%{opacity:1;transform:scale(1)}96%,100%{opacity:0;transform:scale(1)}}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; }
+  html { scroll-behavior: auto; }
+}
