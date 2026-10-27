@@ -27,8 +27,10 @@ class SliceResult:
 class SliceOptions:
     material: str
     quality: str
-    infill: int
+    infill: float
     supports: bool
+    # Altura de capa exacta; si falta, la de la calidad.
+    layer_height: float | None = None
 
 
 _TIME = re.compile(r"(?:(\d+)d\s*)?(?:(\d+)h\s*)?(?:(\d+)m\s*)?(?:(\d+)s)?")
@@ -123,7 +125,7 @@ class PrusaSlicer:
     def slice(self, stl: Path, opts: SliceOptions, gcode: Path) -> SliceResult:
         cat = self.catalog
         mat = cat.materials[opts.material]
-        q = cat.qualities[opts.quality]
+        layer = opts.layer_height or cat.qualities[opts.quality].layer_height
         bx, by, bz = cat.printer.bed
         args = [
             "--export-gcode",
@@ -131,14 +133,16 @@ class PrusaSlicer:
             "--bed-shape", f"0x0,{bx:g}x0,{bx:g}x{by:g},0x{by:g}",
             "--max-print-height", f"{bz:g}",
             "--center", f"{bx / 2:g},{by / 2:g}",
-            "--layer-height", f"{q.layer_height:g}",
-            "--first-layer-height", f"{max(q.layer_height, 0.2):g}",
-            "--fill-density", f"{opts.infill}%",
+            "--layer-height", f"{layer:g}",
+            "--first-layer-height", f"{max(layer, 0.2):g}",
+            "--fill-density", f"{opts.infill:g}%",
             "--filament-density", f"{mat.density:g}",
             "--temperature", str(mat.temperature),
             "--first-layer-temperature", str(mat.temperature),
             "--bed-temperature", str(mat.bed_temperature),
             "--first-layer-bed-temperature", str(mat.bed_temperature),
+            *(["--filament-max-volumetric-speed", f"{mat.max_volumetric_speed:g}"] if mat.max_volumetric_speed else []),
+            *(["--slowdown-below-layer-time", f"{mat.min_layer_time:g}"] if mat.min_layer_time is not None else []),
             *(["--support-material", "--support-material-auto"] if opts.supports else []),
             "--output", str(gcode),
             str(stl),

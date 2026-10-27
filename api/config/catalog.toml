@@ -16,32 +16,50 @@ setup_hours_per_plate = 0.2
 quote_valid_days = 7
 
 [printer]
-# Volumen de impresión en mm: X, Y, Z.
-bed = [220, 220, 250]
-# Perfil de PrusaSlicer con la impresora y la velocidad (ruta relativa a esta carpeta).
-# Exporta el tuyo desde PrusaSlicer: Archivo → Exportar → Exportar configuración.
-profile = "printer.ini"
+# Elige tu impresora: cama en mm (X, Y, Z) y perfil de config/profiles/.
+#   Bambu X1C / X1E / P1S / P1P → bed = [256, 256, 256], profile = "profiles/bambu-x1-p1.ini"
+#   Bambu A1                    → bed = [256, 256, 256], profile = "profiles/bambu-a1.ini"
+#   Bambu A1 mini               → bed = [180, 180, 180], profile = "profiles/bambu-a1.ini"
+#   Otra (tipo Prusa / Ender)   → tu cama,               profile = "profiles/generico.ini"
+bed = [256, 256, 256]
+profile = "profiles/bambu-x1-p1.ini"
+
+[calibration]
+# Corrigen la diferencia entre el laminado de la API (PrusaSlicer) y tu Bambu Studio.
+# Calcúlalos con: python -m capa3d_api.calibrate (ver README). 1 = sin corrección.
+time_factor = 1.0
+weight_factor = 1.0
 
 # price_per_gram en COP. density en g/cm³. Temperaturas en °C.
+# max_volumetric_speed (mm³/s) y min_layer_time (s) como en los perfiles de filamento
+# genéricos de Bambu Studio: limitan la velocidad real y por eso pesan en el tiempo.
 [materials.PLA]
+max_volumetric_speed = 21
+min_layer_time = 4
 price_per_gram = 120
 density = 1.24
 temperature = 215
 bed_temperature = 60
 
 [materials.PETG]
+max_volumetric_speed = 13
+min_layer_time = 8
 price_per_gram = 140
 density = 1.27
 temperature = 240
 bed_temperature = 80
 
 [materials.ABS]
+max_volumetric_speed = 16
+min_layer_time = 3
 price_per_gram = 140
 density = 1.04
 temperature = 250
 bed_temperature = 100
 
 [materials.TPU]
+max_volumetric_speed = 3.6
+min_layer_time = 8
 price_per_gram = 250
 density = 1.21
 temperature = 225

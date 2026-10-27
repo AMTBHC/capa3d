@@ -14,7 +14,14 @@ class Pricing(BaseModel):
 
 class Printer(BaseModel):
     bed: tuple[float, float, float]
-    profile: str = "printer.ini"
+    profile: str = "profiles/generico.ini"
+
+
+class Calibration(BaseModel):
+    """Factores que acercan el laminado de la API al del slicer del taller."""
+
+    time_factor: float = Field(default=1.0, gt=0)
+    weight_factor: float = Field(default=1.0, gt=0)
 
 
 class Material(BaseModel):
@@ -22,6 +29,8 @@ class Material(BaseModel):
     density: float = Field(gt=0)
     temperature: int
     bed_temperature: int
+    max_volumetric_speed: float | None = Field(default=None, gt=0)
+    min_layer_time: float | None = Field(default=None, ge=0)
 
 
 class Quality(BaseModel):
@@ -33,6 +42,7 @@ class Catalog(BaseModel):
     currency: str = "COP"
     pricing: Pricing
     printer: Printer
+    calibration: Calibration = Calibration()
     materials: dict[str, Material]
     qualities: dict[str, Quality]
     # Carpeta del catálogo, para resolver la ruta del perfil.
