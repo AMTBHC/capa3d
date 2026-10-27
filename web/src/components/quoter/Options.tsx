@@ -1,123 +1,140 @@
 "use client";
 
-import { COLORS, MATERIALS, METER_LABELS, QUALITIES } from "@/lib/catalog";
+import { COLORS, MATERIALS, QUALITIES } from "@/lib/catalog";
 import { infillPattern } from "../LayerStack";
 
-interface PickerProps {
-  value: number;
-  onChange: (v: number) => void;
+const Check = () => (
+  <span className="choice-check" aria-hidden="true">
+    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round"><path d="M4 12l5 5L20 6" /></svg>
+  </span>
+);
+
+/** Paso 2: material y color del filamento. */
+export function FilamentPicker({ material, color, onMaterial, onColor }: {
+  material: number;
+  color: number;
+  onMaterial: (i: number) => void;
+  onColor: (i: number) => void;
+}) {
+  return (
+    <>
+      <div className="field">
+        <div className="field-label">Material</div>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: 10 }}>
+          {MATERIALS.map((m, i) => (
+            <button key={m.id} className="choice" aria-pressed={i === material} onClick={() => onMaterial(i)}>
+              <Check />
+              <span className="display" style={{ fontWeight: 700, fontSize: 18 }}>{m.id}</span>
+              <span style={{ fontSize: 13, color: "var(--text-2)" }}>{m.tag}</span>
+              <span style={{ fontSize: 12, color: "var(--text-3)", marginTop: 4, lineHeight: 1.4 }}>Ideal: {m.ideal.toLowerCase()}</span>
+            </button>
+          ))}
+        </div>
+      </div>
+      <div className="field">
+        <div className="field-label">
+          Color <span className="muted">{COLORS[color].name}</span>
+        </div>
+        <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+          {COLORS.map((c, i) => (
+            <button key={c.name} className="swatch" aria-pressed={i === color} onClick={() => onColor(i)}>
+              <span className="swatch-dot" style={{ background: `radial-gradient(circle at 35% 30%, rgba(255,255,255,.35), transparent 45%), ${c.render}` }}>
+                {i === color && (
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={["Blanco", "Amarillo"].includes(c.name) ? "#0B0B0D" : "#fff"} strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"
+                    style={{ position: "absolute", inset: 0, margin: "auto" }} aria-hidden="true"><path d="M4 12l5 5L20 6" /></svg>
+                )}
+              </span>
+              {c.name}
+            </button>
+          ))}
+        </div>
+      </div>
+    </>
+  );
 }
 
-export function MaterialPicker({ value, onChange }: PickerProps) {
+const QUALITY_TEXT: Record<string, string> = {
+  borrador: "Más rápida y económica",
+  estandar: "Equilibrio entre detalle y precio",
+  detalle: "Superficie más lisa, tarda más",
+};
+
+const INFILL_PRESETS = [
+  [10, "Ligero", "Decoración"],
+  [20, "Estándar", "Uso general"],
+  [40, "Resistente", "Piezas funcionales"],
+  [100, "Sólido", "Máxima fuerza"],
+] as const;
+
+/** Paso 3: calidad de capa, relleno y soportes. */
+export function PrintSettings({ quality, infill, supports, showSupports, onQuality, onInfill, onSupports }: {
+  quality: number;
+  infill: number;
+  supports: boolean;
+  showSupports: boolean;
+  onQuality: (i: number) => void;
+  onInfill: (v: number) => void;
+  onSupports: (v: boolean) => void;
+}) {
   return (
-    <div className="card">
-      <div className="mono label" style={{ marginBottom: 16 }}>02 / MATERIAL</div>
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: 12 }}>
-        {MATERIALS.map((m, i) => {
-          const on = i === value;
-          return (
-            <button key={m.id} className="option" aria-pressed={on} onClick={() => onChange(i)}
-              style={{ padding: 18, borderRadius: 18, boxShadow: on ? "0 0 30px #FF5A1F33" : "none", transform: on ? "translateY(-3px)" : "none" }}>
-              <span style={{ display: "flex", justifyContent: "space-between", alignItems: "center", width: "100%" }}>
-                <span className="display" style={{ fontWeight: 700, fontSize: 20 }}>{m.id}</span>
-                <span style={{ width: 14, height: 14, borderRadius: "50%", border: `2px solid ${on ? "var(--ac)" : "rgba(255,255,255,.3)"}`, background: on ? "var(--ac)" : "transparent", boxShadow: on ? "0 0 12px var(--ac)" : "none" }} />
-              </span>
-              <span style={{ fontSize: 13, color: "var(--text-3)", margin: "4px 0 14px" }}>{m.tag}</span>
-              {m.meters.map((v, j) => (
-                <span key={j} style={{ width: "100%" }}>
-                  <span className="mono label-sm" style={{ display: "block", marginTop: 6 }}>{METER_LABELS[j]}</span>
-                  <span style={{ display: "flex", gap: 3, width: "100%", marginTop: 4 }} aria-label={`${METER_LABELS[j]} ${v} de 5`}>
-                    {[0, 1, 2, 3, 4].map((s) => (
-                      <span key={s} style={{ flex: 1, height: 6, borderRadius: 2, background: s < v ? (on ? "var(--ac)" : "var(--text-2)") : "rgba(255,255,255,.1)" }} />
-                    ))}
-                  </span>
+    <>
+      <div className="field">
+        <div className="field-label">Calidad <span className="muted">qué tan finas son las capas</span></div>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))", gap: 10 }}>
+          {QUALITIES.map((q, i) => {
+            const h = Math.max(2, Math.round(16 / q.lines));
+            return (
+              <button key={q.id} className="choice" aria-pressed={i === quality} onClick={() => onQuality(i)}>
+                <Check />
+                <span aria-hidden="true" style={{ display: "flex", flexDirection: "column", gap: 2, width: 34, marginBottom: 8 }}>
+                  {Array.from({ length: q.lines }, (_, k) => (
+                    <span key={k} style={{ display: "block", height: h, borderRadius: 1, background: i === quality ? "var(--ac)" : "#6A6A70" }} />
+                  ))}
                 </span>
+                <span style={{ fontWeight: 600, fontSize: 15 }}>{q.name}</span>
+                <span style={{ fontSize: 12, color: "var(--text-3)", lineHeight: 1.4 }}>{QUALITY_TEXT[q.id]}</span>
+                <span className="mono" style={{ fontSize: 11, color: "var(--text-4)", marginTop: 2 }}>capas de {q.layerMm.toFixed(2)} mm</span>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      <div className="field">
+        <div className="field-label">Relleno <span className="muted">cuánto material va por dentro</span></div>
+        <div style={{ display: "flex", gap: 16, alignItems: "center" }}>
+          <div aria-hidden="true" style={{ width: 64, height: 64, flex: "none", borderRadius: 12, border: "2px solid var(--ac)", background: infillPattern("#FF5A1F", infill) }} />
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+              {INFILL_PRESETS.map(([v, name, hint]) => (
+                <button key={v} className="chip-btn" aria-pressed={infill === v} onClick={() => onInfill(v)} title={hint}>
+                  {name} · {v}%
+                </button>
               ))}
-            </button>
-          );
-        })}
+            </div>
+            <div style={{ display: "flex", alignItems: "center", gap: 12, marginTop: 10 }}>
+              <input type="range" min={0} max={100} step={5} value={infill} onChange={(e) => onInfill(+e.target.value)} aria-label="Porcentaje de relleno" />
+              <span className="mono" style={{ minWidth: 44, textAlign: "right", fontWeight: 600 }}>{infill}%</span>
+            </div>
+          </div>
+        </div>
+        <p style={{ margin: "10px 0 0", fontSize: 13, color: "var(--text-3)" }}>Más relleno = pieza más fuerte, pero más pesada y costosa.</p>
       </div>
-    </div>
-  );
-}
 
-export function QualityPicker({ value, onChange }: PickerProps) {
-  return (
-    <div className="card" style={{ flex: "1 1 280px" }}>
-      <div className="mono label" style={{ marginBottom: 16 }}>03 / CALIDAD DE CAPA</div>
-      <div style={{ display: "flex", gap: 10 }}>
-        {QUALITIES.map((q, i) => {
-          const on = i === value;
-          const h = Math.max(2, Math.round(18 / q.lines));
-          return (
-            <button key={q.name} className="option" aria-pressed={on} onClick={() => onChange(i)} style={{ flex: 1, padding: 14, borderRadius: 16 }}>
-              <span aria-hidden="true" style={{ display: "flex", flexDirection: "column", gap: 3, width: 40, marginBottom: 10 }}>
-                {Array.from({ length: q.lines }, (_, k) => (
-                  <span key={k} style={{ display: "block", height: h, borderRadius: 1, background: on ? "var(--ac)" : "#6A6A70" }} />
-                ))}
-              </span>
-              <span style={{ fontWeight: 600, fontSize: 14 }}>{q.name}</span>
-              <span className="mono muted" style={{ fontSize: 11 }}>{q.layerMm.toFixed(2)} mm</span>
-            </button>
-          );
-        })}
-      </div>
-    </div>
-  );
-}
-
-export function InfillPicker({ value, onChange }: PickerProps) {
-  return (
-    <div className="card" style={{ flex: "1 1 220px" }}>
-      <div className="mono label" style={{ marginBottom: 12 }}>04 / RELLENO</div>
-      <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
-        <div aria-hidden="true" style={{ width: 68, height: 68, flex: "none", borderRadius: 12, border: "2px solid var(--ac)", background: infillPattern("#FF5A1F", value) }} />
-        <span className="display" style={{ fontSize: 34, fontWeight: 700 }}>{value}%</span>
-      </div>
-      <input type="range" min={0} max={100} step={5} value={value} onChange={(e) => onChange(+e.target.value)} aria-label="Densidad de relleno" style={{ marginTop: 16 }} />
-    </div>
-  );
-}
-
-export function ColorPicker({ value, onChange }: PickerProps) {
-  return (
-    <div className="card">
-      <div className="mono label" style={{ marginBottom: 16 }}>05 / COLOR DEL FILAMENTO · {COLORS[value].name}</div>
-      <div className="row" style={{ gap: 14 }}>
-        {COLORS.map((c, i) => {
-          const on = i === value;
-          return (
-            <button key={c.name} aria-label={c.name} aria-pressed={on} onClick={() => onChange(i)}
-              style={{
-                width: 52, height: 52, borderRadius: "50%", cursor: "pointer", padding: 0, transition: "transform .2s",
-                background: `radial-gradient(circle,#0B0B0D 0 18%,#2A2A30 19% 24%,transparent 25%),repeating-radial-gradient(circle,${c.spool} 0 2px,${c.render}cc 2px 3px)`,
-                border: on ? "3px solid var(--ac)" : "1px solid rgba(255,255,255,.18)",
-                boxShadow: on ? `0 0 0 4px #0B0B0D,0 0 22px ${c.render}99` : "none",
-                transform: on ? "scale(1.08)" : "none",
-              }} />
-          );
-        })}
-      </div>
-    </div>
-  );
-}
-
-export function SupportsPicker({ value, onChange }: { value: boolean; onChange: (v: boolean) => void }) {
-  const opts = [
-    [true, "Automáticos", "Donde la pieza los necesite"],
-    [false, "Sin soportes", "La pieza no tiene voladizos"],
-  ] as const;
-  return (
-    <div className="card">
-      <div className="mono label" style={{ marginBottom: 16 }}>06 / SOPORTES</div>
-      <div style={{ display: "flex", gap: 10 }}>
-        {opts.map(([v, name, sub]) => (
-          <button key={name} className="option" aria-pressed={value === v} onClick={() => onChange(v)} style={{ flex: 1, padding: 14, borderRadius: 16 }}>
-            <span style={{ fontWeight: 600, fontSize: 14 }}>{name}</span>
-            <span className="muted" style={{ fontSize: 12, marginTop: 2 }}>{sub}</span>
-          </button>
-        ))}
-      </div>
-    </div>
+      {showSupports && (
+        <div className="field">
+          <div className="field-label">Soportes <span className="muted">para partes que quedan en el aire</span></div>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+            {([[true, "Automáticos", "Los ponemos donde la pieza los necesite"], [false, "Sin soportes", "La pieza no tiene partes en voladizo"]] as const).map(([v, name, sub]) => (
+              <button key={name} className="choice" aria-pressed={supports === v} onClick={() => onSupports(v)}>
+                <Check />
+                <span style={{ fontWeight: 600, fontSize: 15 }}>{name}</span>
+                <span style={{ fontSize: 12, color: "var(--text-3)", lineHeight: 1.4 }}>{sub}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+    </>
   );
 }
