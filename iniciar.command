@@ -9,19 +9,24 @@ abrir() { (command -v open >/dev/null && open "$1") || (command -v xdg-open >/de
 falta() { echo; echo "❌ Falta $1. Instálalo desde $2 y vuelve a abrir este archivo."; abrir "$2"; read -rp "Presiona Enter para salir"; exit 1; }
 
 command -v node >/dev/null || falta "Node.js" "https://nodejs.org"
-PY=$(command -v python3 || true)
+# Se prefiere un Python estable: las versiones recién salidas a veces no tienen todas las librerías.
+PY=$(command -v python3.13 || command -v python3.12 || command -v python3.11 || command -v python3 || true)
 [ -n "$PY" ] || falta "Python 3" "https://www.python.org/downloads/"
 
-if [ ! -x api/.venv/bin/python ]; then
+# La marca .listo solo se escribe si la instalación terminó bien; si falta, se rehace.
+if [ ! -f api/.venv/.listo ]; then
   echo "▶ Preparando la API (solo la primera vez)…"
+  rm -rf api/.venv
   "$PY" -m venv api/.venv
   api/.venv/bin/python -m pip install --quiet --upgrade pip
   api/.venv/bin/python -m pip install --quiet -e api
+  touch api/.venv/.listo
 fi
 
-if [ ! -d web/node_modules ]; then
+if [ ! -f web/node_modules/.listo ]; then
   echo "▶ Preparando el sitio (solo la primera vez)…"
   (cd web && npm install --no-audit --no-fund)
+  touch web/node_modules/.listo
 fi
 
 # La web debe saber dónde está la API.
