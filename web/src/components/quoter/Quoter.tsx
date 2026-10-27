@@ -141,6 +141,7 @@ export function Quoter() {
             stage={stage}
             qty={qty}
             onQty={onQty}
+            shipping={catalog.shipping}
           />
         </aside>
 

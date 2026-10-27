@@ -276,7 +276,7 @@ class QuoteService:
             "error": q["error"],
         }
 
-    def order_zip(self, quote_id: str, dest: Path) -> str:
+    def order_zip(self, quote_id: str, dest: Path, header: str = "") -> str:
         """Zip con el archivo del cliente, el G-code de cada cama y un resumen. Devuelve el nombre sugerido."""
         q = self.store.get_quote(quote_id)
         if q is None:
@@ -290,7 +290,7 @@ class QuoteService:
                 z.write(original, file["name"])
             for gcode in sorted((folder / "quotes" / quote_id).glob("plate_*.gcode")):
                 z.write(gcode, f"gcode/{stem}-cama-{gcode.stem.split('_')[1]}.gcode")
-            z.writestr("resumen.txt", self._summary_text(q, file))
+            z.writestr("resumen.txt", header + self._summary_text(q, file))
         return f"{quote_id}-{stem}.zip"
 
     def _summary_text(self, q: dict, file: dict) -> str:

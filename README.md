@@ -28,6 +28,8 @@ api/                 API de cotización (Python + FastAPI + PrusaSlicer)
     slicer.py        PrusaSlicer por línea de comandos (G-code, STEP → STL)
     calibrate.py     Ajusta tiempo y gramos para que coincidan con Bambu Studio
     mesh/            Lectura de STL/OBJ/3MF (mismas camas que la web) y análisis
+    orders.py        Pedidos: estados, confirmación y pagos
+    wompi.py         Enlace de pago, consulta de transacciones y eventos de Wompi
     pricing.py       Fórmula de precio
     store.py         SQLite: archivos y cotizaciones
 web/                 Sitio (Next.js 16 + TypeScript + Three.js)
@@ -94,16 +96,42 @@ Con Docker, sitio y API juntos: `docker compose up --build` (sitio en :3000, API
 
 Textos pendientes de completar: busca `[TU` en `web/src`.
 
-## Recibir los pedidos
+## Pedidos y pagos
 
-WhatsApp no deja adjuntar archivos desde un enlace. Por eso el archivo del cliente queda en la API y el mensaje de WhatsApp trae el número de cotización (por ejemplo `QE909DD9F`).
+```
+Cliente cotiza → "Hacer pedido": datos y dirección, sin pagar          → Recibido
+Tú revisas el archivo en el panel, ajustas impresión y envío, confirmas → Por pagar
+   └ "Avisar al cliente por WhatsApp" le manda el enlace de su pedido
+Cliente abre su enlace → "Pagar ahora" con Wompi (PSE, Nequi, tarjeta)  → Pagado
+Tú imprimes → Imprimiendo → Enviado (transportadora + guía) → Entregado
+```
 
-1. Entra al panel: **http://localhost:3000/admin** (en producción, `tusitio.com/admin`).
-2. Escribe la clave del panel. `iniciar` la genera la primera vez, la muestra al arrancar y la guarda en `api/.env` como `CAPA3D_ADMIN_TOKEN`.
-3. En **"Pedidas por WhatsApp"** aparecen las cotizaciones donde el cliente tocó el botón, con el material, el color, la calidad, el relleno, la cantidad y el precio. En **"Todas las cotizaciones"** están también las que solo cotizó.
-4. **Descargar** baja un zip con el archivo original del cliente, el G-code de cada cama y un `resumen.txt`.
+- **Página del cliente** (`/pedido/<número>?t=…`): estado, línea de tiempo, total, botón de pago y número de guía. Se actualiza sola.
+- **Panel** (`/admin`): pestaña **Pedidos**, con filtros por estado. Cada pedido muestra los datos del cliente, la pieza, la descarga del archivo y el G-code, el precio editable, el botón del siguiente paso y el aviso por WhatsApp con un mensaje listo. La pestaña **Cotizaciones** guarda todo lo que se ha cotizado.
+- **Sin llaves de Wompi**, el cliente ve "Pagar por WhatsApp" y tú marcas el pago a mano: "Marcar como pagado", para transferencias o efectivo.
+- **Costo de envío:** `api/config/catalog.toml` → `[shipping]`. Ahí van la tarifa general y las ciudades con otra tarifa. En cada pedido lo puedes ajustar antes de confirmar.
 
-En producción, usa una clave larga y difícil de adivinar.
+### Activar Wompi
+
+1. Crea tu cuenta de comercio en https://comercios.wompi.co.
+2. En **Desarrolladores** copia la llave pública, el secreto de integridad y el secreto de eventos. Empieza con las de **prueba** (`pub_test_…`): los pagos van al sandbox y no se cobra nada.
+3. Ponlas en `api/.env`:
+   ```
+   CAPA3D_WOMPI_PUBLIC_KEY=pub_test_...
+   CAPA3D_WOMPI_INTEGRITY_SECRET=test_integrity_...
+   CAPA3D_WOMPI_EVENTS_SECRET=test_events_...
+   CAPA3D_SITE_URL=http://localhost:3000
+   ```
+4. Reinicia `iniciar`. Haz un pedido, confírmalo en el panel y págalo con los datos de prueba que indica la documentación de Wompi.
+5. **En producción:** cambia a las llaves `pub_prod_…`, pon en `CAPA3D_SITE_URL` la dirección real del sitio y, en Wompi → Eventos, registra la URL `https://<tu-api>/api/payments/wompi`.
+
+En tu computador, Wompi no puede enviarte eventos porque no tienes una dirección pública. El pago igual queda confirmado: cuando el cliente vuelve de Wompi, la API consulta la transacción. En producción también se confirma por el evento, aunque el cliente cierre la ventana antes de volver.
+
+### Descargar los archivos
+
+WhatsApp no deja adjuntar archivos desde un enlace, por eso el archivo del cliente queda en la API. En el panel, **Descargar** baja un zip con el archivo original, el G-code de cada cama y un `resumen.txt` con los datos del cliente y del pedido.
+
+La clave del panel la genera `iniciar` la primera vez, la muestra al arrancar y la guarda en `api/.env` como `CAPA3D_ADMIN_TOKEN`. En producción usa una clave larga.
 
 ## Calibrar con Bambu Studio
 
@@ -158,5 +186,5 @@ El estimado no tiene en cuenta los soportes ni la orientación. Sirve para mostr
 
 1. ✅ **Frontend**: migración del mockup a Next.js, visor WebGL con capas visibles y volumen de la impresora, lectura correcta de 3MF (unidades, componentes y transformaciones), análisis en un Web Worker.
 2. ✅ **Backend de cotización** (Python + FastAPI): subida del archivo, laminado real con PrusaSlicer (gramos y tiempo exactos, con soportes), conversión de STEP para verlo y cotizarlo, y precios en el servidor.
-3. **Pedidos y pagos**: base de datos, almacenamiento de archivos, Wompi o Mercado Pago, estados del pedido.
+3. ✅ **Pedidos y pagos**: pedido sin pago, confirmación del precio en el panel, pago con Wompi (o manual), estados hasta la entrega, página de seguimiento para el cliente.
 4. **Panel de administración**: pedidos, precios y materiales sin tocar código.

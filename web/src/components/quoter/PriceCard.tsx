@@ -2,7 +2,9 @@
 
 import { COLORS, MATERIALS, QUALITIES } from "@/lib/catalog";
 import { API_URL, printer, whatsappUrl } from "@/lib/config";
-import { markRequested } from "@/lib/api";
+import { markRequested, type Shipping } from "@/lib/api";
+import { useCallback, useState } from "react";
+import { OrderDialog } from "./OrderDialog";
 import { duration, money, num1 } from "@/lib/format";
 import type { ModelMetrics, Quote } from "@/lib/pricing";
 import { Icon, ICONS } from "../Icon";
@@ -36,9 +38,12 @@ interface Props {
   stage: PriceStage;
   qty: number;
   onQty: (q: number) => void;
+  shipping: Shipping | null;
 }
 
-export function PriceCard({ fileName, model, opts, supports, dims, quote, server, stage, qty, onQty }: Props) {
+export function PriceCard({ fileName, model, opts, supports, dims, quote, server, stage, qty, onQty, shipping }: Props) {
+  const [ordering, setOrdering] = useState(false);
+  const closeOrder = useCallback(() => setOrdering(false), []);
   const material = MATERIALS[opts.material];
   const quality = QUALITIES[opts.quality];
   const color = COLORS[opts.color];
@@ -121,15 +126,45 @@ export function PriceCard({ fileName, model, opts, supports, dims, quote, server
         </div>
       </details>
 
-      <a className="btn btn-primary glow" href={whatsappUrl(msg)} target="_blank" rel="noopener noreferrer"
-        onClick={() => quoteId && markRequested(quoteId, color.name)}
-        style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 10, marginTop: 16, padding: 15, borderRadius: 16, fontSize: 16 }}>
-        <Icon d={ICONS.chat} size={20} stroke={2} />
-        {model ? "Pedir por WhatsApp" : "Cotizar por WhatsApp"}
-      </a>
-      <p style={{ fontSize: 12, color: "var(--text-4)", margin: "8px 0 0", textAlign: "center" }}>
-        {quoteId ? `Tu archivo ya nos llegó con la cotización ${quoteId}.` : "Confirmamos el pedido y el pago por WhatsApp."}
-      </p>
+      {quoteId ? (
+        <>
+          <button className="btn btn-primary glow" onClick={() => setOrdering(true)}
+            style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 10, width: "100%", marginTop: 16, padding: 15, borderRadius: 16, fontSize: 16 }}>
+            <Icon d={ICONS.box} size={20} stroke={2} />
+            Hacer pedido
+          </button>
+          <p style={{ fontSize: 12, color: "var(--text-4)", margin: "8px 0 0", textAlign: "center" }}>
+            No pagas nada todavía: primero revisamos tu archivo.
+          </p>
+          <a className="btn btn-ghost" href={whatsappUrl(msg)} target="_blank" rel="noopener noreferrer"
+            onClick={() => markRequested(quoteId, color.name)}
+            style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8, marginTop: 10, padding: 12, borderRadius: 14, fontSize: 14 }}>
+            <Icon d={ICONS.chat} size={18} stroke={2} />
+            Preguntar por WhatsApp
+          </a>
+        </>
+      ) : (
+        <>
+          <a className="btn btn-primary glow" href={whatsappUrl(msg)} target="_blank" rel="noopener noreferrer"
+            style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 10, marginTop: 16, padding: 15, borderRadius: 16, fontSize: 16 }}>
+            <Icon d={ICONS.chat} size={20} stroke={2} />
+            {model ? "Pedir por WhatsApp" : "Cotizar por WhatsApp"}
+          </a>
+          <p style={{ fontSize: 12, color: "var(--text-4)", margin: "8px 0 0", textAlign: "center" }}>
+            {busy ? "En unos segundos podrás hacer el pedido aquí mismo." : "Confirmamos el pedido y el pago por WhatsApp."}
+          </p>
+        </>
+      )}
+      {ordering && quoteId && (
+        <OrderDialog
+          quoteId={quoteId}
+          color={color.name}
+          summary={`${fileName} · ${material.id} ${color.name} · ${quality.name} · relleno ${opts.infill}%${quote.qty > 1 ? ` · ${quote.qty} unidades` : ""}`}
+          printPrice={quote.total}
+          shipping={shipping}
+          onClose={closeOrder}
+        />
+      )}
     </div>
   );
 }

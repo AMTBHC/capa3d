@@ -7,6 +7,7 @@ import { ApiError, downloadQuote, listAdminQuotes, type AdminQuote } from "@/lib
 import { QUALITIES } from "@/lib/catalog";
 import { duration, money, num1 } from "@/lib/format";
 import { Icon, ICONS } from "../Icon";
+import { OrdersTab } from "./OrdersTab";
 
 const TOKEN_KEY = "capa3d-admin";
 const REFRESH_MS = 30_000;
@@ -60,11 +61,28 @@ export function AdminPanel() {
       {!API_URL ? (
         <Notice>Para usar el panel, configura <code>NEXT_PUBLIC_API_URL</code> en <code>web/.env.local</code>.</Notice>
       ) : !ready ? null : token ? (
-        <QuoteList token={token} onUnauthorized={logout} />
+        <Tabs token={token} onUnauthorized={logout} />
       ) : (
         <Login onLogin={(t) => { saveToken(t); setToken(t); }} />
       )}
     </main>
+  );
+}
+
+function Tabs({ token, onUnauthorized }: { token: string; onUnauthorized: () => void }) {
+  const [tab, setTab] = useState<"orders" | "quotes">("orders");
+  return (
+    <>
+      <div role="tablist" style={{ display: "flex", gap: 6, marginBottom: 20, borderBottom: "1px solid var(--line)" }}>
+        {([["orders", "Pedidos"], ["quotes", "Cotizaciones"]] as const).map(([id, label]) => (
+          <button key={id} role="tab" aria-selected={tab === id} onClick={() => setTab(id)}
+            style={{ padding: "12px 16px", background: "none", border: 0, borderBottom: `2px solid ${tab === id ? "var(--ac)" : "transparent"}`, color: tab === id ? "var(--text)" : "var(--text-3)", fontSize: 16, fontWeight: 600, cursor: "pointer", marginBottom: -1 }}>
+            {label}
+          </button>
+        ))}
+      </div>
+      {tab === "orders" ? <OrdersTab token={token} onUnauthorized={onUnauthorized} /> : <QuoteList token={token} onUnauthorized={onUnauthorized} />}
+    </>
   );
 }
 
@@ -89,7 +107,7 @@ function Login({ onLogin }: { onLogin: (token: string) => void }) {
 
   return (
     <form onSubmit={submit} className="step" style={{ maxWidth: 420, margin: "60px auto 0" }}>
-      <h1 className="step-title" style={{ fontSize: 24 }}>Panel de pedidos</h1>
+      <h1 className="step-title" style={{ fontSize: 24 }}>Panel de Capa3D</h1>
       <p className="step-sub" style={{ marginBottom: 18 }}>Escribe la clave del panel. Está en <code>api/.env</code> como <code>CAPA3D_ADMIN_TOKEN</code>.</p>
       <input type="password" value={value} onChange={(e) => setValue(e.target.value)} placeholder="Clave" autoFocus required
         style={{ width: "100%", padding: "14px 16px", borderRadius: 12, border: "1px solid rgba(255,255,255,.2)", background: "var(--surface-3)", color: "var(--text)", fontSize: 16 }} />
@@ -131,9 +149,9 @@ function QuoteList({ token, onUnauthorized }: { token: string; onUnauthorized: (
   return (
     <>
       <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", justifyContent: "space-between", gap: 12, marginBottom: 18 }}>
-        <div role="tablist" style={{ display: "flex", gap: 6 }}>
-          <button role="tab" aria-selected={requestedOnly} className="pill" onClick={() => setRequestedOnly(true)}>Pedidas por WhatsApp</button>
-          <button role="tab" aria-selected={!requestedOnly} className="pill" onClick={() => setRequestedOnly(false)}>Todas las cotizaciones</button>
+        <div style={{ display: "flex", gap: 6 }}>
+          <button className="chip-btn" aria-pressed={requestedOnly} onClick={() => setRequestedOnly(true)}>Pedidas o consultadas</button>
+          <button className="chip-btn" aria-pressed={!requestedOnly} onClick={() => setRequestedOnly(false)}>Todas</button>
         </div>
         <button className="chip-btn" onClick={load} disabled={loading}>{loading ? "Actualizando…" : "Actualizar"}</button>
       </div>
@@ -141,7 +159,7 @@ function QuoteList({ token, onUnauthorized }: { token: string; onUnauthorized: (
       {quotes && quotes.length === 0 && (
         <Notice>
           {requestedOnly
-            ? "Todavía nadie ha tocado “Pedir por WhatsApp”. Mira la pestaña “Todas las cotizaciones”."
+            ? "Todavía nadie ha pedido ni consultado. Mira “Todas”."
             : "Todavía no hay cotizaciones."}
         </Notice>
       )}
@@ -189,7 +207,7 @@ function QuoteRow({ q, token }: { q: AdminQuote; token: string }) {
         <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: 8 }}>
           <span className="mono" style={{ color: "var(--ac)", fontWeight: 600 }}>{q.id}</span>
           {q.requested_at
-            ? <span style={badge("var(--ok)")}>Pidió por WhatsApp</span>
+            ? <span style={badge("var(--ok)")}>Pidió o consultó</span>
             : <span style={badge("var(--text-3)")}>Solo cotizó</span>}
           {q.status === "failed" && <span style={badge("var(--bad)")}>Falló</span>}
           {q.status === "pending" && <span style={badge("var(--warn)")}>Laminando</span>}
