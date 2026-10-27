@@ -35,7 +35,7 @@ export type PricingRates = typeof pricing;
 
 export const printer = {
   /** Volumen de impresión en mm. */
-  bed: { x: 220, y: 220, z: 250 },
+  bed: { x: 256, y: 256, z: 256 },
   maxFileMB: 100,
   maxQty: 500,
 };

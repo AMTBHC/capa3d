@@ -1,5 +1,6 @@
 """Laminado con PrusaSlicer por línea de comandos."""
 
+import os
 import re
 import shutil
 import subprocess
@@ -26,8 +27,10 @@ class SliceResult:
 class SliceOptions:
     material: str
     quality: str
-    infill: int
+    infill: float
     supports: bool
+    # Altura de capa exacta; si falta, la de la calidad.
+    layer_height: float | None = None
 
 
 _TIME = re.compile(r"(?:(\d+)d\s*)?(?:(\d+)h\s*)?(?:(\d+)m\s*)?(?:(\d+)s)?")
@@ -61,9 +64,24 @@ def parse_gcode_stats(gcode: Path, density: float) -> tuple[float, float, float]
     return float(cm3) * density, parse_duration(time), float(mm or 0)
 
 
+def find_prusaslicer() -> str | None:
+    """PrusaSlicer en el PATH o en su carpeta de instalación habitual (Windows, Mac)."""
+    for name in ("prusa-slicer", "PrusaSlicer", "prusa-slicer-console"):
+        if found := shutil.which(name):
+            return found
+    candidates = [
+        Path("/Applications/PrusaSlicer.app/Contents/MacOS/PrusaSlicer"),
+        Path("/Applications/Original Prusa Drivers/PrusaSlicer.app/Contents/MacOS/PrusaSlicer"),
+    ]
+    for env in ("ProgramFiles", "ProgramW6432", "ProgramFiles(x86)"):
+        if base := os.environ.get(env):
+            candidates.append(Path(base) / "Prusa3D" / "PrusaSlicer" / "prusa-slicer-console.exe")
+    return next((str(c) for c in candidates if c.is_file()), None)
+
+
 class PrusaSlicer:
     def __init__(self, executable: str, catalog: Catalog, timeout_s: int):
-        self.executable = executable or shutil.which("prusa-slicer") or shutil.which("PrusaSlicer") or ""
+        self.executable = executable or find_prusaslicer() or ""
         self.catalog = catalog
         self.timeout_s = timeout_s
 
@@ -73,7 +91,9 @@ class PrusaSlicer:
         if not self.executable:
             return None
         try:
-            out = subprocess.run([self.executable, "--help"], capture_output=True, text=True, timeout=60)
+            out = subprocess.run(
+                [self.executable, "--help"], capture_output=True, encoding="utf-8", errors="replace", timeout=60
+            )
         except (OSError, subprocess.TimeoutExpired):
             return None
         m = re.search(r"PrusaSlicer-([\w.+-]+)", out.stdout + out.stderr)
@@ -82,7 +102,12 @@ class PrusaSlicer:
     def _run(self, args: list[str], cwd: Path) -> None:
         try:
             out = subprocess.run(
-                [self.executable, *args], cwd=cwd, capture_output=True, text=True, timeout=self.timeout_s
+                [self.executable, *args],
+                cwd=cwd,
+                capture_output=True,
+                encoding="utf-8",
+                errors="replace",
+                timeout=self.timeout_s,
             )
         except subprocess.TimeoutExpired as e:
             raise SlicerError("El laminado tardó demasiado") from e
@@ -100,7 +125,7 @@ class PrusaSlicer:
     def slice(self, stl: Path, opts: SliceOptions, gcode: Path) -> SliceResult:
         cat = self.catalog
         mat = cat.materials[opts.material]
-        q = cat.qualities[opts.quality]
+        layer = opts.layer_height or cat.qualities[opts.quality].layer_height
         bx, by, bz = cat.printer.bed
         args = [
             "--export-gcode",
@@ -108,14 +133,16 @@ class PrusaSlicer:
             "--bed-shape", f"0x0,{bx:g}x0,{bx:g}x{by:g},0x{by:g}",
             "--max-print-height", f"{bz:g}",
             "--center", f"{bx / 2:g},{by / 2:g}",
-            "--layer-height", f"{q.layer_height:g}",
-            "--first-layer-height", f"{max(q.layer_height, 0.2):g}",
-            "--fill-density", f"{opts.infill}%",
+            "--layer-height", f"{layer:g}",
+            "--first-layer-height", f"{max(layer, 0.2):g}",
+            "--fill-density", f"{opts.infill:g}%",
             "--filament-density", f"{mat.density:g}",
             "--temperature", str(mat.temperature),
             "--first-layer-temperature", str(mat.temperature),
             "--bed-temperature", str(mat.bed_temperature),
             "--first-layer-bed-temperature", str(mat.bed_temperature),
+            *(["--filament-max-volumetric-speed", f"{mat.max_volumetric_speed:g}"] if mat.max_volumetric_speed else []),
+            *(["--slowdown-below-layer-time", f"{mat.min_layer_time:g}"] if mat.min_layer_time is not None else []),
             *(["--support-material", "--support-material-auto"] if opts.supports else []),
             "--output", str(gcode),
             str(stl),

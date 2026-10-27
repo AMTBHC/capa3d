@@ -42,6 +42,7 @@ class ProjectInfo:
     printer: str | None = None
     layer_height: float | None = None
     infill: float | None = None
+    supports: bool | None = None
     filaments: list[dict[str, str]] = field(default_factory=list)
 
 

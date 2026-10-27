@@ -189,7 +189,11 @@ class QuoteService:
                     stl = self._scaled_stl(req.file_id, p["id"], k, work)
                     opts = SliceOptions(req.material, req.quality, req.infill, req.supports)
                     r = self.slicer.slice(stl, opts, work / f"plate_{p['id']}.gcode")
-                    usage, method = PlateUsage(grams=r.grams, print_hours=r.seconds / 3600), "slicer"
+                    cal = cat.calibration
+                    usage = PlateUsage(
+                        grams=r.grams * cal.weight_factor, print_hours=r.seconds / 3600 * cal.time_factor
+                    )
+                    method = "slicer"
                 except SlicerError as e:
                     note, usage, method = f"No se pudo laminar: {e}", None, "estimate"
             else:

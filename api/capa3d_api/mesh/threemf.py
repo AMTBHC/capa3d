@@ -266,6 +266,8 @@ def _project_settings(text) -> ProjectInfo:
         info.printer = str(first(s.get("printer_model")) or first(s.get("printer_settings_id")) or "") or None
         info.layer_height = _pos(str(first(s.get("layer_height")) or ""))
         info.infill = _pos(str(first(s.get("sparse_infill_density")) or "").replace("%", ""))
+        if (sup := first(s.get("enable_support"))) is not None:
+            info.supports = str(sup).lower() in ("1", "true")
         types = s.get("filament_type") or []
         colors = s.get("filament_colour") or []
         info.filaments = [
@@ -283,6 +285,8 @@ def _project_settings(text) -> ProjectInfo:
         info.printer = val("printer_model") or val("printer_settings_id") or None
         info.layer_height = _pos(val("layer_height"))
         info.infill = _pos((val("fill_density") or "").replace("%", ""))
+        if (sup := val("support_material")) is not None:
+            info.supports = sup == "1"
         types = [t for t in (val("filament_type") or "").split(";") if t]
         colors = (val("filament_colour") or "").split(";")
         info.filaments = [{"type": t, "color": colors[i] if i < len(colors) else ""} for i, t in enumerate(types)]

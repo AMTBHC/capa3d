@@ -2,17 +2,31 @@
 
 Sitio de impresión 3D con cotizador en línea. El cliente sube su modelo (STL, OBJ, 3MF o STEP) y lo ve en 3D sobre la cama de la impresora. Elige material, calidad, relleno, color y soportes, y recibe un estimado al instante, que luego se reemplaza por el **precio laminado** con PrusaSlicer en el servidor.
 
+## Probarlo en tu computador
+
+1. Instala, una sola vez:
+   - [Node.js](https://nodejs.org) (versión LTS)
+   - [Python 3](https://www.python.org/downloads/). En Windows, marca **"Add python.exe to PATH"** en el instalador.
+   - [PrusaSlicer](https://www.prusa3d.com/page/prusaslicer_424/). Sin él, el sitio funciona igual, pero con precio estimado y sin abrir STEP.
+2. Doble clic en **`iniciar.bat`** (Windows) o **`iniciar.command`** (Mac y Linux).
+   - La primera vez tarda unos minutos porque instala todo. Después arranca en segundos.
+   - En Mac, si no abre con doble clic: clic derecho → Abrir, o en una terminal `bash iniciar.command`.
+3. Se abre http://localhost:3000 con el sitio completo. La API queda en http://localhost:8000.
+
+Para apagarlo, cierra las ventanas de la terminal.
+
 ## Estructura
 
 ```
 api/                 API de cotización (Python + FastAPI + PrusaSlicer)
   config/
     catalog.toml     ← Precios, tarifas, materiales, calidades y cama (fuente de verdad)
-    printer.ini      ← Perfil de PrusaSlicer de tu impresora
+    profiles/        ← Perfiles de impresora (Bambu X1/P1, Bambu A1, genérico)
   capa3d_api/
     main.py          Rutas HTTP
     service.py       Subida, análisis, cotización y laminado en segundo plano
     slicer.py        PrusaSlicer por línea de comandos (G-code, STEP → STL)
+    calibrate.py     Ajusta tiempo y gramos para que coincidan con Bambu Studio
     mesh/            Lectura de STL/OBJ/3MF (mismas camas que la web) y análisis
     pricing.py       Fórmula de precio
     store.py         SQLite: archivos y cotizaciones
@@ -70,8 +84,8 @@ Con Docker, sitio y API juntos: `docker compose up --build` (sitio en :3000, API
 |---|---|
 | Número de WhatsApp y correo | `web/.env.local` (`NEXT_PUBLIC_WHATSAPP`, `NEXT_PUBLIC_EMAIL`) |
 | Precio por gramo, tarifa por hora, cargo base, vigencia de cotizaciones | `api/config/catalog.toml` (la web los lee de la API; `web/src/lib/config.ts` es solo el respaldo sin API) |
-| Volumen de impresión | `api/config/catalog.toml` → `[printer] bed` |
-| Velocidades, perímetros y aceleraciones con que se calcula el tiempo | `api/config/printer.ini`: reemplázalo por el perfil exportado de tu PrusaSlicer |
+| Tu impresora (cama y perfil) | `api/config/catalog.toml` → `[printer]`. Viene con la Bambu X1C/P1S; ahí mismo están las líneas para A1 y A1 mini |
+| Corrección de tiempo y gramos frente a Bambu Studio | `api/config/catalog.toml` → `[calibration]`. Se calcula con `calibrate` (ver abajo) |
 | Temperaturas y densidad de cada material | `api/config/catalog.toml` → `[materials.*]` |
 | Orígenes permitidos (CORS), carpeta de datos, límites | `api/.env` (ver `api/.env.example`) |
 | Materiales, calidades (altura de capa y velocidad), colores | `web/src/lib/catalog.ts` |
@@ -79,6 +93,24 @@ Con Docker, sitio y API juntos: `docker compose up --build` (sitio en :3000, API
 | Precios de los planes | `web/src/components/Plans.tsx` |
 
 Textos pendientes de completar: busca `[TU` en `web/src`.
+
+## Calibrar con Bambu Studio
+
+La API lamina con PrusaSlicer usando un perfil que imita la velocidad de las Bambu. Aun así, el tiempo y los gramos no salen idénticos a los de Bambu Studio. Para que coincidan, calcula un factor de corrección con piezas reales:
+
+1. En Bambu Studio, abre 3 o más piezas distintas (una pequeña, una mediana y una grande), con tu material y tus ajustes de siempre.
+2. Lamina **todas las camas** y guarda el proyecto (**Archivo → Guardar proyecto**). El 3MF guarda el tiempo y los gramos de cada cama.
+3. En la carpeta `api`, con el entorno activado (en Windows: `.venv\Scripts\activate`):
+   ```bash
+   python -m capa3d_api.calibrate pieza1.3mf pieza2.3mf pieza3.3mf --guardar
+   ```
+   Compara cada cama, muestra la diferencia y guarda `time_factor` y `weight_factor` en `catalog.toml`.
+4. Reinicia la API, o cierra y vuelve a abrir `iniciar`.
+
+Si el 3MF no trae el tiempo, pásalo a mano con los datos que muestra Bambu Studio:
+```bash
+python -m capa3d_api.calibrate pieza.stl --tiempo "1h 23m" --gramos 38.2 --relleno 15 --material PLA
+```
 
 ## Archivos 3MF con varias camas
 
@@ -96,7 +128,7 @@ Cada cama se cotiza como una impresión aparte (con su propio calentamiento). El
 
 ## Cómo se calcula el precio
 
-**Precio laminado (con la API).** Cada cama se lamina con PrusaSlicer usando `printer.ini`, el material, la calidad, el relleno, los soportes y la escala que eligió el cliente. Del G-code salen los gramos y el tiempo exactos:
+**Precio laminado (con la API).** Cada cama se lamina con PrusaSlicer usando el perfil de tu impresora, el material, la calidad, el relleno, los soportes y la escala que eligió el cliente. Del G-code salen los gramos y el tiempo, ajustados con los factores de calibración:
 
 - **Precio por unidad** = cargo base + gramos × $/g + (horas del slicer + preparación por cama) × tarifa, redondeado a $100
 
