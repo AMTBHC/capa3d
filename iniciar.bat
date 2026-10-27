@@ -13,8 +13,12 @@ if errorlevel 1 (
   exit /b 1
 )
 
+rem Se prefiere un Python estable: las versiones recien salidas a veces no tienen todas las librerias.
 set "PY="
-where py >nul 2>nul && set "PY=py -3"
+for %%v in (3.13 3.12 3.11) do (
+  if not defined PY py -%%v -c "1" >nul 2>nul && set "PY=py -%%v"
+)
+if not defined PY where py >nul 2>nul && set "PY=py -3"
 if not defined PY (
   echo Falta Python 3. Instalalo desde https://www.python.org/downloads/ y marca "Add python.exe to PATH".
   start https://www.python.org/downloads/
@@ -22,17 +26,21 @@ if not defined PY (
   exit /b 1
 )
 
-if not exist "api\.venv\Scripts\python.exe" (
+rem La marca .listo solo se escribe si la instalacion termino bien; si falta, se rehace.
+if not exist "api\.venv\.listo" (
   echo Preparando la API, solo la primera vez...
+  if exist "api\.venv" rmdir /s /q "api\.venv"
   %PY% -m venv api\.venv || goto :error
   api\.venv\Scripts\python -m pip install --quiet --upgrade pip
   api\.venv\Scripts\python -m pip install --quiet -e api || goto :error
+  echo ok> "api\.venv\.listo"
 )
 
-if not exist "web\node_modules" (
+if not exist "web\node_modules\.listo" (
   echo Preparando el sitio, solo la primera vez...
   pushd web
   call npm install --no-audit --no-fund || goto :error
+  echo ok> node_modules\.listo
   popd
 )
 
