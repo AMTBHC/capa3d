@@ -18,6 +18,8 @@ interface Props {
   plates: (LoadedPlate & { metrics: ModelMetrics })[];
   info: ProjectInfo;
   quote: Quote;
+  /** El peso y el tiempo de `quote` vienen del slicer. */
+  sliced: boolean;
   report: ProjectReport;
   selected: number;
   onSelect: (i: number) => void;
@@ -34,7 +36,7 @@ interface Props {
 const dim = (m: ModelMetrics) => `${num1(m.dx)} × ${num1(m.dy)} × ${num1(m.dz)} mm`;
 
 export function AnalysisPanel(props: Props) {
-  const { plates, info, quote, report, selected, onSelect, fileOptions, unit, onUnit, scale, onScale, qty, onQty } = props;
+  const { plates, info, quote, sliced, report, selected, onSelect, fileOptions, unit, onUnit, scale, onScale, qty, onQty } = props;
   const v = LEVEL[report.verdict];
   const multi = plates.length > 1;
   const pieces = plates.reduce((s, p) => s + p.plate.objects.length, 0);
@@ -46,14 +48,14 @@ export function AnalysisPanel(props: Props) {
         ["CAMAS", String(plates.length)],
         ["PIEZAS", String(pieces)],
         ["VOLUMEN TOTAL", `${num1(volume)} cm³`],
-        ["PESO ESTIMADO", `${num1(quote.grams)} g`],
-        ["TIEMPO ESTIMADO", duration(quote.hours)],
+        [sliced ? "PESO LAMINADO" : "PESO ESTIMADO", `${num1(quote.grams)} g`],
+        [sliced ? "TIEMPO LAMINADO" : "TIEMPO ESTIMADO", duration(quote.hours)],
       ]
     : [
         ["DIMENSIONES", dim(plates[0].metrics)],
         ["VOLUMEN", `${num1(volume)} cm³`],
-        ["PESO ESTIMADO", `${num1(quote.grams)} g`],
-        ["TIEMPO ESTIMADO", duration(quote.hours)],
+        [sliced ? "PESO LAMINADO" : "PESO ESTIMADO", `${num1(quote.grams)} g`],
+        [sliced ? "TIEMPO LAMINADO" : "TIEMPO ESTIMADO", duration(quote.hours)],
         [pieces > 1 ? "PIEZAS" : "TRIÁNGULOS", pieces > 1 ? String(pieces) : triangles.toLocaleString("es-CO")],
       ];
 
@@ -76,7 +78,7 @@ export function AnalysisPanel(props: Props) {
       </div>
 
       {multi && (
-        <PlateList plates={plates} quote={quote} report={report} selected={selected} onSelect={onSelect} from={info.platesFrom} />
+        <PlateList plates={plates} quote={quote} sliced={sliced} report={report} selected={selected} onSelect={onSelect} from={info.platesFrom} />
       )}
       {!multi && pieces > 1 && <PieceList names={plates[0].plate.objects.map((o) => o.name)} />}
 
@@ -161,9 +163,10 @@ function ProjectInfoBox({ info, onApply }: { info: ProjectInfo; onApply?: () => 
   );
 }
 
-function PlateList({ plates, quote, report, selected, onSelect, from }: {
+function PlateList({ plates, quote, sliced, report, selected, onSelect, from }: {
   plates: Props["plates"];
   quote: Quote;
+  sliced: boolean;
   report: ProjectReport;
   selected: number;
   onSelect: (i: number) => void;
@@ -193,10 +196,10 @@ function PlateList({ plates, quote, report, selected, onSelect, from }: {
                 </span>
                 <span style={{ display: "block", fontSize: 12, color: "var(--text-3)", marginTop: 2, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{names}</span>
                 <span className="mono" style={{ display: "block", fontSize: 11, color: "var(--text-3)", marginTop: 4 }}>
-                  {dim(p.metrics)} · ≈ {num1(est.grams)} g · {duration(est.hours)}
+                  {dim(p.metrics)} · {sliced ? "" : "≈ "}{num1(est.grams)} g · {duration(est.hours)}
                   {p.plate.sliced && (p.plate.sliced.grams || p.plate.sliced.seconds) && (
                     <span style={{ color: "var(--ok)" }}>
-                      {" "}· SLICER: {[p.plate.sliced.grams && `${num1(p.plate.sliced.grams)} g`, p.plate.sliced.seconds && duration(p.plate.sliced.seconds / 3600)].filter(Boolean).join(" · ")}
+                      {" "}· EN TU ARCHIVO: {[p.plate.sliced.grams && `${num1(p.plate.sliced.grams)} g`, p.plate.sliced.seconds && duration(p.plate.sliced.seconds / 3600)].filter(Boolean).join(" · ")}
                     </span>
                   )}
                 </span>

@@ -4,7 +4,8 @@ import { useState } from "react";
 import { MATERIALS, QUALITIES } from "@/lib/catalog";
 import { printer } from "@/lib/config";
 import { projectPrintability } from "@/lib/checks";
-import { estimateQuote, SAMPLE_MODEL } from "@/lib/pricing";
+import { estimateQuote, SAMPLE_MODEL, type Quote } from "@/lib/pricing";
+import type { QuoteParams, ServerQuote } from "@/lib/api";
 import type { ProjectInfo } from "@/lib/mesh/project";
 import { scaledMetrics, unitFactor, type FileUnit } from "@/lib/units";
 import { SectionHeader } from "../SectionHeader";
@@ -12,7 +13,8 @@ import { useModelFile } from "./useModelFile";
 import { PreviewCard } from "./PreviewCard";
 import { FileDrop } from "./FileDrop";
 import { AnalysisPanel } from "./AnalysisPanel";
-import { ColorPicker, InfillPicker, MaterialPicker, QualityPicker } from "./Options";
+import { ColorPicker, InfillPicker, MaterialPicker, QualityPicker, SupportsPicker } from "./Options";
+import { useCatalog, useServerQuote } from "./useServer";
 
 export interface QuoteOptions {
   material: number;
@@ -35,14 +37,34 @@ function optionsFromFile(info: ProjectInfo): Partial<QuoteOptions> {
   return out;
 }
 
+/** El precio laminado del servidor con la misma forma que el estimado local. */
+function fromServer(q: ServerQuote, plateIds: number[]): Quote | null {
+  const p = q.price;
+  if (!p) return null;
+  return {
+    plates: plateIds.map((id, i) => q.plates.find((x) => x.id === id) ?? q.plates[i] ?? { grams: 0, hours: 0 }),
+    grams: p.grams,
+    hours: p.hours,
+    pricePerGram: p.price_per_gram,
+    materialCost: p.material_cost,
+    machineCost: p.machine_cost,
+    baseFee: p.base_fee,
+    unitPrice: p.unit_price,
+    qty: p.qty,
+    total: p.total,
+  };
+}
+
 export function Quoter() {
-  const file = useModelFile();
+  const catalog = useCatalog();
+  const file = useModelFile(catalog.bed);
   const [opts, setOpts] = useState<QuoteOptions>({ material: 0, quality: 1, infill: 20, color: 3 });
   const [unit, setUnit] = useState<FileUnit>("mm");
   const [scale, setScale] = useState(100);
   const [qty, setQty] = useState(1);
   /** Cama que muestra el visor; -1 = todas. */
   const [plate, setPlate] = useState(-1);
+  const [supports, setSupports] = useState(true);
   const set = (patch: Partial<QuoteOptions>) => setOpts((o) => ({ ...o, ...patch }));
 
   // Al cambiar de modelo se reinician unidades, escala, cantidad y cama.
@@ -60,16 +82,25 @@ export function Quoter() {
   const plates = model?.plates.map((p) => ({ ...p, metrics: scaledMetrics(p.analysis, k) })) ?? [];
   const material = MATERIALS[opts.material];
   const quality = QUALITIES[opts.quality];
-  const quote = estimateQuote({
+  const estimate = estimateQuote({
     metrics: plates.length ? plates.map((p) => p.metrics) : SAMPLE_MODEL,
     material,
     flow: quality.flow,
     infill: opts.infill,
     qty: model ? qty : 1,
+    rates: catalog.rates,
   });
   const report = model
-    ? projectPrintability(plates.map((p) => ({ name: p.plate.name, metrics: p.metrics, openEdges: p.analysis.openEdges })), printer.bed, scale)
+    ? projectPrintability(plates.map((p) => ({ name: p.plate.name, metrics: p.metrics, openEdges: p.analysis.openEdges })), catalog.bed, scale)
     : null;
+
+  // Precio laminado en el servidor, cuando hay API y el modelo cabe.
+  const params: QuoteParams | null =
+    model && report?.fits
+      ? { material: material.id, quality: quality.id, infill: opts.infill, qty, unit, scale, supports }
+      : null;
+  const server = useServerQuote(file.upload.file?.id, params);
+  const quote = (server.status === "done" && fromServer(server.quote, plates.map((p) => p.plate.id))) || estimate;
   const fileOptions = model ? optionsFromFile(model.info) : {};
 
   return (
@@ -89,14 +120,17 @@ export function Quoter() {
           fits={report?.plates.map((r) => r.fits) ?? []}
           dims={plates.length ? plates.map((p) => p.metrics) : [SAMPLE_MODEL]}
           quote={quote}
+          server={server}
+          bed={catalog.bed}
         />
         <div style={{ flex: "1 1 520px", minWidth: 0, display: "flex", flexDirection: "column", gap: 18 }}>
-          <FileDrop fileName={file.fileName} status={file.status} onFile={file.load} />
+          <FileDrop fileName={file.fileName} status={file.status} upload={file.upload} onFile={file.load} />
           {model && report && (
             <AnalysisPanel
               plates={plates}
               info={model.info}
               quote={quote}
+              sliced={server.status === "done" && server.quote.method !== "estimate"}
               report={report}
               selected={plate}
               onSelect={setPlate}
@@ -115,6 +149,7 @@ export function Quoter() {
             <InfillPicker value={opts.infill} onChange={(infill) => set({ infill })} />
           </div>
           <ColorPicker value={opts.color} onChange={(color) => set({ color })} />
+          {catalog.slicing && <SupportsPicker value={supports} onChange={setSupports} />}
         </div>
       </div>
     </section>

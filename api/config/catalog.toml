@@ -1,0 +1,61 @@
+# Catálogo y precios de Capa3D. Esta es la fuente de verdad del precio:
+# la web lo lee de GET /api/catalog para su estimado inmediato.
+
+currency = "COP"
+
+[pricing]
+# Tarifa de máquina por hora de impresión.
+machine_rate_per_hour = 2500
+# Cargo fijo por copia del proyecto (preparación, revisión, retiro de cama).
+base_fee = 5000
+# El precio por unidad se redondea a este múltiplo.
+round_to = 100
+# Calentamiento y preparación de cada cama, en horas.
+setup_hours_per_plate = 0.2
+# Días que se respeta una cotización.
+quote_valid_days = 7
+
+[printer]
+# Volumen de impresión en mm: X, Y, Z.
+bed = [220, 220, 250]
+# Perfil de PrusaSlicer con la impresora y la velocidad (ruta relativa a esta carpeta).
+# Exporta el tuyo desde PrusaSlicer: Archivo → Exportar → Exportar configuración.
+profile = "printer.ini"
+
+# price_per_gram en COP. density en g/cm³. Temperaturas en °C.
+[materials.PLA]
+price_per_gram = 120
+density = 1.24
+temperature = 215
+bed_temperature = 60
+
+[materials.PETG]
+price_per_gram = 140
+density = 1.27
+temperature = 240
+bed_temperature = 80
+
+[materials.ABS]
+price_per_gram = 140
+density = 1.04
+temperature = 250
+bed_temperature = 100
+
+[materials.TPU]
+price_per_gram = 250
+density = 1.21
+temperature = 225
+bed_temperature = 50
+
+# flow: mm³/s efectivos, solo para el estimado cuando no se puede laminar.
+[qualities.borrador]
+layer_height = 0.28
+flow = 12
+
+[qualities.estandar]
+layer_height = 0.20
+flow = 8
+
+[qualities.detalle]
+layer_height = 0.12
+flow = 4.5

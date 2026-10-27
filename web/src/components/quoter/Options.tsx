@@ -101,3 +101,23 @@ export function ColorPicker({ value, onChange }: PickerProps) {
     </div>
   );
 }
+
+export function SupportsPicker({ value, onChange }: { value: boolean; onChange: (v: boolean) => void }) {
+  const opts = [
+    [true, "Automáticos", "Donde la pieza los necesite"],
+    [false, "Sin soportes", "La pieza no tiene voladizos"],
+  ] as const;
+  return (
+    <div className="card">
+      <div className="mono label" style={{ marginBottom: 16 }}>06 / SOPORTES</div>
+      <div style={{ display: "flex", gap: 10 }}>
+        {opts.map(([v, name, sub]) => (
+          <button key={name} className="option" aria-pressed={value === v} onClick={() => onChange(v)} style={{ flex: 1, padding: 14, borderRadius: 16 }}>
+            <span style={{ fontWeight: 600, fontSize: 14 }}>{name}</span>
+            <span className="muted" style={{ fontSize: 12, marginTop: 2 }}>{sub}</span>
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}

@@ -1,0 +1,117 @@
+"""Modelos de prueba generados en memoria."""
+
+import io
+import json
+import zipfile
+
+import numpy as np
+
+CUBE_FACES = [
+    (0, 2, 1), (0, 3, 2), (4, 5, 6), (4, 6, 7), (0, 1, 5), (0, 5, 4),
+    (1, 2, 6), (1, 6, 5), (2, 3, 7), (2, 7, 6), (3, 0, 4), (3, 4, 7),
+]  # fmt: skip
+
+
+def cube_vertices(s: float) -> list[tuple[float, float, float]]:
+    return [(0, 0, 0), (s, 0, 0), (s, s, 0), (0, s, 0), (0, 0, s), (s, 0, s), (s, s, s), (0, s, s)]
+
+
+def cube(s: float = 10) -> np.ndarray:
+    v = np.array(cube_vertices(s), dtype=np.float64)
+    return v[np.array(CUBE_FACES)]
+
+
+def binary_stl(tris: np.ndarray) -> bytes:
+    rec = np.zeros(len(tris), dtype=[("n", "<f4", 3), ("v", "<f4", (3, 3)), ("a", "<u2")])
+    rec["v"] = tris
+    return b"\0" * 80 + np.uint32(len(tris)).tobytes() + rec.tobytes()
+
+
+def mesh_xml(s: float) -> str:
+    vs = "".join(f'<vertex x="{x}" y="{y}" z="{z}"/>' for x, y, z in cube_vertices(s))
+    ts = "".join(f'<triangle v1="{a}" v2="{b}" v3="{c}"/>' for a, b, c in CUBE_FACES)
+    return f"<mesh><vertices>{vs}</vertices><triangles>{ts}</triangles></mesh>"
+
+
+RELS = (
+    '<?xml version="1.0"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">'
+    '<Relationship Target="/3D/3dmodel.model" Id="rel0" '
+    'Type="http://schemas.microsoft.com/3dmanufacturing/2013/01/3dmodel"/></Relationships>'
+)
+
+
+def tr(x: float, y: float, z: float = 0) -> str:
+    return f"1 0 0 0 1 0 0 0 1 {x} {y} {z}"
+
+
+def zip3mf(files: dict[str, str | bytes]) -> bytes:
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as z:
+        z.writestr("_rels/.rels", RELS)
+        for k, v in files.items():
+            z.writestr(k, v)
+    return buf.getvalue()
+
+
+def model(unit: str, resources: str, build: str) -> str:
+    return (
+        f'<?xml version="1.0"?><model unit="{unit}" xmlns="http://schemas.microsoft.com/3dmanufacturing/core/2015/02">'
+        f"<resources>{resources}</resources><build>{build}</build></model>"
+    )
+
+
+def bambu_project() -> bytes:
+    """Igual que bambuProject() en web/src/lib/testing.ts."""
+
+    def sub(s: float) -> str:
+        return model("millimeter", f'<object id="1" type="model">{mesh_xml(s)}</object>', "")
+
+    comp = '<components><component p:path="/3D/Objects/object_{n}.model" objectid="1" transform="{t}"/></components>'
+    ident = "1 0 0 0 1 0 0 0 1 0 0 0"
+    root = (
+        '<?xml version="1.0"?><model unit="millimeter" xmlns="http://schemas.microsoft.com/3dmanufacturing/core/2015/02"'
+        ' xmlns:p="http://schemas.microsoft.com/3dmanufacturing/production/2015/06"><resources>'
+        f'<object id="2" type="model">{comp.format(n=1, t=ident)}</object>'
+        f'<object id="4" type="model">{comp.format(n=2, t=ident)}</object>'
+        f'</resources><build><item objectid="2" transform="{tr(100, 100)}" printable="1"/>'
+        f'<item objectid="4" transform="{tr(370, 100)}" printable="1"/>'
+        f'<item objectid="2" transform="{tr(150, 100)}" printable="1"/></build></model>'
+    )
+
+    def md(k: str, v: object) -> str:
+        return f'<metadata key="{k}" value="{v}"/>'
+
+    def inst(o: int, i: int) -> str:
+        return f"<model_instance>{md('object_id', o)}{md('instance_id', i)}</model_instance>"
+
+    settings = (
+        '<?xml version="1.0"?><config>'
+        f'<object id="2">{md("name", "Cubo &amp; tapa")}<part id="1">{md("name", "parte")}</part></object>'
+        f'<object id="4">{md("name", "Cubo grande")}</object>'
+        f"<plate>{md('plater_id', 1)}{md('plater_name', '')}{inst(2, 0)}{inst(2, 1)}</plate>"
+        f"<plate>{md('plater_id', 2)}{md('plater_name', 'Tapas')}{inst(4, 0)}</plate>"
+        "</config>"
+    )
+    slice_info = (
+        f'<?xml version="1.0"?><config><plate>{md("index", 2)}{md("prediction", 3600)}{md("weight", 12.5)}'
+        '<filament id="1" type="PETG" color="#FFFFFF" used_g="12.5"/></plate></config>'
+    )
+    project = json.dumps(
+        {
+            "printer_model": "Bambu Lab X1 Carbon",
+            "layer_height": "0.2",
+            "sparse_infill_density": "15%",
+            "filament_type": ["PETG"],
+            "filament_colour": ["#FFFFFF"],
+        }
+    )
+    return zip3mf(
+        {
+            "3D/3dmodel.model": root,
+            "3D/Objects/object_1.model": sub(10),
+            "3D/Objects/object_2.model": sub(20),
+            "Metadata/model_settings.config": settings,
+            "Metadata/slice_info.config": slice_info,
+            "Metadata/project_settings.config": project,
+        }
+    )

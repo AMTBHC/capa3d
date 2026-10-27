@@ -1,4 +1,4 @@
-import { pricing as defaultRates, type MaterialId } from "./config";
+import { pricing as defaultRates, type MaterialId, type PricingRates } from "./config";
 
 /** Medidas del modelo ya escalado, en mm / cm³ / cm². */
 export interface ModelMetrics {
@@ -21,7 +21,7 @@ export interface QuoteInput {
   /** 0–100 */
   infill: number;
   qty: number;
-  rates?: typeof defaultRates;
+  rates?: PricingRates;
 }
 
 export interface PrintEstimate {
@@ -49,17 +49,21 @@ const SHELL_CM = 0.12;
 const WASTE = 1.1;
 /** Factor por desplazamientos, aceleración y cambios de capa. */
 const TIME_OVERHEAD = 1.25;
-/** Calentamiento y preparación, en horas. */
-const WARMUP_H = 0.2;
 
-/** Gramos y horas de una cama, sin slicer: paredes + relleno proporcional. */
-export function estimatePrint(metrics: ModelMetrics, density: number, flow: number, infill: number): PrintEstimate {
+/** Gramos y horas de una cama, sin slicer: paredes + relleno proporcional, más la preparación. */
+export function estimatePrint(
+  metrics: ModelMetrics,
+  density: number,
+  flow: number,
+  infill: number,
+  setupHours = defaultRates.setupHoursPerPlate,
+): PrintEstimate {
   const vol = metrics.volumeCm3;
   const shell = Math.min(vol, metrics.areaCm2 * SHELL_CM);
   const extruded = shell + Math.max(0, vol - shell) * (infill / 100);
   return {
     grams: extruded * WASTE * density,
-    hours: ((extruded * 1000) / flow / 3600) * TIME_OVERHEAD + WARMUP_H,
+    hours: ((extruded * 1000) / flow / 3600) * TIME_OVERHEAD + setupHours,
   };
 }
 
@@ -69,7 +73,7 @@ export function estimatePrint(metrics: ModelMetrics, density: number, flow: numb
  * El precio final se confirma al laminar el archivo.
  */
 export function estimateQuote({ metrics, material, flow, infill, qty, rates = defaultRates }: QuoteInput): Quote {
-  const plates = (Array.isArray(metrics) ? metrics : [metrics]).map((m) => estimatePrint(m, material.density, flow, infill));
+  const plates = (Array.isArray(metrics) ? metrics : [metrics]).map((m) => estimatePrint(m, material.density, flow, infill, rates.setupHoursPerPlate));
   const grams = plates.reduce((s, p) => s + p.grams, 0);
   const hours = plates.reduce((s, p) => s + p.hours, 0);
   const pricePerGram = rates.pricePerGram[material.id];
