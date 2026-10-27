@@ -2,6 +2,19 @@
 
 Sitio de impresión 3D con cotizador en línea. El cliente sube su modelo (STL, OBJ, 3MF o STEP) y lo ve en 3D sobre la cama de la impresora. Elige material, calidad, relleno, color y soportes, y recibe un estimado al instante, que luego se reemplaza por el **precio laminado** con PrusaSlicer en el servidor.
 
+## Probarlo en tu computador
+
+1. Instala, una sola vez:
+   - [Node.js](https://nodejs.org) (versión LTS)
+   - [Python 3](https://www.python.org/downloads/). En Windows, marca **"Add python.exe to PATH"** en el instalador.
+   - [PrusaSlicer](https://www.prusa3d.com/page/prusaslicer_424/). Sin él, el sitio funciona igual, pero con precio estimado y sin abrir STEP.
+2. Doble clic en **`iniciar.bat`** (Windows) o **`iniciar.command`** (Mac y Linux).
+   - La primera vez tarda unos minutos porque instala todo. Después arranca en segundos.
+   - En Mac, si no abre con doble clic: clic derecho → Abrir, o en una terminal `bash iniciar.command`.
+3. Se abre http://localhost:3000 con el sitio completo. La API queda en http://localhost:8000.
+
+Para apagarlo, cierra las ventanas de la terminal.
+
 ## Estructura
 
 ```
