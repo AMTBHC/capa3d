@@ -15,6 +15,7 @@ web/                 Sitio (Next.js 16 + TypeScript + Three.js)
     pricing.ts       Fórmula de cotización (pura, con pruebas)
     checks.ts        Revisión de imprimibilidad (malla cerrada, cabe en la cama…)
     mesh/            Lectura de STL/OBJ/3MF y análisis geométrico (en un Web Worker)
+      threemf.ts     Lector 3MF propio: camas, objetos en subarchivos, datos del slicer
 design/reference/    Mockup original exportado de la herramienta de diseño (solo referencia)
 ```
 
@@ -47,6 +48,20 @@ npm run lint && npm run typecheck && npm test && npm run build
 | Precios de los planes | `web/src/components/Plans.tsx` |
 
 Textos pendientes de completar: busca `[TU` en `web/src`.
+
+## Archivos 3MF con varias camas
+
+Los proyectos de **Bambu Studio y OrcaSlicer** guardan sus camas en `Metadata/model_settings.config`. El cotizador las lee y muestra:
+
+- Cada cama con su nombre, su miniatura, sus piezas, sus medidas y si cabe en la impresora.
+- Los datos laminados, si el archivo los trae (`slice_info.config`): gramos y tiempo reales del slicer.
+- La impresora, la altura de capa, el relleno y los filamentos del proyecto, con un botón para usar esos ajustes en la cotización.
+
+Si el archivo no declara camas (por ejemplo, un 3MF exportado de PrusaSlicer) y las piezas no caben juntas, se agrupan por posición en camas que sí quepan.
+
+En el visor se puede ver una cama o todas lado a lado, y ampliarlo a pantalla completa (Esc para cerrar).
+
+Cada cama se cotiza como una impresión aparte (con su propio calentamiento). El cargo base se cobra una vez por copia del proyecto.
 
 ## Cómo se calcula el precio
 

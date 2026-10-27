@@ -26,3 +26,14 @@ describe("estimateQuote", () => {
     expect(at(100)).toBeGreaterThan(at(20));
   });
 });
+
+describe("estimateQuote con varias camas", () => {
+  it("suma material y tiempo por cama y cobra el cargo base una vez", () => {
+    const one = estimateQuote({ metrics: SAMPLE_MODEL, material: pla, flow: standard.flow, infill: 20, qty: 1 });
+    const two = estimateQuote({ metrics: [SAMPLE_MODEL, SAMPLE_MODEL], material: pla, flow: standard.flow, infill: 20, qty: 1 });
+    expect(two.plates).toHaveLength(2);
+    expect(two.grams).toBeCloseTo(one.grams * 2);
+    expect(two.hours).toBeCloseTo(one.hours * 2);
+    expect(two.unitPrice).toBe(Math.round((5000 + one.materialCost * 2 + one.machineCost * 2) / 100) * 100);
+  });
+});

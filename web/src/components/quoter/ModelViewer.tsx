@@ -7,9 +7,16 @@ import { BufferAttribute, BufferGeometry, Color, Float32BufferAttribute, MeshSta
 import type { MeshAnalysis } from "@/lib/mesh/analyze";
 import type { Bed } from "@/lib/checks";
 
-interface Props {
+export interface ViewerPlate {
   positions: Float32Array;
   analysis: MeshAnalysis;
+  fits: boolean;
+}
+
+interface Props {
+  plates: ViewerPlate[];
+  /** Índice de la cama a mostrar; -1 muestra todas lado a lado. */
+  selected: number;
   /** Factor mm del archivo → mm reales (unidades × escala). */
   k: number;
   color: string;
@@ -17,10 +24,11 @@ interface Props {
   autoRotate: boolean;
   layerMm: number;
   bed: Bed;
-  fits: boolean;
 }
 
 const FOV = 38;
+/** Separación entre camas en la vista de todas, relativa al ancho de la cama. */
+const PLATE_STRIDE = 1.25;
 
 /** Lo que usamos de los controles de órbita de drei. */
 interface Orbit {
@@ -30,7 +38,7 @@ interface Orbit {
   update(): void;
 }
 
-/** Visor WebGL del modelo del cliente sobre la cama de la impresora, en mm reales y Z hacia arriba. */
+/** Visor WebGL de las camas del cliente, en mm reales y Z hacia arriba. */
 export default function ModelViewer(props: Props) {
   return (
     <Canvas
@@ -50,33 +58,50 @@ export default function ModelViewer(props: Props) {
   );
 }
 
-function Scene({ positions, analysis, k, color, wire, autoRotate, layerMm, bed, fits }: Props) {
-  const geometry = useMemo(() => {
-    const g = new BufferGeometry();
-    g.setAttribute("position", new BufferAttribute(positions, 3));
-    g.computeVertexNormals();
-    return g;
-  }, [positions]);
-  useEffect(() => () => geometry.dispose(), [geometry]);
-
+function Scene({ plates, selected, k, color, wire, autoRotate, layerMm, bed }: Props) {
   const material = useLayeredMaterial();
   useEffect(() => {
     updateMaterial(material, color, wire, layerMm);
   }, [material, color, wire, layerMm]);
 
-  const [cx, cy] = analysis.center;
-  const size = new Vector3(analysis.dx * k, analysis.dy * k, analysis.dz * k);
+  const all = selected < 0 || selected >= plates.length;
+  const shown = all ? plates.map((p, i) => ({ p, i })) : [{ p: plates[selected], i: selected }];
+  const stride = bed.x * PLATE_STRIDE;
+  const offset = (n: number) => (all ? (n - (plates.length - 1) / 2) * stride : 0);
+
+  const size = all
+    ? new Vector3((plates.length - 1) * stride + bed.x, bed.y, Math.max(...plates.map((p) => p.analysis.dz * k), 10))
+    : new Vector3(shown[0].p.analysis.dx * k, shown[0].p.analysis.dy * k, shown[0].p.analysis.dz * k);
 
   return (
     <>
-      <group scale={k}>
-        <mesh geometry={geometry} material={material} position={[-cx, -cy, -analysis.minZ]} />
-      </group>
-      <BedGrid bed={bed} />
-      <BuildVolume bed={bed} fits={fits} />
+      {shown.map(({ p, i }) => (
+        <group key={i} position={[offset(i), 0, 0]}>
+          <PlateMesh plate={p} k={k} material={material} />
+          <BedGrid bed={bed} />
+          <BuildVolume bed={bed} fits={p.fits} />
+        </group>
+      ))}
       <OrbitControls makeDefault autoRotate={autoRotate} autoRotateSpeed={1.2} enableDamping={false} />
       <CameraRig size={size} />
     </>
+  );
+}
+
+/** La cama centrada sobre el origen y apoyada en Z = 0. */
+function PlateMesh({ plate, k, material }: { plate: ViewerPlate; k: number; material: MeshStandardMaterial }) {
+  const geometry = useMemo(() => {
+    const g = new BufferGeometry();
+    g.setAttribute("position", new BufferAttribute(plate.positions, 3));
+    g.computeVertexNormals();
+    return g;
+  }, [plate.positions]);
+  useEffect(() => () => geometry.dispose(), [geometry]);
+  const [cx, cy] = plate.analysis.center;
+  return (
+    <group scale={k}>
+      <mesh geometry={geometry} material={material} position={[-cx, -cy, -plate.analysis.minZ]} />
+    </group>
   );
 }
 
@@ -91,7 +116,7 @@ function updateMaterial(m: MeshStandardMaterial, color: string, wire: boolean, l
 function useLayeredMaterial() {
   const material = useMemo(() => {
     const uniforms = { uLayer: { value: 0.2 }, uStrength: { value: 0.22 } };
-    const m = new MeshStandardMaterial({ roughness: 0.62, metalness: 0.05, flatShading: false });
+    const m = new MeshStandardMaterial({ roughness: 0.62, metalness: 0.05 });
     m.userData.uniforms = uniforms;
     m.onBeforeCompile = (shader) => {
       Object.assign(shader.uniforms, uniforms);
@@ -155,7 +180,7 @@ function BuildVolume({ bed, fits }: { bed: Bed; fits: boolean }) {
   );
 }
 
-/** Encuadra la cámara al modelo cuando cambia de tamaño. */
+/** Encuadra la cámara cuando cambia lo que se muestra. */
 function CameraRig({ size }: { size: Vector3 }) {
   const camera = useThree((s) => s.camera) as PerspectiveCamera;
   const controls = useThree((s) => s.controls) as unknown as Orbit | null;
