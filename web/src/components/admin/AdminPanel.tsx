@@ -114,7 +114,12 @@ function Login({ onLogin }: { onLogin: (token: string) => void }) {
   return (
     <form onSubmit={submit} className="step" style={{ maxWidth: 420, margin: "60px auto 0" }}>
       <h1 className="step-title" style={{ fontSize: 24 }}>Panel de Capa3D</h1>
-      <p className="step-sub" style={{ marginBottom: 18 }}>Escribe la clave del panel. Está en <code>api/.env</code> como <code>CAPA3D_ADMIN_TOKEN</code>.</p>
+      <p className="step-sub" style={{ marginBottom: 18 }}>
+        Escribe la clave del panel. Este navegador la recuerda hasta que toques <strong>Salir</strong>.
+        <span style={{ display: "block", fontSize: 12, marginTop: 6, color: "var(--text-4)" }}>
+          En el servidor es la que elegiste al instalar (<code>CLAVE_PANEL</code> en <code>deploy/.env</code>); en tu PC, <code>CAPA3D_ADMIN_TOKEN</code> en <code>api/.env</code>.
+        </span>
+      </p>
       <input type="password" value={value} onChange={(e) => setValue(e.target.value)} placeholder="Clave" autoFocus required
         style={{ width: "100%", padding: "14px 16px", borderRadius: 12, border: "1px solid var(--line-3)", background: "var(--surface-3)", color: "var(--text)", fontSize: 16 }} />
       {error && <p style={{ color: "var(--bad)", fontSize: 14, margin: "10px 0 0" }}>{error}</p>}

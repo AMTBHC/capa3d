@@ -1,0 +1,29 @@
+# Caddy pide y renueva solo el certificado HTTPS (Let's Encrypt) para tu dominio.
+{
+	email {$CORREO}
+}
+
+{$DOMINIO} {
+	encode zstd gzip
+
+	# La API: cotizaciones, pedidos, pagos y panel. Los archivos de clientes pueden pesar
+	# hasta 100 MB, y las actualizaciones en vivo (SSE) no se deben retener.
+	handle /api/* {
+		request_body {
+			max_size 110MB
+		}
+		reverse_proxy api:8000 {
+			flush_interval -1
+		}
+	}
+
+	# El sitio.
+	handle {
+		reverse_proxy web:3000
+	}
+}
+
+# www.tudominio.com lleva al dominio principal.
+www.{$DOMINIO} {
+	redir https://{$DOMINIO}{uri} permanent
+}

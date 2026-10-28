@@ -1,0 +1,57 @@
+# Capa3D en un servidor (VPS): sitio, API y HTTPS automático con Caddy.
+# Se instala con deploy/instalar.sh, que escribe deploy/.env con tu dominio y tus claves.
+#   docker compose up -d --build     (desde esta carpeta)
+name: capa3d
+
+services:
+  caddy:
+    image: caddy:2.8
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    environment:
+      DOMINIO: ${DOMINIO:?Falta DOMINIO en deploy/.env}
+      CORREO: ${CORREO:-}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+    depends_on:
+      - api
+      - web
+
+  api:
+    build: ../api
+    restart: unless-stopped
+    environment:
+      CAPA3D_SITE_URL: https://${DOMINIO}
+      CAPA3D_CORS_ORIGINS: https://${DOMINIO}
+      CAPA3D_ADMIN_TOKEN: ${CLAVE_PANEL:?Falta CLAVE_PANEL en deploy/.env}
+      CAPA3D_WOMPI_PUBLIC_KEY: ${WOMPI_PUBLIC_KEY:-}
+      CAPA3D_WOMPI_INTEGRITY_SECRET: ${WOMPI_INTEGRITY_SECRET:-}
+      CAPA3D_WOMPI_EVENTS_SECRET: ${WOMPI_EVENTS_SECRET:-}
+      CAPA3D_WOMPI_PRIVATE_KEY: ${WOMPI_PRIVATE_KEY:-}
+    volumes:
+      # Archivos de los clientes, G-code, fotos del catálogo y la base de datos.
+      - capa3d-data:/data
+      # Precios, materiales, perfil de la impresora y límites: se editan sin reconstruir.
+      - ../api/config:/app/config:ro
+
+  web:
+    build:
+      context: ../web
+      args:
+        # El sitio y la API comparten dominio: Caddy manda /api/* a la API.
+        NEXT_PUBLIC_API_URL: https://${DOMINIO}
+        NEXT_PUBLIC_WHATSAPP: ${WHATSAPP:-}
+        NEXT_PUBLIC_EMAIL: ${CORREO_CONTACTO:-}
+    restart: unless-stopped
+    depends_on:
+      - api
+
+volumes:
+  capa3d-data:
+  caddy-data:
+  caddy-config:

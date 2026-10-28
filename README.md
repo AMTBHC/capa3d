@@ -16,6 +16,31 @@ Sitio de impresión 3D con cotizador en línea. El cliente sube su modelo (STL, 
 
 Para apagarlo, cierra las ventanas de la terminal.
 
+## Publicarlo en un servidor (VPS)
+
+Para que clientes y tú entren desde cualquier lugar, con tu dominio y HTTPS. Sirve cualquier VPS con Ubuntu 22.04/24.04 (Hetzner, DigitalOcean, Contabo, AWS Lightsail…); recomendado: 2 núcleos y 4 GB de RAM o más, porque PrusaSlicer usa CPU al laminar.
+
+1. **Dominio:** en tu proveedor de dominio crea un registro **A** de `tudominio.com` (y otro de `www`) hacia la IP del servidor.
+2. **Entra al servidor** por SSH y descarga el proyecto:
+   ```bash
+   git clone https://github.com/AMTBHC/capa3d.git && cd capa3d
+   ```
+3. **Instala:**
+   ```bash
+   sudo bash deploy/instalar.sh
+   ```
+   Te pide el dominio, tu correo, el WhatsApp y la clave del panel (o genera una), instala Docker, abre solo los puertos web y arranca todo. El certificado HTTPS se pide y se renueva solo.
+4. Listo: el sitio queda en `https://tudominio.com` y el **panel en `https://tudominio.com/admin`**, desde tu PC, tu celular o cualquier navegador. Cada navegador recuerda la clave hasta que toques **Salir**; tras 10 claves equivocadas seguidas, esa conexión queda bloqueada unos minutos.
+
+Después:
+
+- **Actualizar** a la última versión: `sudo bash deploy/actualizar.sh` (los pedidos, archivos y catálogo se conservan).
+- **Copia de seguridad:** `sudo bash deploy/respaldo.sh` guarda todo en `deploy/respaldos/`. Para hacerla cada noche, agrégala con `sudo crontab -e` (instrucciones en el archivo). Descarga los respaldos a otro lugar de vez en cuando.
+- **Cambiar la clave, el WhatsApp o activar Wompi:** edita `deploy/.env` y ejecuta `deploy/actualizar.sh`. En Wompi, la URL de eventos es `https://tudominio.com/api/payments/wompi`.
+- **Precios, materiales, perfil y límites:** edita `api/config/catalog.toml` en el servidor y ejecuta `deploy/actualizar.sh`.
+
+Cómo queda armado (`deploy/docker-compose.yml`): **Caddy** recibe todo en los puertos 80/443 con HTTPS, manda `/api/*` a la **API** (FastAPI + PrusaSlicer + OpenSCAD) y lo demás al **sitio** (Next.js). Los datos viven en el volumen `capa3d-data`.
+
 ## Estructura
 
 ```

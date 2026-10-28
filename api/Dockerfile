@@ -22,4 +22,4 @@ VOLUME /data
 EXPOSE 8000
 
 HEALTHCHECK --interval=30s --timeout=5s CMD /venv/bin/python -c "import urllib.request; urllib.request.urlopen('http://localhost:8000/api/health')"
-CMD ["/venv/bin/uvicorn", "capa3d_api.main:create_app", "--factory", "--host", "0.0.0.0", "--port", "8000"]
+CMD ["/venv/bin/uvicorn", "capa3d_api.main:create_app", "--factory", "--host", "0.0.0.0", "--port", "8000", "--proxy-headers", "--forwarded-allow-ips", "*"]
