@@ -178,7 +178,7 @@ class Shop:
             tmp = self.images_dir / f"{p['id']}.part"
             try:
                 data = download(source_url(src), tmp, MAX_IMAGE_MB).read_bytes()
-            except DownloadError as e:
+            except Exception as e:  # una foto que falla no detiene las demás
                 log.warning("No se pudo bajar la foto de %s: %s", p["id"], e)
                 continue
             finally:

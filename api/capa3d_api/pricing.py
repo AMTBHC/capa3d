@@ -16,6 +16,9 @@ class PlateUsage:
     grams: float
     # Horas de impresión sin preparación.
     print_hours: float
+    # Cambios de filamento y gramos purgados, ya incluidos en grams y print_hours.
+    color_changes: int = 0
+    purge_grams: float = 0.0
 
 
 @dataclass
@@ -29,6 +32,8 @@ class Price:
     unit_price: int
     qty: int
     total: int
+    color_changes: int = 0
+    purge_grams: float = 0.0
 
 
 def estimate_usage(volume_cm3: float, area_cm2: float, density: float, flow: float, infill: float) -> PlateUsage:
@@ -59,4 +64,6 @@ def price(plates: list[PlateUsage], material: str, qty: int, catalog: Catalog) -
         unit_price=int(unit),
         qty=qty,
         total=int(unit) * qty,
+        color_changes=sum(x.color_changes for x in plates),
+        purge_grams=sum(x.purge_grams for x in plates),
     )

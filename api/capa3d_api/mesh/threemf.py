@@ -68,6 +68,8 @@ class _Obj:
     name: str | None = None
     vertices: np.ndarray | None = None
     triangles: np.ndarray | None = None
+    # Filamento pintado en cada triángulo (0 = el de la pieza), si el modelo tiene pintura de color.
+    paint: np.ndarray | None = None
     components: list[tuple[str | None, str, np.ndarray]] = field(default_factory=list)
 
 
@@ -99,6 +101,41 @@ def _numbers(body: str, kind: str, keys: tuple[str, str, str], dtype: type) -> n
     return np.array(rows, dtype=np.float64).astype(dtype).reshape(-1, 3)
 
 
+_PAINT = re.compile(r'\b(?:paint_color|slic3rpe:mmu_segmentation)="([^"]*)"')
+
+
+def paint_state(code: str) -> int:
+    """
+    Primer filamento pintado en un triángulo. El código es el árbol de subdivisión de
+    PrusaSlicer/Bambu en hexadecimal, leído desde el final: en cada hoja, los 2 bits bajos
+    son 0 y los altos el filamento (3 = sigue en el siguiente dígito, sumando 3).
+    """
+    digits = [int(c, 16) for c in reversed(code) if c in "0123456789abcdefABCDEF"]
+    i = 0
+    while i < len(digits):
+        d = digits[i]
+        i += 1
+        if d & 0b11:
+            continue  # triángulo dividido: sus hijos siguen
+        state = d >> 2
+        if state == 3 and i < len(digits):
+            state = digits[i] + 3
+            i += 1
+        if state:
+            return state
+    return 0
+
+
+def _paint(body: str) -> np.ndarray | None:
+    if "paint_color=" not in body and "mmu_segmentation=" not in body:
+        return None
+    out = []
+    for m in _TRIANGLE.finditer(body):
+        pm = _PAINT.search(m.group(1))
+        out.append(paint_state(pm.group(1)) if pm else 0)
+    return np.array(out, dtype=np.int16)
+
+
 def _parse_model(xml: str) -> _Model:
     unit = UNIT_MM.get((re.search(r'<model\b[^>]*\bunit="([^"]+)"', xml) or [None, "millimeter"])[1], 1.0)
     objects: dict[str, _Obj] = {}
@@ -111,6 +148,7 @@ def _parse_model(xml: str) -> _Model:
         if mesh:
             obj.vertices = _numbers(mesh.group(1), "vertex", ("x", "y", "z"), np.float64)
             obj.triangles = _numbers(mesh.group(1), "triangle", ("v1", "v2", "v3"), np.int64)
+            obj.paint = _paint(mesh.group(1))
         for cm in re.finditer(r"<component\b([^>]*)>", om.group(2)):
             cid = _attr(cm.group(1), "objectid")
             if cid:
@@ -174,7 +212,30 @@ def parse_3mf(data: bytes, bed: tuple[float, float, float], max_unzipped: int = 
     assert root is not None
     unit = root.unit
 
-    def emit(path: str, oid: str, mat: np.ndarray, out: list[np.ndarray], depth: int) -> None:
+    settings = text("Metadata/model_settings.config") or ""
+    names: dict[str, str] = {}
+    # Filamento de cada objeto y de cada parte; las partes que no se imprimen (negativas,
+    # modificadores, bloqueadores de soportes) no suman geometría.
+    obj_filament: dict[str, int] = {}
+    parts: dict[tuple[str, str], tuple[str, int]] = {}
+    for so in re.finditer(r"<object\b([^>]*)>([\s\S]*?)</object>", settings):
+        oid = _attr(so.group(1), "id")
+        if not oid:
+            continue
+        head, *rest = re.split(r"(?=<part\b)", so.group(2))
+        md = _metadata(head)
+        if md.get("name"):
+            names[oid] = md["name"]
+        obj_filament[oid] = _int(md.get("extruder")) or 1
+        for part in rest:
+            tag = re.match(r"<part\b([^>]*)>", part)
+            pid = _attr(tag.group(1), "id") if tag else None
+            if pid:
+                subtype = _attr(tag.group(1), "subtype") or "normal_part"
+                parts[(oid, pid)] = (subtype, _int(_metadata(part).get("extruder")))
+
+    def emit(path: str, oid: str, mat: np.ndarray, out: list[np.ndarray], cols: list[np.ndarray], depth: int,
+             filament: int, root: str | None) -> None:  # fmt: skip
         if depth > 32:
             return
         mf = model(path)
@@ -186,26 +247,29 @@ def parse_3mf(data: bytes, bed: tuple[float, float, float], max_unzipped: int = 
             if tri.max() < len(obj.vertices):
                 v = obj.vertices @ mat[:3] + mat[3]
                 out.append(v[tri] * unit)
+                base = np.full(len(tri), filament, dtype=np.int16)
+                paint = obj.paint if obj.paint is not None and len(obj.paint) == len(tri) else None
+                cols.append(np.where(paint > 0, paint, base) if paint is not None else base)
         for cpath, cid, cmat in obj.components:
-            emit(cpath or path, cid, _then(cmat, mat), out, depth + 1)
-
-    settings = text("Metadata/model_settings.config") or ""
-    names = {}
-    for so in re.finditer(r"<object\b([^>]*)>([\s\S]*?)</object>", settings):
-        oid = _attr(so.group(1), "id")
-        md = _metadata(re.split(r"<part\b", so.group(2))[0])
-        if oid and md.get("name"):
-            names[oid] = md["name"]
+            f = filament
+            if root is not None:
+                subtype, pf = parts.get((root, cid), ("normal_part", 0))
+                if subtype != "normal_part":
+                    continue
+                f = pf or filament
+            emit(cpath or path, cid, _then(cmat, mat), out, cols, depth + 1, f, None)
 
     instances: list[ModelObject] = []
     by_object: dict[str, list[int]] = {}
     for i, (path, oid, mat) in enumerate(root.items):
         out: list[np.ndarray] = []
-        emit(path or root_path, oid, mat, out, 0)
+        cols: list[np.ndarray] = []
+        emit(path or root_path, oid, mat, out, cols, 0, obj_filament.get(oid, 1), oid)
         tris = np.concatenate(out) if out else np.zeros((0, 3, 3))
+        colors = np.concatenate(cols) if cols else np.zeros(0, dtype=np.int16)
         src = model(path or root_path)
         name = names.get(oid) or (src.objects[oid].name if src and oid in src.objects else None) or f"Objeto {oid}"
-        instances.append(ModelObject(name=name, triangles=tris))
+        instances.append(ModelObject(name=name, triangles=tris, colors=colors))
         by_object.setdefault(oid, []).append(i)
 
     plates: list[Plate] = []
@@ -242,6 +306,26 @@ def parse_3mf(data: bytes, bed: tuple[float, float, float], max_unzipped: int = 
     return Project(plates=plates, info=info)
 
 
+def _mean_flush(matrix, multiplier) -> float | None:
+    """Promedio de la matriz de purga de Bambu (mm³ por cada par de colores distintos)."""
+    try:
+        values = [float(v) for v in matrix or []]
+        mult = float(multiplier or 1)
+    except (TypeError, ValueError):
+        return None
+    n = int(round(len(values) ** 0.5))
+    off = [values[i * n + j] for i in range(n) for j in range(n) if i != j and i * n + j < len(values)]
+    off = [v for v in off if v > 0]
+    return sum(off) / len(off) * mult if off else None
+
+
+def _int(s: str | None) -> int:
+    try:
+        return int(s or 0)
+    except ValueError:
+        return 0
+
+
 def _pos(s: str | None) -> float | None:
     try:
         v = float(s) if s is not None else None
@@ -273,6 +357,7 @@ def _project_settings(text) -> ProjectInfo:
         info.filaments = [
             {"type": str(t), "color": str(colors[i]) if i < len(colors) else ""} for i, t in enumerate(types)
         ]
+        info.flush_mm3 = _mean_flush(s.get("flush_volumes_matrix"), first(s.get("flush_multiplier")))
         return info
     ini = text("Metadata/Slic3r_PE.config")
     if ini:

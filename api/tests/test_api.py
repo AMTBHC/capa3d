@@ -145,3 +145,19 @@ def test_step_con_carpeta_de_datos_relativa(tmp_path, monkeypatch):
     with TestClient(create_app(Settings(data_dir="./data", _env_file=None))) as c:
         r = upload(c, "caja.step", (FIXTURES / "caja.step").read_bytes())
     assert r.status_code == 201, r.text
+
+
+def test_varios_colores_cobra_los_cambios(client_no_slicer):
+    from .builders import bambu_multicolor
+
+    f = upload(client_no_slicer, "llavero.3mf", bambu_multicolor()).json()
+    assert f["plates"][0]["colors"] == 2 and f["plates"][0]["color_mix_mm"] == pytest.approx(10, abs=0.1)
+    multi = wait_quote(client_no_slicer, client_no_slicer.post("/api/quotes", json=quote_body(f["id"])).json()["id"])
+    single = wait_quote(
+        client_no_slicer, client_no_slicer.post("/api/quotes", json=quote_body(f["id"], multicolor=False)).json()["id"]
+    )
+    # Calidad estándar (0,2 mm): 10 mm de mezcla = 50 cambios, con la purga por defecto (350 mm³ de PLA).
+    assert multi["price"]["color_changes"] == 50
+    assert multi["price"]["purge_grams"] == pytest.approx(50 * 0.35 * 1.24, rel=0.01)
+    assert single["price"]["color_changes"] == 0
+    assert multi["price"]["total"] > single["price"]["total"]

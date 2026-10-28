@@ -12,7 +12,7 @@ import { SectionHeader } from "../SectionHeader";
 import { useModelFile } from "./useModelFile";
 import { FileDrop } from "./FileDrop";
 import { AnalysisPanel } from "./AnalysisPanel";
-import { FilamentPicker, PrintSettings } from "./Options";
+import { ColorMode, FilamentPicker, PrintSettings } from "./Options";
 import { ViewerCard } from "./ViewerCard";
 import { PriceCard, priceStage } from "./PriceCard";
 import { MobilePriceBar } from "./MobilePriceBar";
@@ -55,6 +55,8 @@ function fromServer(q: ServerQuote, plateIds: number[]): Quote | null {
     unitPrice: p.unit_price,
     qty: p.qty,
     total: p.total,
+    colorChanges: p.color_changes ?? 0,
+    purgeGrams: p.purge_grams ?? 0,
   };
 }
 
@@ -68,6 +70,7 @@ export function Quoter() {
   /** Cama que muestra el visor; -1 = todas. */
   const [plate, setPlate] = useState(-1);
   const [supports, setSupports] = useState(true);
+  const [multicolor, setMulticolor] = useState(true);
   const set = (patch: Partial<QuoteOptions>) => setOpts((o) => ({ ...o, ...patch }));
 
   // Al cambiar de modelo se reinician unidades, escala, cantidad y cama.
@@ -78,6 +81,7 @@ export function Quoter() {
     setScale(100);
     setQty(1);
     setPlate(file.model && file.model.plates.length > 1 ? -1 : 0);
+    setMulticolor(true);
   }
 
   const model = file.status === "ok" ? file.model : null;
@@ -97,10 +101,14 @@ export function Quoter() {
     ? projectPrintability(plates.map((p) => ({ name: p.plate.name, metrics: p.metrics, openEdges: p.analysis.openEdges })), catalog.bed, scale)
     : null;
 
+  // Colores del archivo, según el servidor (Bambu/Orca/Prusa guardan el filamento de cada parte).
+  const fileColors = Math.max(1, ...(file.upload.file?.plates.map((p) => p.colors ?? 1) ?? []));
+  const colors = fileColors > 1 && multicolor ? fileColors : 1;
+
   // Precio laminado en el servidor, cuando hay API y el modelo cabe.
   const params: QuoteParams | null =
     model && report?.fits
-      ? { material: material.id, quality: quality.id, infill: opts.infill, qty, unit, scale, supports }
+      ? { material: material.id, quality: quality.id, infill: opts.infill, qty, unit, scale, supports, multicolor }
       : null;
   const server = useServerQuote(file.upload.file?.id, params);
   const quote = (server.status === "done" && fromServer(server.quote, plates.map((p) => p.plate.id))) || estimate;
@@ -142,6 +150,8 @@ export function Quoter() {
             qty={qty}
             onQty={onQty}
             shipping={catalog.shipping}
+            colors={colors}
+            fileFilaments={model?.info.filaments ?? []}
           />
         </aside>
 
@@ -167,11 +177,15 @@ export function Quoter() {
           </StepCard>
 
           <StepCard id="paso-filamento" n={2} title="Elige el filamento" sub="El material define la resistencia; el color lo ves en el visor.">
+            {fileColors > 1 && (
+              <ColorMode colors={fileColors} filaments={model?.info.filaments ?? []} multicolor={multicolor} onChange={setMulticolor} />
+            )}
             <FilamentPicker
               material={opts.material}
               color={opts.color}
               onMaterial={(material) => set({ material })}
               onColor={(color) => set({ color })}
+              showColors={colors === 1}
             />
           </StepCard>
 
