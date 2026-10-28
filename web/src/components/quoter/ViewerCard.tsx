@@ -2,6 +2,7 @@
 
 import dynamic from "next/dynamic";
 import { useEffect, useState, type CSSProperties } from "react";
+import { createPortal } from "react-dom";
 import { COLORS, QUALITIES, vase } from "@/lib/catalog";
 import type { Bed } from "@/lib/checks";
 import { num1 } from "@/lib/format";
@@ -68,71 +69,78 @@ export function ViewerCard({ status, model, opts, k, plate, onPlate, fits, dims,
     : "";
 
   const box: CSSProperties = isExpanded
-    ? { position: "fixed", inset: 0, zIndex: 60, background: "radial-gradient(circle at 50% 60%,#1b1b20,#0b0b0d 70%)" }
+    ? { position: "fixed", inset: 0, zIndex: 80, background: "radial-gradient(circle at 50% 60%,var(--surface),var(--bg-2) 75%)" }
     : { position: "relative", perspective: 1000, background: `radial-gradient(circle at 50% 65%,${color.render}33,transparent 60%)` };
 
+  const viewer = (
+    <div className={isExpanded ? undefined : "quote-viewer"} style={box}
+      role={isExpanded ? "dialog" : undefined} aria-modal={isExpanded || undefined} aria-label={isExpanded ? "Visor 3D ampliado" : undefined}>
+      {model ? (
+        <ModelViewer
+          plates={plates.map((p, i) => ({ positions: p.positions, analysis: p.analysis, fits: fits[i] ?? true }))}
+          selected={sel}
+          k={k}
+          color={color.render}
+          wire={wire}
+          autoRotate={auto}
+          layerMm={quality.layerMm}
+          bed={bed}
+        />
+      ) : status !== "reading" ? (
+        <>
+          <div aria-hidden="true" className="turnF" style={{ position: "absolute", left: "50%", top: "52%", width: 220, height: 220, margin: "-110px 0 0 -110px", opacity: 0.85 }}>
+            <BedPlate />
+            <LayerStack layers={quality.previewLayers} size={220} height={120} profile={(u) => sampleProfile(u) * 0.85}
+              color={color.render} border={quality.previewBorder} infill={opts.infill} wire={wire} alpha="2e" />
+          </div>
+          <div style={{ position: "absolute", left: 0, right: 0, bottom: 20, display: "flex", flexDirection: "column", alignItems: "center", gap: 10 }}>
+            <label htmlFor={FILE_INPUT_ID} className="btn btn-primary glow" style={{ display: "inline-flex", alignItems: "center", gap: 8, padding: "12px 20px", borderRadius: 14 }}>
+              <Icon d={ICONS.upload} size={18} stroke={2} />Sube tu modelo para verlo aquí
+            </label>
+            <span style={{ fontSize: 12, color: "var(--text-3)" }}>Vista de ejemplo · cambia con el color, la calidad y el relleno</span>
+          </div>
+        </>
+      ) : null}
+      {status === "reading" && <Overlay title="Analizando tu modelo…" sub="Medimos el tamaño, el volumen y si se puede imprimir" />}
+
+      {model && (
+        <>
+          <div style={{ position: "absolute", left: 12, right: 12, top: 12, display: "flex", gap: 8, justifyContent: "space-between", alignItems: "flex-start", pointerEvents: "none" }}>
+            <div role="group" aria-label="Vista" style={{ display: "flex", gap: 4, padding: 4, borderRadius: 14, background: "var(--glass)", border: "1px solid var(--line-2)", pointerEvents: "auto" }}>
+              <ToolBtn on={!wire} onClick={() => setWire(false)} label="Sólido" />
+              <ToolBtn on={wire} onClick={() => setWire(true)} label="Malla" />
+              <ToolBtn on={auto} onClick={() => setAuto(!auto)} label="Girar" />
+            </div>
+            <button onClick={() => setExpanded(!isExpanded)} aria-label={isExpanded ? "Cerrar vista ampliada" : "Ampliar visor"} title={isExpanded ? "Cerrar (Esc)" : "Ampliar"} style={iconBtn}>
+              <Icon d={isExpanded ? ICONS.close : ICONS.expand} size={18} stroke={2} />
+            </button>
+          </div>
+          <div style={{ position: "absolute", left: 12, right: 12, bottom: 12, display: "flex", flexDirection: "column", alignItems: "center", gap: 8, pointerEvents: "none" }}>
+            {multi && (
+              <div role="tablist" aria-label="Camas" style={{ display: "flex", flexWrap: "wrap", justifyContent: "center", gap: 6, pointerEvents: "auto" }}>
+                <button role="tab" aria-selected={sel < 0} className="pill" onClick={() => onPlate(-1)} style={plateTab(sel < 0, true)}>Todas</button>
+                {plates.map((p, i) => (
+                  <button key={p.plate.id} role="tab" aria-selected={sel === i} className="pill" onClick={() => onPlate(i)} style={plateTab(sel === i, fits[i] !== false)}>
+                    {p.plate.name}
+                  </button>
+                ))}
+              </div>
+            )}
+            <span className="mono" style={{ fontSize: 11, letterSpacing: 1, color: "var(--text-3)", textAlign: "center", padding: "4px 10px", borderRadius: 8, background: "var(--glass)" }}>
+              {caption.toUpperCase()}{isExpanded ? " · ESC PARA CERRAR" : " · ARRASTRA PARA GIRAR"}
+            </span>
+          </div>
+        </>
+      )}
+    </div>
+  );
+
+  // Ampliado se dibuja sobre toda la página: dentro de la columna fija, los pasos de la
+  // derecha quedarían encima por más alto que sea su z-index.
   return (
     <div className="quote-viewer-card" style={{ borderRadius: 24, background: "var(--surface)", border: "1px solid var(--line)", overflow: "hidden" }}>
-      <div className={isExpanded ? undefined : "quote-viewer"} style={box}
-        role={isExpanded ? "dialog" : undefined} aria-modal={isExpanded || undefined} aria-label={isExpanded ? "Visor 3D ampliado" : undefined}>
-        {model ? (
-          <ModelViewer
-            plates={plates.map((p, i) => ({ positions: p.positions, analysis: p.analysis, fits: fits[i] ?? true }))}
-            selected={sel}
-            k={k}
-            color={color.render}
-            wire={wire}
-            autoRotate={auto}
-            layerMm={quality.layerMm}
-            bed={bed}
-          />
-        ) : status !== "reading" ? (
-          <>
-            <div aria-hidden="true" className="turnF" style={{ position: "absolute", left: "50%", top: "52%", width: 220, height: 220, margin: "-110px 0 0 -110px", opacity: 0.85 }}>
-              <BedPlate />
-              <LayerStack layers={quality.previewLayers} size={220} height={120} profile={(u) => sampleProfile(u) * 0.85}
-                color={color.render} border={quality.previewBorder} infill={opts.infill} wire={wire} alpha="2e" />
-            </div>
-            <div style={{ position: "absolute", left: 0, right: 0, bottom: 20, display: "flex", flexDirection: "column", alignItems: "center", gap: 10 }}>
-              <label htmlFor={FILE_INPUT_ID} className="btn btn-primary glow" style={{ display: "inline-flex", alignItems: "center", gap: 8, padding: "12px 20px", borderRadius: 14 }}>
-                <Icon d={ICONS.upload} size={18} stroke={2} />Sube tu modelo para verlo aquí
-              </label>
-              <span style={{ fontSize: 12, color: "var(--text-3)" }}>Vista de ejemplo · cambia con el color, la calidad y el relleno</span>
-            </div>
-          </>
-        ) : null}
-        {status === "reading" && <Overlay title="Analizando tu modelo…" sub="Medimos el tamaño, el volumen y si se puede imprimir" />}
-
-        {model && (
-          <>
-            <div style={{ position: "absolute", left: 12, right: 12, top: 12, display: "flex", gap: 8, justifyContent: "space-between", alignItems: "flex-start", pointerEvents: "none" }}>
-              <div role="group" aria-label="Vista" style={{ display: "flex", gap: 4, padding: 4, borderRadius: 14, background: "var(--glass)", border: "1px solid var(--line-2)", pointerEvents: "auto" }}>
-                <ToolBtn on={!wire} onClick={() => setWire(false)} label="Sólido" />
-                <ToolBtn on={wire} onClick={() => setWire(true)} label="Malla" />
-                <ToolBtn on={auto} onClick={() => setAuto(!auto)} label="Girar" />
-              </div>
-              <button onClick={() => setExpanded(!isExpanded)} aria-label={isExpanded ? "Cerrar vista ampliada" : "Ampliar visor"} title={isExpanded ? "Cerrar (Esc)" : "Ampliar"} style={iconBtn}>
-                <Icon d={isExpanded ? ICONS.close : ICONS.expand} size={18} stroke={2} />
-              </button>
-            </div>
-            <div style={{ position: "absolute", left: 12, right: 12, bottom: 12, display: "flex", flexDirection: "column", alignItems: "center", gap: 8, pointerEvents: "none" }}>
-              {multi && (
-                <div role="tablist" aria-label="Camas" style={{ display: "flex", flexWrap: "wrap", justifyContent: "center", gap: 6, pointerEvents: "auto" }}>
-                  <button role="tab" aria-selected={sel < 0} className="pill" onClick={() => onPlate(-1)} style={plateTab(sel < 0, true)}>Todas</button>
-                  {plates.map((p, i) => (
-                    <button key={p.plate.id} role="tab" aria-selected={sel === i} className="pill" onClick={() => onPlate(i)} style={plateTab(sel === i, fits[i] !== false)}>
-                      {p.plate.name}
-                    </button>
-                  ))}
-                </div>
-              )}
-              <span className="mono" style={{ fontSize: 11, letterSpacing: 1, color: "var(--text-3)", textAlign: "center", padding: "4px 10px", borderRadius: 8, background: "var(--glass)" }}>
-                {caption.toUpperCase()}{isExpanded ? " · ESC PARA CERRAR" : " · ARRASTRA PARA GIRAR"}
-              </span>
-            </div>
-          </>
-        )}
-      </div>
+      {isExpanded ? <div className="quote-viewer" /> : viewer}
+      {isExpanded && createPortal(viewer, document.body)}
     </div>
   );
 }

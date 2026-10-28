@@ -43,10 +43,17 @@ def analyze(tris: Triangles) -> MeshAnalysis:
 def count_open_edges(tris: Triangles) -> int:
     """Suelda vértices a 1 µm y cuenta las aristas que no tienen exactamente dos caras."""
     keys = np.round(tris.reshape(-1, 3) * 1000).astype(np.int64)
-    _, ids = np.unique(keys, axis=0, return_inverse=True)
-    ids = ids.reshape(-1, 3)
+    keys -= keys.min(axis=0)
+    # Cada vértice (y luego cada arista) se empaca en un solo entero: ordenar enteros es
+    # mucho más rápido que ordenar filas. Hasta 2 m por eje a 1 µm caben en 21 bits.
+    if keys.max() < 1 << 21:
+        packed = (keys[:, 0] << 42) | (keys[:, 1] << 21) | keys[:, 2]
+        _, ids = np.unique(packed, return_inverse=True)
+    else:
+        _, ids = np.unique(keys, axis=0, return_inverse=True)
+    ids = ids.reshape(-1, 3).astype(np.int64)
     edges = np.concatenate([ids[:, [0, 1]], ids[:, [1, 2]], ids[:, [2, 0]]])
     edges = edges[edges[:, 0] != edges[:, 1]]
     edges.sort(axis=1)
-    _, counts = np.unique(edges, axis=0, return_counts=True)
+    _, counts = np.unique((edges[:, 0] << 32) | edges[:, 1], return_counts=True)
     return int((counts != 2).sum())

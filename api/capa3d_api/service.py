@@ -3,8 +3,10 @@
 import hashlib
 import json
 import math
+import os
 import secrets
 import shutil
+import threading
 import zipfile
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import asdict
@@ -43,6 +45,15 @@ class QuoteService:
         self.slicer = slicer
         self.files_dir = settings.data_dir / "files"
         self.pool = ThreadPoolExecutor(max_workers=settings.slicer_workers, thread_name_prefix="slicer")
+        # Pool aparte para las camas: una cotización (en self.pool) espera las suyas sin bloquearlo.
+        self.plate_pool = ThreadPoolExecutor(max_workers=settings.plate_workers, thread_name_prefix="plate")
+        self._slice_locks: dict[str, threading.Lock] = {}
+        self._slice_locks_guard = threading.Lock()
+        # Si cambia el perfil de la impresora o los ajustes de materiales y calidades, el
+        # laminado guardado deja de valer.
+        profile = catalog.profile_path.read_bytes() if catalog.profile_path.exists() else b""
+        salt = json.dumps([catalog.materials, catalog.qualities, catalog.printer], default=lambda m: m.model_dump())
+        self._slice_salt = hashlib.sha256(profile + salt.encode()).hexdigest()[:16]
 
     @property
     def can_slice(self) -> bool:
@@ -212,17 +223,20 @@ class QuoteService:
 
         usages: list[PlateUsage] = []
         plates_out = []
+        opts = SliceOptions(req.material, req.quality, req.infill, req.supports)
+        # Todas las camas se laminan a la vez; cada una se espera en orden.
+        sliced = (
+            {p["id"]: self.plate_pool.submit(self._slice_plate, req.file_id, p["id"], k, opts, work) for p in plates}
+            if self.can_slice
+            else {}
+        )
         for p in plates:
             note = None
             if self.can_slice:
                 try:
-                    stl = self._scaled_stl(req.file_id, p["id"], k, work)
-                    opts = SliceOptions(req.material, req.quality, req.infill, req.supports)
-                    r = self.slicer.slice(stl, opts, work / f"plate_{p['id']}.gcode")
+                    grams, seconds = sliced[p["id"]].result()
                     cal = cat.calibration
-                    usage = PlateUsage(
-                        grams=r.grams * cal.weight_factor, print_hours=r.seconds / 3600 * cal.time_factor
-                    )
+                    usage = PlateUsage(grams=grams * cal.weight_factor, print_hours=seconds / 3600 * cal.time_factor)
                     method = "slicer"
                 except SlicerError as e:
                     note, usage, method = f"No se pudo laminar: {e}", None, "estimate"
@@ -259,6 +273,40 @@ class QuoteService:
             "plates": plates_out,
             "price": {"currency": cat.currency, **asdict(pr)},
         }
+
+    def _slice_plate(
+        self, file_id: str, plate_id: int, k: float, opts: SliceOptions, work: Path
+    ) -> tuple[float, float]:
+        """
+        Gramos y segundos de una cama. El laminado se guarda por los ajustes que cambian el
+        G-code, así que cambiar la cantidad, el color o los varios colores no vuelve a laminar.
+        """
+        key = hashlib.sha256(
+            json.dumps([self._slice_salt, plate_id, round(k, 6), asdict(opts)], sort_keys=True).encode()
+        ).hexdigest()[:24]
+        cache = self.file_dir(file_id) / "slices" / key
+        gcode = work / f"plate_{plate_id}.gcode"
+        with self._slice_lock(f"{file_id}/{key}"):
+            meta = cache / "result.json"
+            if not meta.exists():
+                cache.mkdir(parents=True, exist_ok=True)
+                stl = self._scaled_stl(file_id, plate_id, k, cache)
+                r = self.slicer.slice(stl, opts, cache / "plate.gcode")
+                if stl.parent == cache:
+                    stl.unlink(missing_ok=True)
+                meta.write_text(json.dumps({"grams": r.grams, "seconds": r.seconds}))
+            result = json.loads(meta.read_text())
+        # Cada cotización lleva su G-code (va en el zip del pedido); un enlace no ocupa espacio.
+        gcode.unlink(missing_ok=True)
+        try:
+            os.link(cache / "plate.gcode", gcode)
+        except OSError:
+            shutil.copyfile(cache / "plate.gcode", gcode)
+        return result["grams"], result["seconds"]
+
+    def _slice_lock(self, key: str) -> threading.Lock:
+        with self._slice_locks_guard:
+            return self._slice_locks.setdefault(key, threading.Lock())
 
     def _color_changes(self, usage: PlateUsage, plate: dict, k: float, layer: float, density: float, file: dict):
         """Suma la purga y el tiempo de cada cambio de filamento de una cama de varios colores."""

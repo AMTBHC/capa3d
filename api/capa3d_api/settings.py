@@ -24,6 +24,8 @@ class Settings(BaseSettings):
     slicer_enabled: bool = True
     slice_timeout_s: int = 600
     slicer_workers: int = 2
+    # Camas de un mismo archivo que se laminan a la vez.
+    plate_workers: int = 3
     max_upload_mb: int = 100
     # Límite al descomprimir un 3MF, contra archivos zip maliciosos.
     max_unzipped_mb: int = 1024

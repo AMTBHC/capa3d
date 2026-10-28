@@ -56,6 +56,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     async def lifespan(app: FastAPI):
         yield
         service.pool.shutdown(wait=False, cancel_futures=True)
+        service.plate_pool.shutdown(wait=False, cancel_futures=True)
 
     app = FastAPI(title="Capa3D API", version="0.1.0", lifespan=lifespan)
     app.state.service = service

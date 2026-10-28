@@ -28,7 +28,7 @@ export type ServerQuoteState =
   | { status: "failed"; error: string; quote?: ServerQuote };
 
 const DEBOUNCE_MS = 700;
-const POLL_MS = 1000;
+const POLL_MS = 500;
 
 /**
  * Cotización laminada en el servidor para el archivo y las opciones actuales.
