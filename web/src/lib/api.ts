@@ -448,6 +448,11 @@ export function listCollections(): Promise<CatalogCollection[]> {
   return request("/api/catalog/collections");
 }
 
+/** Todos los productos visibles, para buscar y filtrar en el catálogo. */
+export function listProducts(): Promise<CatalogProduct[]> {
+  return request("/api/catalog/products");
+}
+
 /** Productos con foto para la galería de la página de inicio, de varias subsecciones. */
 export function getFeatured(limit = 24): Promise<CatalogProduct[]> {
   return request(`/api/catalog/featured?limit=${limit}`);

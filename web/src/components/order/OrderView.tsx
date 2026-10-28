@@ -322,7 +322,7 @@ function Timeline({ order }: { order: Order }) {
         return (
           // El último estado se alinea a la derecha para que su nombre no se salga de la pantalla.
           <li key={s.status} style={{ display: "flex", flexDirection: "column", alignItems: i === order.flow.length - 1 ? "flex-end" : "flex-start", gap: 8, minWidth: 0 }}>
-            <span style={{ width: "100%", height: 6, borderRadius: 3, background: done || now ? "var(--ac)" : "rgba(255,255,255,.1)", boxShadow: now ? "0 0 12px var(--ac)" : "none" }} />
+            <span style={{ width: "100%", height: 6, borderRadius: 3, background: done || now ? "var(--ac)" : "var(--line-2)", boxShadow: now ? "0 0 12px var(--ac)" : "none" }} />
             <span className="tl-label" data-now={now || undefined} title={s.label}
               style={{ fontSize: 12, color: now ? "var(--text)" : done ? "var(--text-2)" : "var(--text-4)", fontWeight: now ? 600 : 400, whiteSpace: "nowrap" }}>
               {s.label}

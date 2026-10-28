@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
-import { CatalogIndex } from "@/components/catalog/CatalogIndex";
+import { Suspense } from "react";
+import { CatalogBrowser } from "@/components/catalog/CatalogBrowser";
 
 export const metadata: Metadata = {
   title: "Catálogo · Capa3D",
@@ -7,5 +8,9 @@ export const metadata: Metadata = {
 };
 
 export default function CatalogPage() {
-  return <CatalogIndex />;
+  return (
+    <Suspense>
+      <CatalogBrowser />
+    </Suspense>
+  );
 }

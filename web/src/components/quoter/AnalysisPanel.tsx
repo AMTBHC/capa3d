@@ -141,7 +141,7 @@ function PlateList({ plates, quote, sliced, report, selected, onSelect, from }: 
           return (
             <button key={p.plate.id} onClick={() => onSelect(on ? -1 : i)} aria-pressed={on}
               style={{ display: "flex", gap: 12, alignItems: "center", textAlign: "left", width: "100%", padding: 8, borderRadius: 12, cursor: "pointer", color: "var(--text)", background: on ? "var(--ac-tint)" : "var(--surface-3)", border: `1px solid ${on ? "var(--ac)" : r.fits ? "transparent" : "var(--bad)"}` }}>
-              <span style={{ width: 44, height: 44, flex: "none", borderRadius: 8, overflow: "hidden", background: "#0B0B0D", display: "flex", alignItems: "center", justifyContent: "center" }}>
+              <span style={{ width: 44, height: 44, flex: "none", borderRadius: 8, overflow: "hidden", background: "var(--surface-3)", display: "flex", alignItems: "center", justifyContent: "center" }}>
                 {p.thumbUrl ? <img src={p.thumbUrl} alt="" style={{ width: "100%", height: "100%", objectFit: "contain" }} /> : <span className="display" style={{ fontWeight: 700, color: "var(--text-3)" }}>{p.plate.id}</span>}
               </span>
               <span style={{ flex: 1, minWidth: 0 }}>

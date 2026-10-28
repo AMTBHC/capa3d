@@ -4,13 +4,14 @@
 import dynamic from "next/dynamic";
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { BADGE_LABEL, getProduct, imageUrl, personalize, prepareProduct, type CatalogProduct, type QuoteParams } from "@/lib/api";
+import { BADGE_LABEL, getCollection, getProduct, imageUrl, personalize, prepareProduct, type CatalogProduct, type QuoteParams } from "@/lib/api";
 import { COLORS, MATERIALS } from "@/lib/catalog";
 import { whatsappUrl } from "@/lib/config";
 import { money, num1 } from "@/lib/format";
 import { loadServerModel, type ServerPlateMesh } from "@/lib/serverModel";
 import { Icon, ICONS } from "../Icon";
 import { SiteHeader } from "../SiteHeader";
+import { grid, ProductCard } from "./Cards";
 import { FilamentPicker } from "../quoter/Options";
 import { OrderDialog } from "../quoter/OrderDialog";
 import { useCatalog, useServerQuote } from "../quoter/useServer";
@@ -20,7 +21,7 @@ const ModelViewer = dynamic(() => import("../quoter/ModelViewer"), { ssr: false 
 /** Texto de muestra del llavero mientras el cliente no escribe el suyo. */
 const SAMPLE_NAME = "Ana";
 const NAME_DEBOUNCE_MS = 600;
-/** Color inicial si el producto no sugiere uno: se ve bien en el visor oscuro. */
+/** Color inicial si el producto no sugiere uno. */
 const DEFAULT_COLOR = "Naranja";
 
 const box = { background: "var(--surface)", border: "1px solid var(--line)", borderRadius: 20, padding: 20 } as const;
@@ -41,11 +42,13 @@ export function ProductView({ id }: { id: string }) {
       <SiteHeader />
       <nav aria-label="Ruta" style={{ fontSize: 13, color: "var(--text-3)", marginBottom: 12 }}>
         <Link href="/catalogo" style={{ color: "var(--text-3)" }}>Catálogo</Link>
-        {p?.collection && <> › <Link href={`/catalogo/${p.collection.id}`} style={{ color: "var(--text-3)" }}>{p.collection.name}</Link></>}
+        {p?.collection && <> › <Link href={`/catalogo?c=${p.collection.id}`} style={{ color: "var(--text-3)" }}>{p.collection.name}</Link></>}
+        {p?.collection && p.subsection && <> › <Link href={`/catalogo?c=${p.collection.id}&s=${encodeURIComponent(p.subsection)}`} style={{ color: "var(--text-3)" }}>{p.subsection}</Link></>}
         {" "}› {p?.name ?? "…"}
       </nav>
       {missing && <div className="status status-warn">Este producto no existe o ya no está disponible. <Link href="/catalogo">Ver el catálogo</Link></div>}
-      {p && <Product p={p} />}
+      {p && <Product key={p.id} p={p} />}
+      {p && <Related p={p} />}
     </main>
   );
 }
@@ -63,6 +66,7 @@ function Product({ p }: { p: CatalogProduct }) {
   const [nameFile, setNameFile] = useState<{ text: string; id: string } | null>(null);
   const [nameError, setNameError] = useState("");
   const [ordering, setOrdering] = useState(false);
+  const [plateSel, setPlateSel] = useState(0);
 
   // Llaveros con nombre: se genera el modelo con el texto (o el de muestra).
   const text = (name.trim() || SAMPLE_NAME).slice(0, p.personalize?.max_length ?? 14);
@@ -134,7 +138,18 @@ function Product({ p }: { p: CatalogProduct }) {
       <div style={{ display: "flex", flexDirection: "column", gap: 16, minWidth: 0 }}>
         <Gallery p={p} viewer={
           viewerPlates.length > 0 ? (
-            <ModelViewer plates={viewerPlates} selected={viewerPlates.length > 1 ? -1 : 0} k={k} color={COLORS[color].render} wire={false} autoRotate layerMm={0.2} bed={catalog.bed} />
+            <>
+              <ModelViewer plates={viewerPlates} selected={Math.min(plateSel, viewerPlates.length - 1)} k={k} color={COLORS[color].render} wire={false} autoRotate layerMm={0.2} bed={catalog.bed} />
+              {viewerPlates.length > 1 && (
+                <div role="group" aria-label="Piezas" style={{ position: "absolute", top: 12, left: 12, display: "flex", flexWrap: "wrap", gap: 6 }}>
+                  {viewerPlates.map((_, i) => (
+                    <button key={i} className="chip-btn" aria-pressed={i === plateSel} onClick={() => setPlateSel(i)} style={{ background: i === plateSel ? undefined : "var(--glass)" }}>
+                      Parte {i + 1}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </>
           ) : null
         } />
         {p.description && <p className="lead" style={{ margin: 0, whiteSpace: "pre-line" }}>{p.description}</p>}
@@ -238,5 +253,29 @@ function Gallery({ p, viewer }: { p: CatalogProduct; viewer: React.ReactNode }) 
         </div>
       )}
     </div>
+  );
+}
+
+const RELATED = 8;
+
+/** Más productos de la misma categoría (o de la colección, si la categoría tiene pocos). */
+function Related({ p }: { p: CatalogProduct }) {
+  const [items, setItems] = useState<CatalogProduct[]>([]);
+  useEffect(() => {
+    getCollection(p.collection_id).then((c) => {
+      const others = c.products.filter((x) => x.id !== p.id);
+      const same = others.filter((x) => x.subsection === p.subsection);
+      setItems([...same, ...others.filter((x) => x.subsection !== p.subsection)].slice(0, RELATED));
+    }, () => setItems([]));
+  }, [p.id, p.collection_id, p.subsection]);
+  if (!items.length) return null;
+  return (
+    <section style={{ marginTop: 56 }}>
+      <div style={{ display: "flex", flexWrap: "wrap", justifyContent: "space-between", alignItems: "baseline", gap: 12, marginBottom: 16 }}>
+        <h2 style={{ fontSize: 22, margin: 0 }}>También te puede gustar</h2>
+        <Link href={`/catalogo?c=${p.collection_id}`} style={{ fontSize: 14 }}>Ver todo {p.collection?.name ?? "la colección"} →</Link>
+      </div>
+      <div style={grid}>{items.map((x) => <ProductCard key={x.id} p={x} emoji={p.collection?.emoji ?? ""} />)}</div>
+    </section>
   );
 }

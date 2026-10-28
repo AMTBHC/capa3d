@@ -61,7 +61,7 @@ function PhotoGallery({ items }: { items: CatalogProduct[] }) {
                 <span style={{ display: "block", fontWeight: 600, fontSize: 17, marginTop: 4 }}>{p.name}</span>
                 {p.price_from && <span style={{ display: "block", fontSize: 13, color: "var(--text-2)", marginTop: 2 }}>Desde ${money(p.price_from)}</span>}
               </span>
-              <span style={{ width: 36, height: 36, flex: "none", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", border: "1px solid rgba(255,255,255,.3)", background: "rgba(11,11,13,.5)" }}>
+              <span style={{ width: 36, height: 36, flex: "none", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", border: "1px solid var(--line-3)", background: "var(--glass)" }}>
                 <Icon d={ICONS.expand} size={16} stroke={2} />
               </span>
             </span>
@@ -91,18 +91,18 @@ function PhotoModal({ items, index, onIndex, onClose }: { items: CatalogProduct[
 
   const arrow = (d: number, label: string, path: string) => (
     <button onClick={() => go(d)} aria-label={label}
-      style={{ position: "absolute", top: "50%", [d < 0 ? "left" : "right"]: 12, transform: "translateY(-50%)", width: 44, height: 44, borderRadius: "50%", border: "1px solid rgba(255,255,255,.25)", background: "rgba(11,11,13,.6)", color: "#fff", cursor: "pointer", fontSize: 20 }}>
+      style={{ position: "absolute", top: "50%", [d < 0 ? "left" : "right"]: 12, transform: "translateY(-50%)", width: 44, height: 44, borderRadius: "50%", border: "1px solid var(--line-3)", background: "var(--glass)", color: "#fff", cursor: "pointer", fontSize: 20 }}>
       {path}
     </button>
   );
 
   return (
     <div role="dialog" aria-modal="true" aria-label={p.name} onClick={onClose}
-      style={{ position: "fixed", inset: 0, zIndex: 30, display: "flex", alignItems: "center", justifyContent: "center", padding: 20, background: "rgba(5,5,7,.82)", backdropFilter: "blur(12px)" }}>
+      style={{ position: "fixed", inset: 0, zIndex: 30, display: "flex", alignItems: "center", justifyContent: "center", padding: 20, background: "var(--backdrop)", backdropFilter: "blur(12px)" }}>
       <div onClick={(e) => e.stopPropagation()}
-        style={{ position: "relative", width: "100%", maxWidth: 1100, maxHeight: "92vh", overflow: "auto", display: "flex", flexWrap: "wrap", borderRadius: 28, background: "var(--surface)", border: "1px solid rgba(255,255,255,.12)" }}>
+        style={{ position: "relative", width: "100%", maxWidth: 1100, maxHeight: "92vh", overflow: "auto", display: "flex", flexWrap: "wrap", borderRadius: 28, background: "var(--surface)", border: "1px solid var(--line-2)" }}>
         <button onClick={onClose} aria-label="Cerrar" autoFocus
-          style={{ position: "absolute", right: 14, top: 14, zIndex: 2, width: 44, height: 44, borderRadius: "50%", border: "1px solid rgba(255,255,255,.2)", background: "var(--bg)", color: "var(--text)", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>
+          style={{ position: "absolute", right: 14, top: 14, zIndex: 2, width: 44, height: 44, borderRadius: "50%", border: "1px solid var(--line-3)", background: "var(--bg)", color: "var(--text)", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>
           <Icon d={ICONS.close} size={18} stroke={2} />
         </button>
         <div style={{ position: "relative", flex: "1 1 460px", minWidth: 0, aspectRatio: "1 / 1", maxHeight: "92vh", background: "var(--surface-3)" }}>
@@ -153,10 +153,10 @@ function SampleGallery() {
             style={{
               flex: "1 1 260px", minWidth: 0, height: 320, position: "relative", overflow: "hidden", cursor: "pointer", textAlign: "left",
               color: "var(--text)", padding: 0, borderRadius: 24, border: "1px solid var(--line)",
-              background: "radial-gradient(circle at 50% 45%,rgba(255,255,255,.07),transparent 60%),var(--surface-2)",
+              background: "radial-gradient(circle at 50% 45%,var(--line),transparent 60%),var(--surface-2)",
             }}
           >
-            <span aria-hidden="true" style={{ position: "absolute", left: "-20%", right: "-20%", bottom: -40, height: 160, backgroundImage: "linear-gradient(rgba(255,255,255,.08) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.08) 1px,transparent 1px)", backgroundSize: "28px 28px", transform: "perspective(400px) rotateX(62deg)", WebkitMaskImage: "linear-gradient(transparent,#000)", maskImage: "linear-gradient(transparent,#000)" }} />
+            <span aria-hidden="true" style={{ position: "absolute", left: "-20%", right: "-20%", bottom: -40, height: 160, backgroundImage: "linear-gradient(var(--line) 1px,transparent 1px),linear-gradient(90deg,var(--line) 1px,transparent 1px)", backgroundSize: "28px 28px", transform: "perspective(400px) rotateX(62deg)", WebkitMaskImage: "linear-gradient(transparent,#000)", maskImage: "linear-gradient(transparent,#000)" }} />
             <span className="flo" style={{ position: "absolute", left: "12%", right: "12%", top: 24, bottom: 84, display: "block", animationDelay: `-${(i * 0.8).toFixed(1)}s` }}>
               <WorkVisual work={w} size={170} className="pic" />
             </span>
@@ -165,7 +165,7 @@ function SampleGallery() {
                 <span className="mono" style={{ display: "block", fontSize: 11, letterSpacing: 1, color: "var(--ac)" }}>{w.category.toUpperCase()}</span>
                 <span style={{ display: "block", fontWeight: 600, fontSize: 17, marginTop: 4 }}>{w.name}</span>
               </span>
-              <span style={{ width: 36, height: 36, flex: "none", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", border: "1px solid rgba(255,255,255,.2)" }}>
+              <span style={{ width: 36, height: 36, flex: "none", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", border: "1px solid var(--line-3)" }}>
                 <Icon d={ICONS.expand} size={16} stroke={2} />
               </span>
             </span>
@@ -187,14 +187,14 @@ function WorkModal({ index, onClose }: { index: number; onClose: () => void }) {
 
   return (
     <div role="dialog" aria-modal="true" aria-label={w.name} onClick={onClose}
-      style={{ position: "fixed", inset: 0, zIndex: 30, display: "flex", alignItems: "center", justifyContent: "center", padding: 20, background: "rgba(5,5,7,.78)", backdropFilter: "blur(12px)" }}>
+      style={{ position: "fixed", inset: 0, zIndex: 30, display: "flex", alignItems: "center", justifyContent: "center", padding: 20, background: "var(--backdrop)", backdropFilter: "blur(12px)" }}>
       <div onClick={(e) => e.stopPropagation()}
-        style={{ position: "relative", width: "100%", maxWidth: 920, maxHeight: "90vh", overflow: "auto", display: "flex", flexWrap: "wrap", borderRadius: 28, background: "var(--surface)", border: "1px solid rgba(255,255,255,.12)" }}>
+        style={{ position: "relative", width: "100%", maxWidth: 920, maxHeight: "90vh", overflow: "auto", display: "flex", flexWrap: "wrap", borderRadius: 28, background: "var(--surface)", border: "1px solid var(--line-2)" }}>
         <button onClick={onClose} aria-label="Cerrar" autoFocus
-          style={{ position: "absolute", right: 14, top: 14, zIndex: 2, width: 44, height: 44, borderRadius: "50%", border: "1px solid rgba(255,255,255,.2)", background: "var(--bg)", color: "var(--text)", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>
+          style={{ position: "absolute", right: 14, top: 14, zIndex: 2, width: 44, height: 44, borderRadius: "50%", border: "1px solid var(--line-3)", background: "var(--bg)", color: "var(--text)", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>
           <Icon d={ICONS.close} size={18} stroke={2} />
         </button>
-        <div style={{ flex: "1 1 380px", minWidth: 0, height: 420, display: "flex", alignItems: "center", justifyContent: "center", background: "radial-gradient(circle at 50% 50%,rgba(255,255,255,.08),transparent 60%),var(--surface-3)" }}>
+        <div style={{ flex: "1 1 380px", minWidth: 0, height: 420, display: "flex", alignItems: "center", justifyContent: "center", background: "radial-gradient(circle at 50% 50%,var(--line),transparent 60%),var(--surface-3)" }}>
           <div className={w.img ? "wob" : undefined} style={{ width: "88%", height: "88%" }}><WorkVisual work={w} size={260} /></div>
         </div>
         <div style={{ flex: "1 1 320px", minWidth: 0, padding: "40px 32px" }}>

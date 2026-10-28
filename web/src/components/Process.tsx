@@ -31,7 +31,7 @@ export function Process() {
                 alignItems: "flex-start", padding: 24, borderRadius: 24, transition: "all .3s", background: "var(--surface)",
                 border: `1px solid ${on ? "#FF5A1F99" : "var(--line)"}`, transform: on ? "translateY(-6px)" : "none",
               }}>
-              <span style={{ display: "block", height: 4, borderRadius: 2, background: "rgba(255,255,255,.1)", overflow: "hidden", width: "100%" }}>
+              <span style={{ display: "block", height: 4, borderRadius: 2, background: "var(--line-2)", overflow: "hidden", width: "100%" }}>
                 <span className="bar" style={{ display: "block", height: 4, borderRadius: 2, background: "var(--ac)", boxShadow: "0 0 10px var(--ac)", width: `${done ? 100 : on ? sub : 0}%` }} />
               </span>
               <span style={{ display: "flex", justifyContent: "space-between", alignItems: "center", width: "100%", marginTop: 24 }}>

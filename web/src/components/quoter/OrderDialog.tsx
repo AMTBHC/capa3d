@@ -83,11 +83,11 @@ export function OrderDialog({ quoteId, color, summary, printPrice, shipping, onC
   // y el resto del cotizador quedaría dibujado encima del formulario.
   return createPortal(
     <div role="dialog" aria-modal="true" aria-labelledby="order-title" onClick={onClose}
-      style={{ position: "fixed", inset: 0, zIndex: 70, display: "flex", alignItems: "flex-start", justifyContent: "center", padding: "24px 12px", overflowY: "auto", background: "rgba(5,5,7,.8)", backdropFilter: "blur(10px)" }}>
+      style={{ position: "fixed", inset: 0, zIndex: 70, display: "flex", alignItems: "flex-start", justifyContent: "center", padding: "24px 12px", overflowY: "auto", background: "var(--backdrop)", backdropFilter: "blur(10px)" }}>
       <form onSubmit={submit} onClick={(e) => e.stopPropagation()}
-        style={{ position: "relative", width: "100%", maxWidth: 560, borderRadius: 24, background: "var(--surface)", border: "1px solid rgba(255,255,255,.12)", padding: 24 }}>
+        style={{ position: "relative", width: "100%", maxWidth: 560, borderRadius: 24, background: "var(--surface)", border: "1px solid var(--line-2)", padding: 24 }}>
         <button type="button" onClick={onClose} aria-label="Cerrar"
-          style={{ position: "absolute", right: 14, top: 14, width: 40, height: 40, borderRadius: "50%", border: "1px solid rgba(255,255,255,.2)", background: "var(--bg)", color: "var(--text)", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>
+          style={{ position: "absolute", right: 14, top: 14, width: 40, height: 40, borderRadius: "50%", border: "1px solid var(--line-3)", background: "var(--bg)", color: "var(--text)", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>
           <Icon d={ICONS.close} size={16} stroke={2} />
         </button>
         <h2 id="order-title" className="step-title" style={{ fontSize: 22, marginTop: 0 }}>Hacer pedido</h2>
@@ -157,7 +157,7 @@ function Row({ k, v, strong }: { k: string; v: string; strong?: boolean }) {
 }
 
 const input = {
-  width: "100%", padding: "12px 14px", borderRadius: 12, border: "1px solid rgba(255,255,255,.18)",
+  width: "100%", padding: "12px 14px", borderRadius: 12, border: "1px solid var(--line-3)",
   background: "var(--surface-3)", color: "var(--text)", fontSize: 15, fontFamily: "inherit",
 } as const;
 const fieldset = { border: 0, padding: 0, margin: "0 0 8px" } as const;

@@ -14,7 +14,7 @@ export function Footer() {
           <div className="mono label" style={{ marginBottom: 14 }}>FORMATOS ADMITIDOS</div>
           <div className="mono" style={{ display: "flex", flexWrap: "wrap", gap: 8, fontSize: 12 }}>
             {[".STL", ".OBJ", ".3MF", ".STEP"].map((f) => (
-              <span key={f} style={{ padding: "6px 10px", borderRadius: 8, border: "1px solid rgba(255,255,255,.15)" }}>{f}</span>
+              <span key={f} style={{ padding: "6px 10px", borderRadius: 8, border: "1px solid var(--line-2)" }}>{f}</span>
             ))}
           </div>
         </div>

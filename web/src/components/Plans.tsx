@@ -24,11 +24,8 @@ export function Plans() {
         {PLANS.map((p) => (
           <div key={p.name} className="pcard"
             style={p.featured
-              ? { flex: "1 1 300px", minWidth: 0, position: "relative", overflow: "hidden", borderRadius: 28, padding: 2, boxShadow: "0 0 60px var(--ac-glow)" }
-              : { flex: "1 1 300px", minWidth: 0, borderRadius: 28, padding: 1, background: "rgba(255,255,255,.1)" }}>
-            {p.featured && (
-              <div aria-hidden="true" className="rot" style={{ position: "absolute", left: "-50%", top: "-50%", width: "200%", height: "200%", background: "conic-gradient(var(--ac),transparent 25%,transparent 50%,var(--ac) 75%,transparent)" }} />
-            )}
+              ? { flex: "1 1 300px", minWidth: 0, borderRadius: 28, padding: 2, background: "var(--text)", boxShadow: "var(--shadow-lg)" }
+              : { flex: "1 1 300px", minWidth: 0, borderRadius: 28, padding: 1, background: "var(--line-2)" }}>
             <div style={{ position: "relative", height: "100%", borderRadius: 26, background: "var(--surface)", padding: 34, display: "flex", flexDirection: "column" }}>
               <span className="mono" style={p.featured
                 ? { alignSelf: "flex-start", padding: "5px 12px", borderRadius: 99, background: "var(--ac)", color: "var(--bg)", fontSize: 11, fontWeight: 500, letterSpacing: 1, marginBottom: 14 }
@@ -38,7 +35,7 @@ export function Plans() {
               <div className="display" style={{ fontSize: 30, fontWeight: 600, marginBottom: 24 }}>{p.price}</div>
               <div style={{ display: "flex", flexDirection: "column", gap: 14, flex: 1, marginBottom: 30 }}>
                 {p.items.map((it) => (
-                  <span key={it} style={{ display: "flex", gap: 10, alignItems: "flex-start", color: "#D8D8D2" }}>
+                  <span key={it} style={{ display: "flex", gap: 10, alignItems: "flex-start", color: "var(--text-2)" }}>
                     <span style={{ color: "var(--ac)", flex: "none" }}><Icon d={ICONS.check} size={20} /></span>{it}
                   </span>
                 ))}

@@ -21,7 +21,7 @@ export default function Home() {
         style={{
           position: "absolute", zIndex: -1, inset: "0 0 auto 0", height: 900,
           backgroundImage:
-            "linear-gradient(rgba(255,255,255,.045) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.045) 1px,transparent 1px)",
+            "linear-gradient(var(--line) 1px,transparent 1px),linear-gradient(90deg,var(--line) 1px,transparent 1px)",
           backgroundSize: "48px 48px",
           WebkitMaskImage: "radial-gradient(ellipse at 70% 30%,#000 20%,transparent 70%)",
           maskImage: "radial-gradient(ellipse at 70% 30%,#000 20%,transparent 70%)",

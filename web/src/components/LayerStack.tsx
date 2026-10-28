@@ -63,10 +63,10 @@ export function BedPlate({ cell = 16, radius = 20 }: { cell?: number; radius?: n
   return (
     <div
       style={{
-        position: "absolute", inset: 0, borderRadius: radius, border: "1px solid rgba(255,255,255,.16)",
+        position: "absolute", inset: 0, borderRadius: radius, border: "1px solid var(--line-2)",
         backgroundColor: "var(--surface-3)",
         backgroundImage:
-          "linear-gradient(rgba(255,255,255,.07) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.07) 1px,transparent 1px)",
+          "linear-gradient(var(--line) 1px,transparent 1px),linear-gradient(90deg,var(--line) 1px,transparent 1px)",
         backgroundSize: `${cell}px ${cell}px`,
       }}
     />

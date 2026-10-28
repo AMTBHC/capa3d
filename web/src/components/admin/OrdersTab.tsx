@@ -390,5 +390,5 @@ function Text({ label, value, onChange, placeholder }: { label: string; value: s
   );
 }
 
-const field = { width: "100%", padding: "9px 10px", borderRadius: 10, border: "1px solid rgba(255,255,255,.18)", background: "var(--surface)", color: "var(--text)", fontSize: 14 } as const;
+const field = { width: "100%", padding: "9px 10px", borderRadius: 10, border: "1px solid var(--line-3)", background: "var(--surface)", color: "var(--text)", fontSize: 14 } as const;
 const actionBtn = { width: "100%", marginTop: 10, padding: 12, borderRadius: 12, fontSize: 14 } as const;

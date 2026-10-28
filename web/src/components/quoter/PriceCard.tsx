@@ -92,7 +92,7 @@ export function PriceCard({ fileName, model, opts, supports, dims, quote, server
       {model && (
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, marginTop: 14, padding: "6px 6px 6px 14px", borderRadius: 14, background: "var(--surface-3)" }}>
           <span style={{ fontSize: 14, fontWeight: 600 }}>{multi ? "Copias del proyecto" : "Cantidad"}</span>
-          <div style={{ display: "flex", alignItems: "center", borderRadius: 12, border: "1px solid rgba(255,255,255,.15)", overflow: "hidden" }}>
+          <div style={{ display: "flex", alignItems: "center", borderRadius: 12, border: "1px solid var(--line-2)", overflow: "hidden" }}>
             <button onClick={() => onQty(qty - 1)} disabled={qty <= 1} aria-label="Quitar una unidad" style={qtyBtn}>−</button>
             <span className="mono" style={{ minWidth: 42, textAlign: "center", fontSize: 16 }}>{qty}</span>
             <button onClick={() => onQty(qty + 1)} disabled={qty >= printer.maxQty} aria-label="Agregar una unidad" style={qtyBtn}>+</button>
@@ -102,7 +102,7 @@ export function PriceCard({ fileName, model, opts, supports, dims, quote, server
 
       <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginTop: 14 }}>
         <a href="#paso-filamento" className="chip" style={chipLink}>
-          <span style={{ width: 12, height: 12, borderRadius: "50%", background: color.render, border: "1px solid rgba(255,255,255,.3)" }} />
+          <span style={{ width: 12, height: 12, borderRadius: "50%", background: color.render, border: "1px solid var(--line-3)" }} />
           {material.id} {color.name}
         </a>
         <a href="#paso-ajustes" className="chip" style={chipLink}>{quality.name}</a>
@@ -119,7 +119,7 @@ export function PriceCard({ fileName, model, opts, supports, dims, quote, server
             ["Preparación y revisión", quote.baseFee],
             [`Precio por unidad${quote.qty > 1 ? ` × ${quote.qty}` : ""}`, quote.unitPrice],
           ].map(([k, v]) => (
-            <div key={k as string} style={{ display: "flex", justifyContent: "space-between", gap: 12, padding: "9px 0", borderBottom: "1px solid rgba(255,255,255,.06)", fontSize: 13 }}>
+            <div key={k as string} style={{ display: "flex", justifyContent: "space-between", gap: 12, padding: "9px 0", borderBottom: "1px solid var(--line)", fontSize: 13 }}>
               <span className="muted">{k}</span><span className="mono">${money(v as number)}</span>
             </div>
           ))}

@@ -102,4 +102,4 @@ function List({ items }: { items: { id: string; token: string; created_at: strin
 }
 
 const label = { display: "flex", flexDirection: "column", gap: 6, fontSize: 13, color: "var(--text-2)" } as const;
-const input = { width: "100%", padding: "12px 14px", borderRadius: 12, border: "1px solid rgba(255,255,255,.18)", background: "var(--surface-3)", color: "var(--text)", fontSize: 15 } as const;
+const input = { width: "100%", padding: "12px 14px", borderRadius: 12, border: "1px solid var(--line-3)", background: "var(--surface-3)", color: "var(--text)", fontSize: 15 } as const;

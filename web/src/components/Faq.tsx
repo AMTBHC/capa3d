@@ -14,7 +14,7 @@ export function Faq() {
       {FAQS.map(([q, a], i) => {
         const on = open === i;
         return (
-          <div key={q} style={{ borderBottom: "1px solid rgba(255,255,255,.1)" }}>
+          <div key={q} style={{ borderBottom: "1px solid var(--line-2)" }}>
             <button onClick={() => setOpen(on ? -1 : i)} aria-expanded={on} aria-controls={`faq-${i}`}
               style={{ width: "100%", textAlign: "left", cursor: "pointer", background: "transparent", border: 0, color: "var(--text)", padding: "24px 0", display: "flex", justifyContent: "space-between", alignItems: "center", gap: 16, fontSize: 18, fontWeight: 500 }}>
               <span>{q}</span>

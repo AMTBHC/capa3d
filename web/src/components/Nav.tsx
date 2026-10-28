@@ -16,7 +16,7 @@ export function Nav() {
         aria-label="Principal"
         style={{
           display: "flex", flexWrap: "wrap", gap: 16, alignItems: "center", justifyContent: "space-between",
-          padding: "12px 14px 12px 20px", borderRadius: 20, background: "rgba(20,20,23,.7)",
+          padding: "12px 14px 12px 20px", borderRadius: 20, background: "var(--glass)",
           backdropFilter: "blur(14px)", border: "1px solid var(--line)",
         }}
       >

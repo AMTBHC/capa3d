@@ -46,9 +46,9 @@ export function Hero() {
           <span className="pulse" style={{ width: 8, height: 8, borderRadius: "50%", background: "var(--ac)" }} />
           IMPRESIÓN 3D FDM · COLOMBIA
         </span>
-        <h1 style={{ fontSize: "clamp(40px,6.2vw,80px)", lineHeight: 1, margin: "26px 0 24px", letterSpacing: -2.5, fontWeight: 700 }}>
+        <h1 style={{ fontSize: "clamp(40px,6vw,76px)", lineHeight: 1.02, margin: "26px 0 24px", letterSpacing: "-0.035em", fontWeight: 600 }}>
           Da vida a tus ideas,{" "}
-          <span style={{ color: "var(--ac)", textShadow: "0 1px 0 rgba(0,0,0,.35),0 2px 0 rgba(0,0,0,.35),0 3px 0 rgba(0,0,0,.35),0 4px 0 rgba(0,0,0,.35),0 5px 0 rgba(0,0,0,.35),0 6px 0 rgba(0,0,0,.35),0 14px 24px rgba(0,0,0,.6)" }}>
+          <span style={{ color: "var(--text-4)" }}>
             capa por capa.
           </span>
         </h1>
@@ -86,7 +86,7 @@ export function Hero() {
             <div style={{ position: "absolute", left: "50%", top: 0, width: 64, marginLeft: -32 }}>
               <div className="nozX">
                 <svg width="64" height="104" viewBox="0 0 64 104">
-                  <rect x="8" y="2" width="48" height="40" rx="8" fill="#2E2E35" stroke="rgba(255,255,255,.25)" />
+                  <rect x="8" y="2" width="48" height="40" rx="8" fill="#2E2E35" stroke="var(--line-3)" />
                   <rect x="16" y="12" width="32" height="6" rx="3" fill="#0B0B0D" />
                   <rect x="22" y="42" width="20" height="30" rx="3" fill="#3A3A42" />
                   <path d="M24 72h16l-5 22h-6z" fill="#C9C9C3" />
@@ -102,15 +102,15 @@ export function Hero() {
           </span>
           <span className="mono tag">CAPA {Math.round(f * 240)} / 240</span>
         </div>
-        <div style={{ position: "absolute", left: 18, right: 18, bottom: 18, padding: 16, borderRadius: 16, background: "rgba(11,11,13,.8)", backdropFilter: "blur(10px)", border: "1px solid rgba(255,255,255,.1)" }}>
+        <div style={{ position: "absolute", left: 18, right: 18, bottom: 18, padding: 16, borderRadius: 16, background: "var(--glass)", backdropFilter: "blur(10px)", border: "1px solid var(--line-2)" }}>
           <div className="mono" style={{ display: "flex", flexWrap: "wrap", justifyContent: "space-between", gap: 8, fontSize: 11, letterSpacing: 1, color: "var(--text-3)", marginBottom: 10 }}>
             <span>BOQUILLA 215 °C</span><span>CAMA 60 °C</span><span style={{ color: "var(--ac)" }}>{pct}%</span>
           </div>
-          <div style={{ height: 6, borderRadius: 3, background: "rgba(255,255,255,.1)", overflow: "hidden" }}>
+          <div style={{ height: 6, borderRadius: 3, background: "var(--line-2)", overflow: "hidden" }}>
             <div className="bar" style={{ height: 6, borderRadius: 3, background: "var(--ac)", width: `${pct}%`, boxShadow: "0 0 12px var(--ac)" }} />
           </div>
         </div>
-        <div style={{ position: "absolute", right: 18, top: 64, width: 190, height: 120, overflow: "hidden", borderRadius: 12, background: "rgba(11,11,13,.6)", border: "1px solid var(--line)", WebkitMaskImage: "linear-gradient(transparent,#000 25%,#000 75%,transparent)", maskImage: "linear-gradient(transparent,#000 25%,#000 75%,transparent)" }}>
+        <div style={{ position: "absolute", right: 18, top: 64, width: 190, height: 120, overflow: "hidden", borderRadius: 12, background: "var(--glass)", border: "1px solid var(--line)", WebkitMaskImage: "linear-gradient(transparent,#000 25%,#000 75%,transparent)", maskImage: "linear-gradient(transparent,#000 25%,#000 75%,transparent)" }}>
           <div className="gscroll mono" style={{ padding: "8px 12px", fontSize: 10, lineHeight: 1.7 }}>
             {GCODE.map((l, i) => (
               <div key={i} style={{ color: l.startsWith(";") ? "var(--ac)" : l[1] === "0" ? "var(--text)" : "var(--text-4)" }}>{l}</div>

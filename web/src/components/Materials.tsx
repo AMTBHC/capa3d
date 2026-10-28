@@ -28,7 +28,7 @@ export function Materials() {
           <div className="turnF" style={{ position: "absolute", left: "50%", top: "62%", width: 240, height: 240, margin: "-120px 0 0 -120px" }}>
             <LayerStack layers={24} size={240} height={140} profile={m.profile} color={m.color} radius={m.radius} infill={25} alpha="26" />
           </div>
-          <span className="display" style={{ position: "absolute", left: 24, bottom: 12, fontWeight: 700, fontSize: 96, lineHeight: 1, color: "transparent", WebkitTextStroke: "1px rgba(255,255,255,.18)" }}>{m.id}</span>
+          <span className="display" style={{ position: "absolute", left: 24, bottom: 12, fontWeight: 700, fontSize: 96, lineHeight: 1, color: "transparent", WebkitTextStroke: "1px var(--line-3)" }}>{m.id}</span>
         </div>
         <div style={{ flex: "1 1 420px", minWidth: 0, padding: 36 }}>
           <h3 style={{ fontSize: 34, margin: "0 0 12px" }}>{m.id}</h3>

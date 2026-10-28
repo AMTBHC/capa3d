@@ -209,6 +209,7 @@ def test_importa_catalogo_y_baja_el_modelo_al_abrirlo(tmp_path, monkeypatch):
         assert p["file_id"] is None and p["price_from"] == 4500 and p["images"]
         # La galería muestra los productos con foto, no los borradores.
         assert [x["id"] for x in c.get("/api/catalog/featured").json()] == ["cubo-viral"]
+        assert {x["id"] for x in c.get("/api/catalog/products").json()} >= {"cubo-viral", "cubo-en-piezas"}
         assert c.get("/api/catalog/products/personaje").status_code == 404  # marcas: borrador
         file_id = c.post("/api/catalog/products/cubo-viral/prepare").json()["file_id"]
         assert c.get(f"/api/files/{file_id}").json()["format"] == "stl"
