@@ -21,6 +21,7 @@ class PlateSummary(BaseModel):
     # Colores (filamentos) de la cama y altura en que se mezclan; ver mesh/colors.py.
     colors: int = 1
     color_mix_mm: float = 0.0
+    color_layer_changes: int = 0
     sliced_seconds: float | None = None
     sliced_grams: float | None = None
 

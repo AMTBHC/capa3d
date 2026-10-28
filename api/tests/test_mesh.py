@@ -6,7 +6,19 @@ from capa3d_api.mesh.colors import color_profile
 from capa3d_api.mesh.load import ModelError, load_project
 from capa3d_api.mesh.threemf import ThreeMfError, paint_state, parse_3mf
 
-from .builders import bambu_multicolor, bambu_project, binary_stl, cube, mesh_xml, model, painted_3mf, tr, zip3mf
+from .builders import (
+    bambu_multicolor,
+    bambu_project,
+    binary_stl,
+    cube,
+    layer_change_3mf,
+    mesh_xml,
+    model,
+    painted_3mf,
+    prusa_multicolor,
+    tr,
+    zip3mf,
+)
 
 BED = (256, 256, 256)
 
@@ -148,3 +160,15 @@ def test_un_color():
         BED,
     ).plates[0]
     assert color_profile(plate.triangles, plate.colors) == (1, 0.0)
+
+
+def test_colores_de_prusaslicer():
+    plate = parse_3mf(prusa_multicolor(), BED).plates[0]
+    # El modificador (cubo de 40) no se imprime.
+    assert len(plate.triangles) == 24 and plate.triangles[:, :, 2].max() == 20
+    assert color_profile(plate.triangles, plate.colors) == (2, pytest.approx(10, abs=0.1))
+
+
+def test_cambios_de_color_por_altura():
+    plate = parse_3mf(layer_change_3mf(), BED).plates[0]
+    assert plate.layer_color_changes == 2  # la pausa no cuenta

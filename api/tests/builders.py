@@ -160,3 +160,47 @@ def painted_3mf() -> bytes:
             )
         }
     )
+
+
+def prusa_multicolor() -> bytes:
+    """Objeto de PrusaSlicer con dos volúmenes (filamentos 1 y 2) y un modificador, en un mismo mesh."""
+    a, b, c = cube(20), cube(10) + [0, 0, 0], cube(40)
+    tris = np.concatenate([a, b, c])
+    verts = tris.reshape(-1, 3)
+    vs = "".join(f'<vertex x="{x}" y="{y}" z="{z}"/>' for x, y, z in verts)
+    ts = "".join(f'<triangle v1="{3 * i}" v2="{3 * i + 1}" v3="{3 * i + 2}"/>' for i in range(len(tris)))
+    mesh = f"<mesh><vertices>{vs}</vertices><triangles>{ts}</triangles></mesh>"
+    config = (
+        '<config><object id="1" instances_count="1"><metadata type="object" key="extruder" value="1"/>'
+        '<volume firstid="0" lastid="11"><metadata type="volume" key="volume_type" value="ModelPart"/>'
+        '<metadata type="volume" key="extruder" value="1"/></volume>'
+        '<volume firstid="12" lastid="23"><metadata type="volume" key="volume_type" value="ModelPart"/>'
+        '<metadata type="volume" key="extruder" value="2"/></volume>'
+        '<volume firstid="24" lastid="35"><metadata type="volume" key="volume_type" value="ParameterModifier"/>'
+        '<metadata type="volume" key="extruder" value="3"/></volume></object></config>'
+    )
+    return zip3mf({
+        "3D/3dmodel.model": model("millimeter", f'<object id="1" type="model">{mesh}</object>', '<item objectid="1"/>'),
+        "Metadata/Slic3r_PE_model.config": config,
+    })  # fmt: skip
+
+
+def layer_change_3mf() -> bytes:
+    """Cubo de un color con dos cambios de color por altura (Bambu)."""
+    gcodes = (
+        '<?xml version="1.0"?><custom_gcodes_per_layer><plate><plate_info id="1"/>'
+        '<layer top_z="5" type="0" extruder="1" color="#FFFFFF" extra="" gcode="M600"/>'
+        '<layer top_z="10" type="0" extruder="1" color="#000000" extra="" gcode="M600"/>'
+        '<layer top_z="12" type="1" extruder="1" color="" extra="" gcode="M400 U1"/>'
+        "</plate></custom_gcodes_per_layer>"
+    )
+    settings = (
+        '<config><plate><metadata key="plater_id" value="1"/><model_instance>'
+        '<metadata key="object_id" value="1"/><metadata key="instance_id" value="0"/></model_instance></plate></config>'
+    )
+    cube_model = model("millimeter", f'<object id="1" type="model">{mesh_xml(20)}</object>', '<item objectid="1"/>')
+    return zip3mf({
+        "3D/3dmodel.model": cube_model,
+        "Metadata/model_settings.config": settings,
+        "Metadata/custom_gcode_per_layer.xml": gcodes,
+    })  # fmt: skip

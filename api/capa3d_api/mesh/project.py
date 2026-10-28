@@ -29,6 +29,8 @@ class Plate:
     name: str
     objects: list[ModelObject]
     sliced: SlicedPlate | None = None
+    # Cambios de color a una altura fija que trae el proyecto (además de las partes de colores).
+    layer_color_changes: int = 0
 
     @property
     def triangles(self) -> Triangles:

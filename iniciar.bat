@@ -57,6 +57,10 @@ rem Cierra una API o sitio de una vez anterior que haya quedado abierto: si sigu
 rem los puertos, la version nueva no arranca y responde la vieja.
 powershell -NoProfile -Command "Get-NetTCPConnection -LocalPort 8000,3000 -State Listen -ErrorAction SilentlyContinue | ForEach-Object { Stop-Process -Id $_.OwningProcess -Force -ErrorAction SilentlyContinue }" >nul 2>nul
 
+rem Borra lo que el sitio compilo antes: despues de actualizar el codigo, esa cache hace que el
+rem navegador reciba la version vieja ("Hydration failed" o funciones nuevas que no aparecen).
+if exist "web\.next" rmdir /s /q "web\.next"
+
 echo Iniciando la API y el sitio...
 start "Capa3D API" cmd /k "cd /d api && .venv\Scripts\python -m uvicorn capa3d_api.main:create_app --factory --port 8000"
 start "Capa3D Web" cmd /k "cd /d web && npm run dev"
