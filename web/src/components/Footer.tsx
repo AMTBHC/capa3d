@@ -5,7 +5,7 @@ export function Footer() {
   const contact = [business.email || "[TU CORREO]", business.whatsapp ? `+${business.whatsapp}` : "[TU WHATSAPP]"].join(" · ");
   return (
     <footer style={{ borderTop: "1px solid var(--line)", padding: "56px 24px 40px" }}>
-      <div style={{ maxWidth: 1240, margin: "0 auto", display: "flex", flexWrap: "wrap", gap: 40, justifyContent: "space-between" }}>
+      <div style={{ maxWidth: "var(--page-max)", margin: "0 auto", display: "flex", flexWrap: "wrap", gap: 40, justifyContent: "space-between" }}>
         <div style={{ flex: "1 1 260px" }}>
           <div className="display" style={{ fontSize: 24, fontWeight: 700 }}>Capa3D</div>
           <p style={{ color: "var(--text-3)", margin: "12px 0 0", lineHeight: 1.6 }}>Impresión 3D FDM para prototipos, repuestos y diseño.<br />{contact}</p>
@@ -26,7 +26,7 @@ export function Footer() {
           <a href="#" style={{ color: "var(--text-2)" }}>TikTok</a>
         </div>
       </div>
-      <div className="mono" style={{ maxWidth: 1240, margin: "40px auto 0", display: "flex", justifyContent: "space-between", gap: 12, fontSize: 11, letterSpacing: 1, color: "var(--text-4)" }}>
+      <div className="mono" style={{ maxWidth: "var(--page-max)", margin: "40px auto 0", display: "flex", justifyContent: "space-between", gap: 12, fontSize: 11, letterSpacing: 1, color: "var(--text-4)" }}>
         <span>© {new Date().getFullYear()} CAPA3D</span>
         <Link href="/admin" style={{ color: "var(--text-4)" }}>ACCESO DEL TALLER</Link>
       </div>

@@ -448,6 +448,11 @@ export function listCollections(): Promise<CatalogCollection[]> {
   return request("/api/catalog/collections");
 }
 
+/** Productos con foto para la galería de la página de inicio, de varias subsecciones. */
+export function getFeatured(limit = 24): Promise<CatalogProduct[]> {
+  return request(`/api/catalog/featured?limit=${limit}`);
+}
+
 export function getCollection(id: string): Promise<CatalogCollection & { products: CatalogProduct[] }> {
   return request(`/api/catalog/collections/${encodeURIComponent(id)}`);
 }
