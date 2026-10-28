@@ -53,6 +53,10 @@ for /f "tokens=2 delims==" %%t in ('findstr /b /c:"CAPA3D_ADMIN_TOKEN=" api\.env
 rem La web debe saber donde esta la API.
 findstr /b /c:"NEXT_PUBLIC_API_URL=http" web\.env.local >nul 2>nul || (echo NEXT_PUBLIC_API_URL=http://localhost:8000)>>web\.env.local
 
+rem Cierra una API o sitio de una vez anterior que haya quedado abierto: si siguen ocupando
+rem los puertos, la version nueva no arranca y responde la vieja.
+powershell -NoProfile -Command "Get-NetTCPConnection -LocalPort 8000,3000 -State Listen -ErrorAction SilentlyContinue | ForEach-Object { Stop-Process -Id $_.OwningProcess -Force -ErrorAction SilentlyContinue }" >nul 2>nul
+
 echo Iniciando la API y el sitio...
 start "Capa3D API" cmd /k "cd /d api && .venv\Scripts\python -m uvicorn capa3d_api.main:create_app --factory --port 8000"
 start "Capa3D Web" cmd /k "cd /d web && npm run dev"
