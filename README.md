@@ -213,9 +213,13 @@ Cada cama se cotiza como una impresión aparte (con su propio calentamiento). El
 
 ## Cómo se calcula el precio
 
-**Precio laminado (con la API).** Cada cama se lamina con PrusaSlicer usando el perfil de tu impresora, el material, la calidad, el relleno, los soportes y la escala que eligió el cliente. Del G-code salen los gramos y el tiempo, ajustados con los factores de calibración: Los soportes automáticos son en árbol (`support_material_style = organic`, como Bambu Studio): solo se ponen donde hacen falta y se calculan mucho más rápido. Las camas de un archivo se laminan a la vez (`CAPA3D_PLATE_WORKERS`, 3 por defecto) y cada laminado queda guardado: cambiar la cantidad, el color o los varios colores no vuelve a laminar.
+**Precio laminado (con la API).** Cada cama se lamina con PrusaSlicer usando el perfil de tu impresora, el material, la calidad, el relleno, los soportes y la escala que eligió el cliente. Del G-code salen los gramos y el tiempo, ajustados con los factores de calibración:
 
 - **Precio por unidad** = cargo base + gramos × $/g + (horas del slicer + preparación por cama) × tarifa, redondeado a $100
+
+Los soportes automáticos son en árbol (`support_material_style = organic`, como Bambu Studio): solo se ponen donde hacen falta y se calculan mucho más rápido. Las camas de un archivo se laminan a la vez (`CAPA3D_PLATE_WORKERS`, 3 por defecto) y cada laminado queda guardado: cambiar la cantidad, el color o los varios colores no vuelve a laminar.
+
+**Archivos muy grandes.** Si el archivo tiene más de `max_plates` camas, pesa más de `max_file_mb` o una copia tardaría más de `max_print_hours` en imprimirse (sección `[limits]` de `api/config/catalog.toml`; por defecto 8 camas, 50 MB y 24 horas), el sitio no muestra precio: avisa que se cotiza por WhatsApp y muestra el botón. El archivo queda en el panel, en Cotizaciones, marcado **Cotizar a mano**, para descargarlo y revisarlo.
 
 Cada cotización queda guardada con un número (por ejemplo `Q1A2B3C4D`), su vigencia y el G-code de cada cama, listo para imprimir. El número aparece en el mensaje de WhatsApp. Si el laminado falla, esa cama se cotiza con el estimado y la respuesta lo indica.
 

@@ -77,6 +77,15 @@ class Multicolor(BaseModel):
     max_colors: int = Field(default=4, ge=1)
 
 
+class Limits(BaseModel):
+    """Archivos más grandes que esto no reciben precio en línea: se cotizan por WhatsApp."""
+
+    max_plates: int = Field(default=8, ge=1)
+    max_file_mb: float = Field(default=50, gt=0)
+    # Horas de impresión estimadas de una copia, con las opciones que eligió el cliente.
+    max_print_hours: float = Field(default=24, gt=0)
+
+
 class Catalog(BaseModel):
     currency: str = "COP"
     pricing: Pricing
@@ -85,6 +94,7 @@ class Catalog(BaseModel):
     shipping: Shipping = Shipping()
     payments: Payments = Payments()
     multicolor: Multicolor = Multicolor()
+    limits: Limits = Limits()
     materials: dict[str, Material]
     qualities: dict[str, Quality]
     # Carpeta del catálogo, para resolver la ruta del perfil.

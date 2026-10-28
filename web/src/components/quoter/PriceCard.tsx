@@ -12,11 +12,12 @@ import type { QuoteOptions } from "./Quoter";
 import type { LoadedModel, UploadStatus } from "./useModelFile";
 import type { ServerQuoteState } from "./useServer";
 
-export type PriceStage = "example" | "estimate" | "uploading" | "slicing" | "exact" | "failed" | "nofit";
+export type PriceStage = "example" | "estimate" | "uploading" | "slicing" | "exact" | "failed" | "nofit" | "review";
 
 /** En qué punto está el precio que ve el cliente. */
-export function priceStage(model: LoadedModel | null, upload: UploadStatus, server: ServerQuoteState, fits: boolean): PriceStage {
+export function priceStage(model: LoadedModel | null, upload: UploadStatus, server: ServerQuoteState, fits: boolean, review: string | null): PriceStage {
   if (!model) return "example";
+  if (review) return "review";
   if (!API_URL) return "estimate";
   if (!fits) return "nofit";
   if (upload === "uploading") return "uploading";
@@ -42,9 +43,11 @@ interface Props {
   /** Colores con que se imprime (más de 1 = como el archivo, con cambios de filamento). */
   colors: number;
   fileFilaments: { color: string }[];
+  /** Muy grande para dar precio en línea: el motivo. */
+  review: string | null;
 }
 
-export function PriceCard({ fileName, model, opts, supports, dims, quote, server, stage, qty, onQty, shipping, colors, fileFilaments }: Props) {
+export function PriceCard({ fileName, model, opts, supports, dims, quote, server, stage, qty, onQty, shipping, colors, fileFilaments, review }: Props) {
   const [ordering, setOrdering] = useState(false);
   const closeOrder = useCallback(() => setOrdering(false), []);
   const material = MATERIALS[opts.material];
@@ -72,6 +75,35 @@ export function PriceCard({ fileName, model, opts, supports, dims, quote, server
       : []),
     quoteId ? `• Cotización ${quoteId}: $${money(quote.total)} COP` : `• Estimado en la web: $${money(quote.total)} COP`,
   ].join("\n");
+
+  if (stage === "review" && review) {
+    const text = [
+      "Hola Capa3D, quiero cotizar un archivo grande:",
+      `• Archivo: ${fileName}${quoteId ? ` (cotización ${quoteId})` : ""}`,
+      `• En la web dice que ${review}`,
+      `• Filamento: ${material.id} ${colorName} · ${quality.name} · relleno ${opts.infill}%`,
+      `• Cantidad: ${qty}`,
+    ].join("\n");
+    return (
+      <div id="precio" className="quote-price" style={{ borderRadius: 24, background: "var(--surface)", border: "1px solid var(--line)", padding: 20, scrollMarginTop: 16 }}>
+        <div className="status status-warn" role="alert">
+          <span style={{ ...badge, background: "var(--warn)" }}>!</span>
+          <span>
+            <strong>Este archivo lo cotizamos por WhatsApp.</strong> Es muy grande para darte el precio en línea: {review}.
+            <span style={{ display: "block", color: "var(--text-3)", fontSize: 13, marginTop: 4 }}>
+              Ya recibimos tu archivo. Escríbenos y te enviamos el precio revisado por una persona.
+            </span>
+          </span>
+        </div>
+        <a className="btn btn-primary" href={whatsappUrl(text)} target="_blank" rel="noopener noreferrer"
+          onClick={() => quoteId && markRequested(quoteId, colorName)}
+          style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 10, marginTop: 16, padding: 15, borderRadius: 16, fontSize: 16 }}>
+          <Icon d={ICONS.chat} size={20} stroke={2} />
+          Cotizar por WhatsApp
+        </a>
+      </div>
+    );
+  }
 
   return (
     <div id="precio" className="quote-price" style={{ borderRadius: 24, background: "var(--surface)", border: "1px solid var(--line)", padding: 20, scrollMarginTop: 16 }}>

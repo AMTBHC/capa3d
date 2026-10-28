@@ -36,6 +36,7 @@ export interface LoadedModel {
  */
 export function useModelFile(bed: Bed = printer.bed) {
   const [fileName, setFileName] = useState("");
+  const [fileSize, setFileSize] = useState(0);
   const [status, setStatus] = useState<FileStatus>("idle");
   const [model, setModel] = useState<LoadedModel | null>(null);
   const [upload, setUpload] = useState<{ status: UploadStatus; file?: ServerFile; error?: string }>({ status: "off" });
@@ -55,6 +56,7 @@ export function useModelFile(bed: Bed = printer.bed) {
       const ext = extensionOf(file.name);
       const isCad = (MANUAL_FORMATS as readonly string[]).includes(ext);
       setFileName(file.name);
+      setFileSize(file.size);
       replace(null);
       setUpload({ status: "off" });
 
@@ -100,7 +102,7 @@ export function useModelFile(bed: Bed = printer.bed) {
     [bed, replace],
   );
 
-  return { fileName, status, model, upload, load };
+  return { fileName, fileSize, status, model, upload, load };
 }
 
 /** Proyecto armado con las mallas que el servidor generó (archivos STEP). */

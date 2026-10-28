@@ -145,6 +145,8 @@ function Product({ p }: { p: CatalogProduct }) {
 
   const needsName = !!p.personalize && !name.trim();
   const canOrder = !!quote && server.status === "done" && !needsName && !generating;
+  // Pieza muy grande para dar precio en línea: se cotiza por WhatsApp.
+  const review = server.status === "failed" ? (server.quote?.review ?? null) : null;
   const label = p.personalize ? `${p.name} "${text}"` : p.name;
   const summary = `${label} · ${s.label} · ${MATERIALS[material].id} ${colorName}${qty > 1 ? ` · ${qty} unidades` : ""}`;
   const closeOrder = useCallback(() => setOrdering(false), []);
@@ -219,17 +221,21 @@ function Product({ p }: { p: CatalogProduct }) {
           )}
           {prepareError
             ? <div className="status status-warn" style={{ marginTop: 8 }}>{prepareError}</div>
-            : server.status === "failed" && <div className="status status-warn" style={{ marginTop: 8 }}>No pudimos calcular el precio. Escríbenos por WhatsApp.</div>}
+            : review
+              ? <div className="status status-warn" role="alert" style={{ marginTop: 8 }}><span><strong>Esta pieza la cotizamos por WhatsApp.</strong> Es muy grande para darte el precio en línea: {review}.</span></div>
+              : server.status === "failed" && <div className="status status-warn" style={{ marginTop: 8 }}>No pudimos calcular el precio. Escríbenos por WhatsApp.</div>}
           {!fileId && !prepareError && !p.personalize && <div style={{ fontSize: 12, color: "var(--text-3)", marginTop: 6 }}>Preparando el modelo para cotizarlo…</div>}
           <div style={{ fontSize: 12, color: "var(--text-4)", marginTop: 6 }}>El envío se calcula con tu ciudad. Confirmamos antes de que pagues.</div>
-          <button className="btn btn-primary glow" style={{ width: "100%", marginTop: 14, padding: 15, borderRadius: 16, fontSize: 16 }} disabled={!canOrder} onClick={() => setOrdering(true)}>
-            {needsName ? "Escribe el nombre para pedirlo" : "Pedirlo"}
-          </button>
-          <a className="btn btn-ghost" target="_blank" rel="noopener noreferrer"
+          {!review && (
+            <button className="btn btn-primary glow" style={{ width: "100%", marginTop: 14, padding: 15, borderRadius: 16, fontSize: 16 }} disabled={!canOrder} onClick={() => setOrdering(true)}>
+              {needsName ? "Escribe el nombre para pedirlo" : "Pedirlo"}
+            </button>
+          )}
+          <a className={`btn ${review ? "btn-primary" : "btn-ghost"}`} target="_blank" rel="noopener noreferrer"
             style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8, marginTop: 10, padding: 12, borderRadius: 14, fontSize: 14 }}
             href={whatsappUrl(`Hola, quiero ${summary}${quote ? ` ($${money(quote.total)})` : ""}`)}>
             <Icon d={ICONS.chat} size={18} stroke={2} />
-            Preguntar por WhatsApp
+            {review ? "Cotizar por WhatsApp" : "Preguntar por WhatsApp"}
           </a>
         </div>
       </aside>

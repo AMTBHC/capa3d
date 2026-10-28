@@ -40,6 +40,14 @@ change_seconds = 40
 # Colores que carga tu AMS a la vez; con más, la cotización avisa que hay que confirmarlo.
 max_colors = 4
 
+[limits]
+# Archivos más grandes que esto no reciben precio en línea: el sitio muestra un aviso y el
+# cliente lo cotiza por WhatsApp. El archivo igual queda en el panel para descargarlo.
+max_plates = 8
+max_file_mb = 50
+# Horas de impresión estimadas de una copia, con el material, calidad y relleno elegidos.
+max_print_hours = 24
+
 [shipping]
 # Envío a domicilio en COP. Lo puedes ajustar en cada pedido antes de confirmarlo.
 cost = 15000
