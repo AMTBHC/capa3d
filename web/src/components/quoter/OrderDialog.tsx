@@ -5,6 +5,7 @@ import { useEffect, useState, type FormEvent } from "react";
 import { createPortal } from "react-dom";
 import { createOrder, shippingFor, type CustomerData, type Shipping } from "@/lib/api";
 import { money } from "@/lib/format";
+import { orderPath, saveOrder } from "@/lib/myOrders";
 import { Icon, ICONS } from "../Icon";
 
 const DEPARTMENTS = [
@@ -70,7 +71,8 @@ export function OrderDialog({ quoteId, color, summary, printPrice, shipping, onC
       } catch {
         // sin almacenamiento: solo no se recuerdan los datos
       }
-      router.push(`/pedido/${o.id}?t=${encodeURIComponent(o.token)}`);
+      saveOrder({ id: o.id, token: o.token, created_at: o.created_at, file_name: o.file_name, total: o.total, status_label: o.status_label });
+      router.push(`${orderPath(o.id, o.token)}&nuevo=1`);
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
       setBusy(false);

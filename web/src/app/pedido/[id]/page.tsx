@@ -17,5 +17,5 @@ export default async function OrderPage({
   const sp = await searchParams;
   const one = (v: string | string[] | undefined) => (Array.isArray(v) ? v[0] : v) ?? "";
   // Wompi agrega ?id=<transacción> al volver del pago.
-  return <OrderView id={id} token={one(sp.t)} transactionId={one(sp.id)} />;
+  return <OrderView id={id} token={one(sp.t)} transactionId={one(sp.id)} isNew={one(sp.nuevo) === "1"} />;
 }

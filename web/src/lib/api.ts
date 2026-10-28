@@ -257,6 +257,14 @@ export interface Order {
   print_price: number;
   shipping: number;
   total: number;
+  /** Lo que ya pagó el cliente (abono o total). */
+  paid_amount: number;
+  /** Lo que falta por pagar; con abono, se paga en efectivo al recibir. */
+  balance: number;
+  plan: "full" | "deposit" | null;
+  /** Abono disponible para este pedido; 0 si el taller no ofrece abono. */
+  deposit_amount: number;
+  deposit_percent: number;
   currency: string;
   carrier: string | null;
   tracking: string | null;
@@ -289,8 +297,70 @@ export function getOrder(id: string, token: string): Promise<Order> {
  * URL de Wompi para pagar el pedido confirmado. `returns` es false cuando el sitio corre en una
  * dirección local: Wompi no devolverá al cliente, así que conviene abrirlo en otra pestaña.
  */
-export function checkoutOrder(id: string, token: string): Promise<{ url: string; returns: boolean }> {
-  return request(`/api/orders/${encodeURIComponent(id)}/checkout?t=${encodeURIComponent(token)}`, { method: "POST" });
+export function checkoutOrder(id: string, token: string, plan: "full" | "deposit"): Promise<{ url: string; returns: boolean }> {
+  return request(`/api/orders/${encodeURIComponent(id)}/checkout?t=${encodeURIComponent(token)}`, json({ plan }));
+}
+
+export interface FoundOrder {
+  id: string;
+  token: string;
+  status: OrderStatus;
+  status_label: string;
+  created_at: string;
+  total: number;
+  file_name: string;
+}
+
+/** Pedidos del cliente por correo y celular. */
+export function lookupOrders(email: string, phone: string): Promise<FoundOrder[]> {
+  return request("/api/orders/lookup", json({ email, phone }));
+}
+
+/** Dirección de la conexión en vivo del pedido (EventSource). */
+export function orderStreamUrl(id: string, token: string): string {
+  return `${API_URL}/api/orders/${encodeURIComponent(id)}/stream?t=${encodeURIComponent(token)}`;
+}
+
+/**
+ * Conexión en vivo del panel. EventSource no permite el encabezado de la clave, así que se
+ * lee el flujo con fetch. Se reconecta sola; devuelve una función para cerrarla.
+ */
+export function watchAdmin(token: string, onChange: (data: { count: number; by_status: Record<string, number> }) => void, onState: (live: boolean) => void): () => void {
+  let stopped = false;
+  let ctrl: AbortController | null = null;
+  const run = async () => {
+    while (!stopped) {
+      ctrl = new AbortController();
+      try {
+        const res = await fetch(`${API_URL}/api/admin/stream`, { headers: auth(token), signal: ctrl.signal });
+        if (!res.ok || !res.body) throw new Error(String(res.status));
+        onState(true);
+        const reader = res.body.pipeThrough(new TextDecoderStream()).getReader();
+        let buf = "";
+        for (;;) {
+          const { value, done } = await reader.read();
+          if (done) break;
+          buf += value;
+          let i;
+          while ((i = buf.indexOf("\n\n")) >= 0) {
+            const block = buf.slice(0, i);
+            buf = buf.slice(i + 2);
+            const data = block.split("\n").find((l) => l.startsWith("data: "));
+            if (data) onChange(JSON.parse(data.slice(6)));
+          }
+        }
+      } catch {
+        // desconexión: se reintenta
+      }
+      onState(false);
+      if (!stopped) await new Promise((r) => setTimeout(r, 3000));
+    }
+  };
+  run();
+  return () => {
+    stopped = true;
+    ctrl?.abort();
+  };
 }
 
 /** Al volver de Wompi: la API consulta la transacción y actualiza el pedido. */
@@ -308,7 +378,7 @@ export function adminOrderAction(
   token: string,
   id: string,
   action: OrderActionName,
-  extra: { print_price?: number; shipping?: number; carrier?: string; tracking?: string; note?: string } = {},
+  extra: { print_price?: number; shipping?: number; carrier?: string; tracking?: string; note?: string; plan?: "full" | "deposit" } = {},
 ): Promise<AdminOrder> {
   const init = json({ action, ...extra });
   return request(`/api/admin/orders/${id}/action`, { ...init, headers: { ...init.headers, ...auth(token) } });
@@ -317,4 +387,156 @@ export function adminOrderAction(
 /** Descarga el zip del pedido con los datos del cliente. */
 export async function downloadOrder(token: string, id: string): Promise<{ blob: Blob; name: string }> {
   return downloadZip(`/api/admin/orders/${id}/download`, token, id);
+}
+
+// Catálogo
+
+export type Badge = "viral" | "mas_pedido" | "nuevo";
+
+export const BADGE_LABEL: Record<Badge, string> = { viral: "🔥 Viral", mas_pedido: "⭐ Más pedido", nuevo: "✨ Nuevo" };
+
+export interface ProductSize {
+  label: string;
+  /** Escala en % sobre el modelo original. */
+  scale: number;
+}
+
+export interface CatalogCollection {
+  id: string;
+  name: string;
+  emoji: string;
+  description: string;
+  cover: string | null;
+  count: number;
+  price_from: number | null;
+}
+
+export interface CatalogProduct {
+  id: string;
+  collection_id: string;
+  kind: "model" | "name_keychain";
+  name: string;
+  subsection: string;
+  description: string;
+  badges: Badge[];
+  images: string[];
+  sizes: ProductSize[];
+  default_color: string;
+  file_id: string | null;
+  price_from: number | null;
+  personalize: { max_length: number } | null;
+  collection?: { id: string; name: string; emoji: string };
+}
+
+export interface AdminProduct extends CatalogProduct {
+  published: boolean;
+  sort: number;
+  /** Tiene modelo (o OpenSCAD para los llaveros con nombre). */
+  ready: boolean;
+}
+
+export interface AdminCollection extends Omit<CatalogCollection, "count" | "price_from"> {
+  published: boolean;
+  sort: number;
+  products: AdminProduct[];
+}
+
+export const imageUrl = (name: string) => `${API_URL}/api/catalog/images/${name}`;
+
+export function listCollections(): Promise<CatalogCollection[]> {
+  return request("/api/catalog/collections");
+}
+
+export function getCollection(id: string): Promise<CatalogCollection & { products: CatalogProduct[] }> {
+  return request(`/api/catalog/collections/${encodeURIComponent(id)}`);
+}
+
+export function getProduct(id: string): Promise<CatalogProduct> {
+  return request(`/api/catalog/products/${encodeURIComponent(id)}`);
+}
+
+/** Genera el llavero con el texto; devuelve el archivo para verlo y cotizarlo. */
+export async function personalize(productId: string, text: string): Promise<string> {
+  const r = await request<{ file_id: string }>(`/api/catalog/products/${encodeURIComponent(productId)}/personalize`, json({ text }));
+  return r.file_id;
+}
+
+export function getServerFile(id: string): Promise<ServerFile> {
+  return request(`/api/files/${id}`);
+}
+
+// Catálogo en el panel
+
+const adminJson = (token: string, method: string, body?: unknown): RequestInit => ({
+  method,
+  headers: { ...auth(token), ...(body === undefined ? {} : { "Content-Type": "application/json" }) },
+  body: body === undefined ? undefined : JSON.stringify(body),
+});
+
+const adminUpload = (token: string, file: File): RequestInit => {
+  const body = new FormData();
+  body.append("file", file);
+  return { method: "POST", headers: auth(token), body };
+};
+
+export interface CollectionInput {
+  name: string;
+  description: string;
+  emoji: string;
+  sort: number;
+  published: boolean;
+}
+
+export interface ProductInput {
+  collection_id: string;
+  name: string;
+  subsection: string;
+  description: string;
+  badges: Badge[];
+  sizes: ProductSize[];
+  default_color: string;
+  sort: number;
+  published: boolean;
+}
+
+export function getAdminCatalog(token: string): Promise<{ collections: AdminCollection[]; openscad: boolean }> {
+  return request("/api/admin/catalog", { headers: auth(token) });
+}
+
+export function saveCollection(token: string, data: CollectionInput, id?: string): Promise<unknown> {
+  return id
+    ? request(`/api/admin/catalog/collections/${id}`, adminJson(token, "PUT", data))
+    : request("/api/admin/catalog/collections", adminJson(token, "POST", data));
+}
+
+export async function deleteCollection(token: string, id: string): Promise<void> {
+  const res = await fetch(`${API_URL}/api/admin/catalog/collections/${id}`, adminJson(token, "DELETE"));
+  if (!res.ok) throw new ApiError((await res.json().catch(() => ({}))).detail ?? res.statusText, res.status);
+}
+
+export function uploadCover(token: string, id: string, file: File): Promise<unknown> {
+  return request(`/api/admin/catalog/collections/${id}/cover`, adminUpload(token, file));
+}
+
+export function saveProduct(token: string, data: ProductInput, id?: string): Promise<AdminProduct> {
+  return id
+    ? request(`/api/admin/catalog/products/${id}`, adminJson(token, "PUT", data))
+    : request("/api/admin/catalog/products", adminJson(token, "POST", data));
+}
+
+export async function deleteProduct(token: string, id: string): Promise<void> {
+  const res = await fetch(`${API_URL}/api/admin/catalog/products/${id}`, adminJson(token, "DELETE"));
+  if (!res.ok) throw new ApiError(res.statusText, res.status);
+}
+
+export function uploadProductModel(token: string, id: string, file: File): Promise<AdminProduct> {
+  return request(`/api/admin/catalog/products/${id}/model`, adminUpload(token, file));
+}
+
+export function uploadProductImage(token: string, id: string, file: File): Promise<AdminProduct> {
+  return request(`/api/admin/catalog/products/${id}/images`, adminUpload(token, file));
+}
+
+export function deleteProductImage(token: string, id: string, name: string): Promise<AdminProduct> {
+  return request(`/api/admin/catalog/products/${id}/images/${name}`, adminJson(token, "DELETE"));
 }

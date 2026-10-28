@@ -7,7 +7,7 @@ ENV DEBIAN_FRONTEND=noninteractive \
     CAPA3D_DATA_DIR=/data
 
 RUN apt-get update \
- && apt-get install -y --no-install-recommends prusa-slicer python3 python3-venv ca-certificates \
+ && apt-get install -y --no-install-recommends prusa-slicer openscad fonts-liberation python3 python3-venv ca-certificates \
  && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app

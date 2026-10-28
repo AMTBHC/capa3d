@@ -1,12 +1,31 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
-import { adminOrderAction, ApiError, downloadOrder, listAdminOrders, type AdminOrder, type OrderActionName, type OrderStatus } from "@/lib/api";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { adminOrderAction, ApiError, downloadOrder, listAdminOrders, watchAdmin, type AdminOrder, type OrderActionName, type OrderStatus } from "@/lib/api";
 import { QUALITIES } from "@/lib/catalog";
 import { money } from "@/lib/format";
 import { Icon } from "../Icon";
 
+/** Respaldo si la conexión en vivo no está disponible. */
 const REFRESH_MS = 30_000;
+
+/** Dos tonos cortos para avisar un pedido nuevo. */
+function chime() {
+  try {
+    const ctx = new AudioContext();
+    [880, 1320].forEach((f, i) => {
+      const o = ctx.createOscillator(), g = ctx.createGain();
+      o.frequency.value = f;
+      g.gain.setValueAtTime(0.15, ctx.currentTime + i * 0.18);
+      g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + i * 0.18 + 0.25);
+      o.connect(g).connect(ctx.destination);
+      o.start(ctx.currentTime + i * 0.18);
+      o.stop(ctx.currentTime + i * 0.18 + 0.3);
+    });
+  } catch {
+    // sin audio
+  }
+}
 
 const FILTERS: [string, OrderStatus[] | null][] = [
   ["Por revisar", ["received"]],
@@ -44,11 +63,13 @@ function customerMessage(o: AdminOrder): string {
     case "confirmed":
       return `Hola ${first}, revisamos tu archivo. El total de tu pedido ${o.id} es ${total} (impresión $${money(o.print_price)} + envío $${money(o.shipping)}). ${o.can_pay ? "Puedes pagar aquí" : "Te envío los datos para el pago. Sigue tu pedido aquí"}: ${o.order_url}`;
     case "paid":
-      return `Hola ${first}, recibimos tu pago del pedido ${o.id}. Ya está en la cola de impresión. ${o.order_url}`;
+      return o.balance > 0
+        ? `Hola ${first}, recibimos tu abono de $${money(o.paid_amount)} del pedido ${o.id}. Ya está en la cola de impresión; los $${money(o.balance)} restantes los pagas en efectivo al recibir. ${o.order_url}`
+        : `Hola ${first}, recibimos tu pago del pedido ${o.id}. Ya está en la cola de impresión. ${o.order_url}`;
     case "printing":
       return `Hola ${first}, tu pedido ${o.id} se está imprimiendo. ${o.order_url}`;
     case "shipped":
-      return `Hola ${first}, tu pedido ${o.id} va en camino con ${o.carrier}, guía ${o.tracking}. ${o.order_url}`;
+      return `Hola ${first}, tu pedido ${o.id} va en camino con ${o.carrier}, guía ${o.tracking}.${o.balance > 0 ? ` Recuerda tener $${money(o.balance)} en efectivo para pagar al recibir.` : ""} ${o.order_url}`;
     case "delivered":
       return `Hola ${first}, ¡gracias por tu compra en Capa3D! Esperamos que tu pieza te encante.`;
     case "cancelled":
@@ -61,23 +82,58 @@ export function OrdersTab({ token, onUnauthorized }: { token: string; onUnauthor
   const [filter, setFilter] = useState(0);
   const [open, setOpen] = useState<string | null>(null);
   const [error, setError] = useState("");
+  const [live, setLive] = useState(false);
+  const [toast, setToast] = useState("");
+  const [canNotify, setCanNotify] = useState<NotificationPermission | "unsupported">("unsupported");
+  const received = useRef<number | null>(null);
 
   const load = useCallback(async () => {
     try {
-      setOrders(await listAdminOrders(token, []));
+      const list = await listAdminOrders(token, []);
+      setOrders(list);
       setError("");
+      return list;
     } catch (e) {
-      if (e instanceof ApiError && e.status === 401) return onUnauthorized();
-      setError(e instanceof Error ? e.message : String(e));
+      if (e instanceof ApiError && e.status === 401) onUnauthorized();
+      else setError(e instanceof Error ? e.message : String(e));
+      return null;
     }
   }, [token, onUnauthorized]);
 
+  // En vivo: la API avisa cuando llega un pedido o cambia alguno.
   useEffect(() => {
+    return watchAdmin(token, async (data) => {
+      const n = data.by_status.received ?? 0;
+      const list = await load();
+      if (received.current !== null && n > received.current && list) {
+        const newest = list.find((o) => o.status === "received");
+        const text = newest ? `Nuevo pedido ${newest.id} de ${newest.customer.name} · $${money(newest.total)}` : "Nuevo pedido";
+        setToast(text);
+        chime();
+        if (typeof Notification !== "undefined" && Notification.permission === "granted") new Notification("Capa3D", { body: text });
+      }
+      received.current = n;
+    }, setLive);
+  }, [token, load]);
+
+  useEffect(() => {
+    if (live) return;
     // eslint-disable-next-line react-hooks/set-state-in-effect
     load();
     const id = setInterval(load, REFRESH_MS);
     return () => clearInterval(id);
-  }, [load]);
+  }, [live, load]);
+
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    if (typeof Notification !== "undefined") setCanNotify(Notification.permission);
+  }, []);
+
+  // Pedidos por revisar en el título de la pestaña: se ven aunque estés en otra.
+  const pending = orders?.filter((o) => o.status === "received").length ?? 0;
+  useEffect(() => {
+    document.title = pending ? `(${pending}) Panel · Capa3D` : "Panel · Capa3D";
+  }, [pending]);
 
   const replace = (o: AdminOrder) => setOrders((list) => list?.map((x) => (x.id === o.id ? o : x)) ?? null);
   const statuses = FILTERS[filter][1];
@@ -86,6 +142,22 @@ export function OrdersTab({ token, onUnauthorized }: { token: string; onUnauthor
 
   return (
     <>
+      {toast && (
+        <div className="status status-ok pop" role="alert" style={{ marginBottom: 14, alignItems: "center" }}>
+          <span aria-hidden="true">🔔</span>
+          <span style={{ flex: 1 }}><strong>{toast}</strong></span>
+          <button className="chip-btn" onClick={() => { setToast(""); setFilter(0); }}>Ver</button>
+        </div>
+      )}
+      <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: 10, marginBottom: 12, fontSize: 13, color: "var(--text-3)" }}>
+        <span style={{ display: "inline-flex", alignItems: "center", gap: 6, color: live ? "var(--ok)" : "var(--text-3)" }}>
+          <span className={live ? "pulse" : undefined} style={{ width: 7, height: 7, borderRadius: "50%", background: live ? "var(--ok)" : "var(--text-4)" }} />
+          {live ? "En vivo: los pedidos nuevos y los pagos aparecen solos" : "Reconectando…"}
+        </span>
+        {canNotify === "default" && (
+          <button className="chip-btn" onClick={async () => setCanNotify(await Notification.requestPermission())}>Activar avisos en el computador</button>
+        )}
+      </div>
       <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 16 }}>
         {FILTERS.map(([label, st], i) => {
           const n = orders?.filter((o) => !st || st.includes(o.status)).length ?? 0;
@@ -221,10 +293,24 @@ function OrderDetail({ o, token, onChange }: { o: AdminOrder; token: string; onC
           </p>
         )}
         {o.status === "confirmed" && (
-          <button className="chip-btn" disabled={busy} style={{ marginTop: 8 }}
-            onClick={() => run("mark_paid", { note: "Pago registrado a mano" }, `¿Confirmas que recibiste $${money(o.total)} por el pedido ${o.id}?`)}>
-            Marcar como pagado (transferencia, efectivo…)
-          </button>
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginTop: 8 }}>
+            <button className="chip-btn" disabled={busy}
+              onClick={() => run("mark_paid", { plan: "full", note: "registrado a mano" }, `¿Confirmas que recibiste $${money(o.total)} por el pedido ${o.id}?`)}>
+              Recibí el total (${money(o.total)})
+            </button>
+            {o.deposit_amount > 0 && o.deposit_amount < o.total && (
+              <button className="chip-btn" disabled={busy}
+                onClick={() => run("mark_paid", { plan: "deposit", note: "registrado a mano" }, `¿Confirmas que recibiste el abono de $${money(o.deposit_amount)} por el pedido ${o.id}?`)}>
+                Recibí el abono (${money(o.deposit_amount)})
+              </button>
+            )}
+          </div>
+        )}
+        {o.paid_amount > 0 && (
+          <p style={{ margin: "0 0 10px", fontSize: 14 }}>
+            Pagado <strong>${money(o.paid_amount)}</strong>
+            {o.balance > 0 && <> · <strong style={{ color: "var(--warn)" }}>por cobrar al entregar ${money(o.balance)}</strong> (efectivo)</>}
+          </p>
         )}
         {o.status === "paid" && <button className="btn btn-primary" disabled={busy} style={actionBtn} onClick={() => run("start_printing")}>Empezar impresión</button>}
         {(o.status === "paid" || o.status === "printing") && (
@@ -239,7 +325,12 @@ function OrderDetail({ o, token, onChange }: { o: AdminOrder; token: string; onC
             </button>
           </div>
         )}
-        {o.status === "shipped" && <button className="btn btn-primary" disabled={busy} style={actionBtn} onClick={() => run("deliver")}>Marcar como entregado</button>}
+        {o.status === "shipped" && (
+          <button className="btn btn-primary" disabled={busy} style={actionBtn}
+            onClick={() => run("deliver", {}, o.balance > 0 ? `¿Entregado y cobraste $${money(o.balance)} en efectivo?` : undefined)}>
+            {o.balance > 0 ? `Entregado · cobré $${money(o.balance)}` : "Marcar como entregado"}
+          </button>
+        )}
         {(o.status === "delivered" || o.status === "cancelled") && <Line muted>Pedido cerrado.</Line>}
 
         <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginTop: 14 }}>

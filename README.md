@@ -8,6 +8,7 @@ Sitio de impresión 3D con cotizador en línea. El cliente sube su modelo (STL, 
    - [Node.js](https://nodejs.org) (versión LTS)
    - [Python 3](https://www.python.org/downloads/). En Windows, marca **"Add python.exe to PATH"** en el instalador.
    - [PrusaSlicer](https://www.prusa3d.com/page/prusaslicer_424/). Sin él, el sitio funciona igual, pero con precio estimado y sin abrir STEP.
+   - [OpenSCAD](https://openscad.org/downloads.html), para los llaveros con nombre del catálogo. En Windows usa el instalador; `iniciar` lo encuentra en `C:\Program Files\OpenSCAD`.
 2. Doble clic en **`iniciar.bat`** (Windows) o **`iniciar.command`** (Mac y Linux).
    - La primera vez tarda unos minutos porque instala todo. Después arranca en segundos.
    - En Mac, si no abre con doble clic: clic derecho → Abrir, o en una terminal `bash iniciar.command`.
@@ -99,16 +100,23 @@ Textos pendientes de completar: busca `[TU` en `web/src`.
 ## Pedidos y pagos
 
 ```
-Cliente cotiza → "Hacer pedido": datos y dirección, sin pagar          → Recibido
-Tú revisas el archivo en el panel, ajustas impresión y envío, confirmas → Por pagar
-   └ "Avisar al cliente por WhatsApp" le manda el enlace de su pedido
-Cliente abre su enlace → "Pagar ahora" con Wompi (PSE, Nequi, tarjeta)  → Pagado
-Tú imprimes → Imprimiendo → Enviado (transportadora + guía) → Entregado
+Cliente cotiza → "Hacer pedido": datos y dirección, sin pagar             → Recibido
+Tú revisas el archivo en el panel, ajustas impresión y envío, confirmas    → Por pagar
+Cliente elige: pagar todo, o abonar el 50 % y el resto en efectivo al recibir → Pagado
+Tú imprimes → Imprimiendo → Enviado (transportadora + guía) → Entregado (y cobras el saldo)
 ```
 
-- **Página del cliente** (`/pedido/<número>?t=…`): estado, línea de tiempo, total, botón de pago y número de guía. Se actualiza sola.
-- **Panel** (`/admin`): pestaña **Pedidos**, con filtros por estado. Cada pedido muestra los datos del cliente, la pieza, la descarga del archivo y el G-code, el precio editable, el botón del siguiente paso y el aviso por WhatsApp con un mensaje listo. La pestaña **Cotizaciones** guarda todo lo que se ha cotizado.
-- **Sin llaves de Wompi**, el cliente ve "Pagar por WhatsApp" y tú marcas el pago a mano: "Marcar como pagado", para transferencias o efectivo.
+**Para el cliente**
+- Al hacer el pedido ve su **número de pedido**, un botón para **enviarlo a Capa3D por WhatsApp** (así le queda el enlace en el chat) y otro para copiar el enlace.
+- **Mis pedidos** (en el menú y en el pie de página) muestra los pedidos hechos desde ese navegador, y permite buscarlos con el **correo y el celular** del pedido.
+- Su página de pedido se actualiza **en vivo**: cuando confirmas el precio, marcas un estado o entra un pago, lo ve en uno o dos segundos sin recargar.
+
+**Para ti (panel)**
+- Entra desde **"Acceso del taller"** en el pie de página, o con el botón **Panel** del menú, que solo aparece en el navegador donde ya iniciaste sesión. `iniciar` abre el panel solo.
+- El panel está **en vivo**: cuando llega un pedido suena un aviso, aparece arriba y la pestaña muestra cuántos hay por revisar, por ejemplo "(2) Panel". Con "Activar avisos en el computador" también te llega una notificación de Windows.
+- **Pagos con abono:** el panel muestra cuánto se pagó y cuánto falta. Al entregar, el botón dice "Entregado · cobré $…" y registra el cobro. Si te pagan por fuera de Wompi, usa "Recibí el total" o "Recibí el abono".
+- **El porcentaje del abono** se configura en `api/config/catalog.toml` → `[payments] deposit_percent` (0 = solo pago total).
+- **Sin llaves de Wompi**, el cliente ve "Pagar por WhatsApp" y tú registras el pago a mano.
 - **Costo de envío:** `api/config/catalog.toml` → `[shipping]`. Ahí van la tarifa general y las ciudades con otra tarifa. En cada pedido lo puedes ajustar antes de confirmar.
 
 ### Activar Wompi
@@ -137,6 +145,25 @@ Con el sitio publicado en un dominio real, Wompi devuelve al cliente a su pedido
 WhatsApp no deja adjuntar archivos desde un enlace, por eso el archivo del cliente queda en la API. En el panel, **Descargar** baja un zip con el archivo original, el G-code de cada cama y un `resumen.txt` con los datos del cliente y del pedido.
 
 La clave del panel la genera `iniciar` la primera vez, la muestra al arrancar y la guarda en `api/.env` como `CAPA3D_ADMIN_TOKEN`. En producción usa una clave larga.
+
+## Catálogo
+
+Además del cotizador, el sitio tiene una tienda de productos listos para imprimir:
+
+- `/catalogo`: las colecciones (Lo más pedido, Virales, Flexibles, Llaveros, Hogar, Decoración, Vehículos, Regalos). En la página de inicio aparece la sección **Elige algo listo para imprimir**.
+- `/catalogo/<colección>`: los productos, filtrables por subsección.
+- `/producto/<producto>`: fotos, vista 3D, tamaño, material, color y cantidad. El precio se calcula laminando el modelo, y **Pedirlo** usa el mismo flujo de pedido y pago del cotizador.
+
+Todo se maneja en el panel, en la pestaña **Catálogo**:
+
+1. **+ Nueva colección** o **Editar** (nombre, emoji, descripción, orden, publicada). Toca la portada para subir una foto.
+2. **+ Producto** en una colección: nombre, subsección (por ejemplo "Animales"), descripción, etiquetas (Viral, Más pedido, Nuevo), tamaños como % de escala sobre el modelo, y color sugerido.
+3. Después de crearlo, sube el modelo (STL, 3MF, OBJ o STEP) y las fotos. La primera foto es la portada.
+4. Marca **Publicado**. Un producto sin modelo no aparece en la tienda, y una colección sin productos visibles tampoco.
+
+El **Llavero con tu nombre** viene creado: el cliente escribe el nombre y OpenSCAD genera el modelo en uno o dos segundos (plantilla en `api/config/templates/llavero_nombre.scad`). Si OpenSCAD no está instalado, el producto queda oculto y el panel lo avisa.
+
+Publica solo modelos que puedas vender: tuyos, con licencia comercial o de dominio público. Los packs de modelos con personajes de marcas (Disney, Marvel, Pokémon…) no dan derecho a venderlos. Usa fotos de tus propias impresiones.
 
 ## Calibrar con Bambu Studio
 
@@ -192,4 +219,5 @@ El estimado no tiene en cuenta los soportes ni la orientación. Sirve para mostr
 1. ✅ **Frontend**: migración del mockup a Next.js, visor WebGL con capas visibles y volumen de la impresora, lectura correcta de 3MF (unidades, componentes y transformaciones), análisis en un Web Worker.
 2. ✅ **Backend de cotización** (Python + FastAPI): subida del archivo, laminado real con PrusaSlicer (gramos y tiempo exactos, con soportes), conversión de STEP para verlo y cotizarlo, y precios en el servidor.
 3. ✅ **Pedidos y pagos**: pedido sin pago, confirmación del precio en el panel, pago con Wompi (o manual), estados hasta la entrega, página de seguimiento para el cliente.
-4. **Panel de administración**: pedidos, precios y materiales sin tocar código.
+4. ✅ **Catálogo**: colecciones, productos con fotos y modelo, precio laminado por tamaño, llaveros con nombre generados con OpenSCAD.
+5. **Panel de administración**: pedidos, precios y materiales sin tocar código.

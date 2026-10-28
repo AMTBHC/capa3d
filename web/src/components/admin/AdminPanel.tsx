@@ -7,6 +7,7 @@ import { ApiError, downloadQuote, listAdminQuotes, type AdminQuote } from "@/lib
 import { QUALITIES } from "@/lib/catalog";
 import { duration, money, num1 } from "@/lib/format";
 import { Icon, ICONS } from "../Icon";
+import { CatalogTab } from "./CatalogTab";
 import { OrdersTab } from "./OrdersTab";
 
 const TOKEN_KEY = "capa3d-admin";
@@ -56,7 +57,10 @@ export function AdminPanel() {
           <span className="display" style={{ fontWeight: 700, fontSize: 20 }}>Capa3D</span>
           <span style={{ color: "var(--text-3)", fontSize: 14 }}>· Panel</span>
         </Link>
-        {token && <button className="chip-btn" onClick={logout}>Salir</button>}
+        <div style={{ display: "flex", gap: 8 }}>
+          <Link href="/" className="chip-btn" style={{ textDecoration: "none" }}>Ver sitio</Link>
+          {token && <button className="chip-btn" onClick={logout}>Salir</button>}
+        </div>
       </header>
       {!API_URL ? (
         <Notice>Para usar el panel, configura <code>NEXT_PUBLIC_API_URL</code> en <code>web/.env.local</code>.</Notice>
@@ -70,18 +74,20 @@ export function AdminPanel() {
 }
 
 function Tabs({ token, onUnauthorized }: { token: string; onUnauthorized: () => void }) {
-  const [tab, setTab] = useState<"orders" | "quotes">("orders");
+  const [tab, setTab] = useState<"orders" | "quotes" | "catalog">("orders");
   return (
     <>
       <div role="tablist" style={{ display: "flex", gap: 6, marginBottom: 20, borderBottom: "1px solid var(--line)" }}>
-        {([["orders", "Pedidos"], ["quotes", "Cotizaciones"]] as const).map(([id, label]) => (
+        {([["orders", "Pedidos"], ["quotes", "Cotizaciones"], ["catalog", "Catálogo"]] as const).map(([id, label]) => (
           <button key={id} role="tab" aria-selected={tab === id} onClick={() => setTab(id)}
             style={{ padding: "12px 16px", background: "none", border: 0, borderBottom: `2px solid ${tab === id ? "var(--ac)" : "transparent"}`, color: tab === id ? "var(--text)" : "var(--text-3)", fontSize: 16, fontWeight: 600, cursor: "pointer", marginBottom: -1 }}>
             {label}
           </button>
         ))}
       </div>
-      {tab === "orders" ? <OrdersTab token={token} onUnauthorized={onUnauthorized} /> : <QuoteList token={token} onUnauthorized={onUnauthorized} />}
+      {tab === "orders" ? <OrdersTab token={token} onUnauthorized={onUnauthorized} />
+        : tab === "quotes" ? <QuoteList token={token} onUnauthorized={onUnauthorized} />
+        : <CatalogTab token={token} onUnauthorized={onUnauthorized} />}
     </>
   );
 }

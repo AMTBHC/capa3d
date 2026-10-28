@@ -101,8 +101,22 @@ class OrderCreate(BaseModel):
     customer: Customer
 
 
+Plan = Literal["full", "deposit"]
+
+
+class Checkout(BaseModel):
+    plan: Plan = "full"
+
+
+class Lookup(BaseModel):
+    email: str = Field(max_length=120)
+    phone: str = Field(max_length=20)
+
+
 class OrderAction(BaseModel):
     action: Literal["confirm", "mark_paid", "start_printing", "ship", "deliver", "cancel"]
+    # Para "mark_paid": si se recibió el total o solo el abono.
+    plan: Plan = "full"
     print_price: int | None = Field(default=None, ge=0)
     shipping: int | None = Field(default=None, ge=0)
     carrier: str | None = Field(default=None, max_length=60)
@@ -152,9 +166,14 @@ class OrderService:
             raise OrderError("Pedido no encontrado", 404)
         return o
 
-    def checkout(self, order_id: str, token: str) -> tuple[str, bool]:
+    def deposit_amount(self, total: int) -> int:
+        """Abono redondeado hacia arriba a $100; 0 si el abono está desactivado."""
+        pct = self.catalog.payments.deposit_percent
+        return -(-total * pct // 10000) * 100 if pct else 0
+
+    def checkout(self, order_id: str, token: str, plan: str = "full") -> tuple[str, bool]:
         """
-        URL de pago de Wompi para el total confirmado, y si Wompi devolverá al cliente al sitio.
+        URL de pago de Wompi por el total o por el abono, y si Wompi devolverá al cliente al sitio.
         Con el sitio en una dirección local no se envía la de regreso: Wompi la rechaza (403).
         """
         o = self.get_for_customer(order_id, token)
@@ -163,11 +182,17 @@ class OrderService:
         if not self.wompi.enabled:
             raise OrderError("El pago en línea no está disponible; escríbenos por WhatsApp", 503)
         total = o["print_price"] + o["shipping"]
+        amount = total
+        if plan == "deposit":
+            amount = self.deposit_amount(total)
+            if not amount:
+                raise OrderError("El abono no está disponible; paga el total", 409)
         reference = f"{o['id']}-{len(self.store.payments(o['id'])) + 1}"
-        self.store.add_payment(reference, o["id"], total)
+        self.store.add_payment(reference, o["id"], amount)
+        self.store.update_order(o["id"], plan=plan)
         redirect = f"{self.settings.site_url.rstrip('/')}/pedido/{o['id']}?t={o['token']}"
         returns = not is_local_url(redirect)
-        return self.wompi.checkout_url(reference, total * 100, redirect if returns else "", o["customer"]), returns
+        return self.wompi.checkout_url(reference, amount * 100, redirect if returns else "", o["customer"]), returns
 
     def refresh_payment(self, o: dict) -> dict:
         """
@@ -214,8 +239,36 @@ class OrderService:
         self.store.update_payment(tx.reference, tx.status, tx.id)
         o = self.store.get_order(pay["order_id"])
         if tx.status == "APPROVED" and o and o["status"] == "confirmed":
-            self.store.update_order(o["id"], status="paid")
-            self.store.add_event(o["id"], "paid", f"Pago Wompi {tx.id}")
+            self._paid(o, pay["amount"], f"Wompi {tx.id}")
+
+    def _paid(self, o: dict, amount: int, how: str) -> None:
+        total = o["print_price"] + o["shipping"]
+        balance = max(0, total - amount)
+        plan = "deposit" if balance else "full"
+        self.store.update_order(o["id"], status="paid", paid_amount=amount, plan=plan)
+        note = (
+            f"Abono {_cop(amount)} · saldo {_cop(balance)} contra entrega" if balance else f"Pago total {_cop(amount)}"
+        )
+        self.store.add_event(o["id"], "paid", f"{note} · {how}")
+
+    def lookup(self, req: Lookup) -> list[dict]:
+        """Pedidos del cliente por correo y celular, para quien perdió el enlace."""
+        digits = "".join(c for c in req.phone if c.isdigit())
+        if len(digits) < 7 or "@" not in req.email:
+            raise OrderError("Escribe el correo y el celular con que hiciste el pedido", 422)
+        found = self.store.orders_by_contact(req.email.strip().lower(), digits[-10:])
+        return [
+            {
+                "id": o["id"],
+                "token": o["token"],
+                "status": o["status"],
+                "status_label": STATUS_LABEL[o["status"]],
+                "created_at": o["created_at"],
+                "total": o["print_price"] + o["shipping"],
+                "file_name": self.store.get_file(self.store.get_quote(o["quote_id"])["file_id"])["name"],
+            }
+            for o in found
+        ]
 
     def public(self, o: dict) -> dict:
         """Lo que ve el cliente en la página de su pedido."""
@@ -224,11 +277,19 @@ class OrderService:
         pays = self.store.payments(o["id"])
         last = pays[-1] if pays else None
         c = o["customer"]
+        total = o["print_price"] + o["shipping"]
+        paid = o.get("paid_amount") or 0
+        balance = max(0, total - paid)
+        text = STATUS_TEXT[o["status"]]
+        if o["status"] in ("paid", "printing", "shipped") and paid and balance:
+            text += (
+                f" Pagaste un abono de {_cop(paid)}; los {_cop(balance)} restantes los pagas en efectivo al recibir."
+            )
         return {
             "id": o["id"],
             "status": o["status"],
             "status_label": STATUS_LABEL[o["status"]],
-            "status_text": STATUS_TEXT[o["status"]],
+            "status_text": text,
             "flow": [{"status": s, "label": STATUS_LABEL[s]} for s in FLOW],
             "events": [{**e, "label": STATUS_LABEL.get(e["status"], e["status"])} for e in self.store.events(o["id"])],
             "created_at": o["created_at"],
@@ -240,7 +301,12 @@ class OrderService:
             "customer": {k: c[k] for k in ("name", "city", "department", "address")},
             "print_price": o["print_price"],
             "shipping": o["shipping"],
-            "total": o["print_price"] + o["shipping"],
+            "total": total,
+            "paid_amount": paid,
+            "balance": balance,
+            "plan": o.get("plan"),
+            "deposit_amount": self.deposit_amount(total),
+            "deposit_percent": self.catalog.payments.deposit_percent,
             "currency": self.catalog.currency,
             "carrier": o["carrier"],
             "tracking": o["tracking"],
@@ -272,6 +338,18 @@ class OrderService:
                 fields["print_price"] = a.print_price
             if a.shipping is not None:
                 fields["shipping"] = a.shipping
+        if a.action == "mark_paid":
+            total = o["print_price"] + o["shipping"]
+            amount = self.deposit_amount(total) if a.plan == "deposit" else total
+            if not amount:
+                raise OrderError("El abono no está disponible", 409)
+            self._paid(o, amount, a.note or "registrado a mano")
+            return self.store.get_order(o["id"])
+        if a.action == "deliver":
+            balance = o["print_price"] + o["shipping"] - (o.get("paid_amount") or 0)
+            if balance > 0:
+                fields["paid_amount"] = o["print_price"] + o["shipping"]
+                a.note = " · ".join(x for x in (f"Cobrado contra entrega {_cop(balance)}", a.note) if x)
         if a.action == "ship":
             if not (a.carrier and a.tracking):
                 raise OrderError("Indica la transportadora y el número de guía", 422)
@@ -300,3 +378,7 @@ class OrderService:
         ]
         name = self.quotes.order_zip(o["quote_id"], dest, header="\n".join(header))
         return f"{o['id']}-{name.split('-', 1)[1]}"
+
+
+def _cop(x: int) -> str:
+    return "$" + f"{int(x):,}".replace(",", ".")

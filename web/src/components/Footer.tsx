@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { business } from "@/lib/config";
 
 export function Footer() {
@@ -19,12 +20,16 @@ export function Footer() {
         </div>
         <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
           <div className="mono label" style={{ marginBottom: 4 }}>ENLACES</div>
+          <Link href="/mis-pedidos" style={{ color: "var(--text-2)" }}>Mis pedidos</Link>
           <a href="#faq" style={{ color: "var(--text-2)" }}>Preguntas frecuentes</a>
           <a href="#" style={{ color: "var(--text-2)" }}>Instagram</a>
           <a href="#" style={{ color: "var(--text-2)" }}>TikTok</a>
         </div>
       </div>
-      <div className="mono" style={{ maxWidth: 1240, margin: "40px auto 0", fontSize: 11, letterSpacing: 1, color: "var(--text-4)" }}>© {new Date().getFullYear()} CAPA3D</div>
+      <div className="mono" style={{ maxWidth: 1240, margin: "40px auto 0", display: "flex", justifyContent: "space-between", gap: 12, fontSize: 11, letterSpacing: 1, color: "var(--text-4)" }}>
+        <span>© {new Date().getFullYear()} CAPA3D</span>
+        <Link href="/admin" style={{ color: "var(--text-4)" }}>ACCESO DEL TALLER</Link>
+      </div>
     </footer>
   );
 }

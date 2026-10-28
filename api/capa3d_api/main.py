@@ -1,23 +1,35 @@
+import asyncio
+import json
 import secrets
 import tempfile
+import time
+from collections import defaultdict, deque
 from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Annotated
 
 from fastapi import BackgroundTasks, Depends, FastAPI, File, Header, HTTPException, Query, Request, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse, JSONResponse
+from fastapi.responses import FileResponse, JSONResponse, StreamingResponse
 from pydantic import BaseModel, Field
 from starlette.concurrency import run_in_threadpool
 
 from .catalog import load_catalog
-from .orders import OrderAction, OrderCreate, OrderError, OrderService
+from .openscad import OpenScad
+from .orders import Checkout, Lookup, OrderAction, OrderCreate, OrderError, OrderService
 from .schemas import AdminQuote, FileOut, QuoteOut, QuoteRequest
 from .service import QuoteService, UploadError
 from .settings import Settings, get_settings
+from .shop import IMAGE_TYPES, CollectionIn, Personalize, ProductIn, Shop, ShopError
 from .slicer import PrusaSlicer
 from .store import Store
 from .wompi import Wompi, WompiError
+
+# Búsqueda de pedidos: máximo de intentos por IP en la ventana de tiempo.
+LOOKUP_MAX = 10
+LOOKUP_WINDOW_S = 600
+# Cada cuánto revisa cambios una conexión en vivo.
+STREAM_TICK_S = 1.0
 
 
 def create_app(settings: Settings | None = None) -> FastAPI:
@@ -33,6 +45,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         settings.wompi_private_key,
     )
     orders = OrderService(settings, catalog, store, service, wompi)
+    shop = Shop(store, service, OpenScad(settings.openscad_path))
+    shop.seed()
 
     @asynccontextmanager
     async def lifespan(app: FastAPI):
@@ -44,7 +58,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.add_middleware(
         CORSMiddleware,
         allow_origins=settings.cors_origins,
-        allow_methods=["GET", "POST"],
+        allow_methods=["GET", "POST", "PUT", "DELETE"],
         allow_headers=["Content-Type", "Authorization"],
         # Para que el panel lea el nombre del zip al descargarlo.
         expose_headers=["Content-Disposition"],
@@ -52,6 +66,10 @@ def create_app(settings: Settings | None = None) -> FastAPI:
 
     @app.exception_handler(UploadError)
     async def upload_error(_: Request, e: UploadError):
+        return JSONResponse({"detail": str(e)}, status_code=e.status)
+
+    @app.exception_handler(ShopError)
+    async def shop_error(_: Request, e: ShopError):
         return JSONResponse({"detail": str(e)}, status_code=e.status)
 
     @app.exception_handler(OrderError)
@@ -118,6 +136,31 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         if not quote_id.isalnum() or not store.mark_requested(quote_id, body.color):
             raise HTTPException(404, "Cotización no encontrada")
 
+    # Catálogo público
+
+    @app.get("/api/catalog/collections")
+    def catalog_collections():
+        return shop.collections_out()
+
+    @app.get("/api/catalog/collections/{cid}")
+    def catalog_collection(cid: str):
+        return shop.collection_out(cid)
+
+    @app.get("/api/catalog/products/{pid}")
+    def catalog_product(pid: str):
+        return shop.get_product(pid)
+
+    @app.post("/api/catalog/products/{pid}/personalize")
+    def catalog_personalize(pid: str, body: Personalize):
+        """Genera el llavero con el texto del cliente; devuelve el archivo para cotizarlo y verlo."""
+        return {"file_id": shop.personalize(pid, body.text)}
+
+    @app.get("/api/catalog/images/{name}")
+    def catalog_image(name: str):
+        path = shop.image_path(name)
+        media = IMAGE_TYPES[path.suffix.lstrip(".")]
+        return FileResponse(path, media_type=media, headers={"Cache-Control": "public, max-age=31536000, immutable"})
+
     # Pedidos del cliente: se identifican con el id y su token secreto (?t=).
 
     @app.post("/api/orders", status_code=201)
@@ -131,10 +174,64 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         return orders.public(orders.refresh_payment(o))
 
     @app.post("/api/orders/{order_id}/checkout")
-    def checkout(order_id: str, t: str = ""):
-        url, returns = orders.checkout(order_id, t)
+    def checkout(order_id: str, t: str = "", body: Checkout | None = None):
+        url, returns = orders.checkout(order_id, t, (body or Checkout()).plan)
         # returns=False: Wompi no devolverá al cliente al sitio (sitio local); la web lo abre en otra pestaña.
         return {"url": url, "returns": returns}
+
+    lookups: dict[str, deque] = defaultdict(deque)
+
+    @app.post("/api/orders/lookup")
+    def lookup_orders(body: Lookup, request: Request):
+        """Pedidos por correo y celular. Limitado por IP para que no se pueda adivinar en masa."""
+        ip = request.client.host if request.client else "?"
+        now, hits = time.monotonic(), lookups[ip]
+        while hits and now - hits[0] > LOOKUP_WINDOW_S:
+            hits.popleft()
+        if len(hits) >= LOOKUP_MAX:
+            raise HTTPException(429, "Demasiados intentos; espera unos minutos")
+        hits.append(now)
+        return orders.lookup(body)
+
+    def sse(event: str, data: object) -> str:
+        return f"event: {event}\ndata: {json.dumps(data, ensure_ascii=False)}\n\n"
+
+    async def live(request: Request, read):
+        """
+        Conexión en vivo (Server-Sent Events): cada segundo llama read(); si devuelve
+        (versión, evento, datos) con otra versión, los envía. El navegador se reconecta solo.
+        """
+        yield "retry: 3000\n\n"
+        last, quiet, start = None, 0, time.monotonic()
+        while time.monotonic() - start < settings.stream_max_seconds:
+            if await request.is_disconnected():
+                break
+            version, event, data = await run_in_threadpool(read)
+            if version != last:
+                last, quiet = version, 0
+                yield sse(event, data)
+            else:
+                quiet += 1
+                if quiet >= 15:
+                    quiet = 0
+                    yield ": sigue\n\n"
+            await asyncio.sleep(STREAM_TICK_S)
+
+    def streaming(gen) -> StreamingResponse:
+        headers = {"Cache-Control": "no-cache", "X-Accel-Buffering": "no"}
+        return StreamingResponse(gen, media_type="text/event-stream", headers=headers)
+
+    @app.get("/api/orders/{order_id}/stream")
+    async def order_stream(order_id: str, request: Request, t: str = ""):
+        """El pedido en vivo para la página del cliente."""
+        await run_in_threadpool(orders.get_for_customer, order_id, t)
+
+        def read():
+            # De paso consulta en Wompi un pago pendiente (con llave privada; espaciado internamente).
+            o = orders.refresh_payment(store.get_order(order_id))
+            return o["version"], "order", orders.public(o)
+
+        return streaming(live(request, read))
 
     class PaymentReturn(BaseModel):
         transaction_id: str = Field(max_length=64)
@@ -180,6 +277,16 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         background.add_task(tmp.unlink, missing_ok=True)
         return FileResponse(tmp, media_type="application/zip", filename=name)
 
+    @app.get("/api/admin/stream", dependencies=[Depends(admin)])
+    async def admin_stream(request: Request):
+        """Avisa al panel cuando llega un pedido o cambia alguno."""
+
+        def read():
+            version = store.orders_version()
+            return version, "orders", {"count": version[0], "by_status": store.count_by_status()}
+
+        return streaming(live(request, read))
+
     @app.get("/api/admin/orders", dependencies=[Depends(admin)])
     def admin_orders(status: str = "", limit: Annotated[int, Query(ge=1, le=500)] = 200):
         statuses = [x for x in status.split(",") if x] or None
@@ -199,5 +306,52 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             raise
         background.add_task(tmp.unlink, missing_ok=True)
         return FileResponse(tmp, media_type="application/zip", filename=name)
+
+    # Catálogo en el panel
+
+    @app.get("/api/admin/catalog", dependencies=[Depends(admin)])
+    def admin_catalog():
+        return {"collections": shop.admin_out(), "openscad": shop.openscad.available}
+
+    @app.post("/api/admin/catalog/collections", dependencies=[Depends(admin)], status_code=201)
+    def admin_new_collection(body: CollectionIn):
+        return shop.save_collection(body)
+
+    @app.put("/api/admin/catalog/collections/{cid}", dependencies=[Depends(admin)])
+    def admin_edit_collection(cid: str, body: CollectionIn):
+        return shop.save_collection(body, cid)
+
+    @app.delete("/api/admin/catalog/collections/{cid}", dependencies=[Depends(admin)], status_code=204)
+    def admin_delete_collection(cid: str):
+        shop.delete_collection(cid)
+
+    @app.post("/api/admin/catalog/collections/{cid}/cover", dependencies=[Depends(admin)])
+    async def admin_collection_cover(cid: str, file: Annotated[UploadFile, File()]):
+        return {"image": shop.add_image(("collection", cid), file.filename or "", await file.read())}
+
+    @app.post("/api/admin/catalog/products", dependencies=[Depends(admin)], status_code=201)
+    def admin_new_product(body: ProductIn):
+        return shop.save_product(body)
+
+    @app.put("/api/admin/catalog/products/{pid}", dependencies=[Depends(admin)])
+    def admin_edit_product(pid: str, body: ProductIn):
+        return shop.save_product(body, pid)
+
+    @app.delete("/api/admin/catalog/products/{pid}", dependencies=[Depends(admin)], status_code=204)
+    def admin_delete_product(pid: str):
+        shop.delete_product(pid)
+
+    @app.post("/api/admin/catalog/products/{pid}/model", dependencies=[Depends(admin)])
+    async def admin_product_model(pid: str, file: Annotated[UploadFile, File()]):
+        return await run_in_threadpool(shop.set_model, pid, file.filename or "modelo.stl", file.file)
+
+    @app.post("/api/admin/catalog/products/{pid}/images", dependencies=[Depends(admin)])
+    async def admin_product_image(pid: str, file: Annotated[UploadFile, File()]):
+        shop.add_image(("product", pid), file.filename or "", await file.read())
+        return shop.product_out(store.get_product(pid), admin=True)
+
+    @app.delete("/api/admin/catalog/products/{pid}/images/{name}", dependencies=[Depends(admin)])
+    def admin_product_image_delete(pid: str, name: str):
+        return shop.remove_image(pid, name)
 
     return app

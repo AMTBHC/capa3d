@@ -14,8 +14,8 @@ jobs:
         working-directory: api
     steps:
       - uses: actions/checkout@v4
-      - name: Instalar PrusaSlicer
-        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends prusa-slicer
+      - name: Instalar PrusaSlicer y OpenSCAD
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends prusa-slicer openscad fonts-liberation
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"

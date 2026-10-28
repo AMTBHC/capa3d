@@ -37,6 +37,13 @@ ADMIN=$(grep "^CAPA3D_ADMIN_TOKEN=." api/.env | tail -1 | cut -d= -f2-)
 # La web debe saber dónde está la API.
 grep -q "^NEXT_PUBLIC_API_URL=http" web/.env.local 2>/dev/null || echo "NEXT_PUBLIC_API_URL=http://localhost:8000" >> web/.env.local
 
+# Cierra una API o sitio de una vez anterior que haya quedado abierto: si siguen ocupando
+# los puertos, la versión nueva no arranca y responde la vieja.
+for port in 8000 3000; do
+  pids=$(lsof -ti "tcp:$port" -sTCP:LISTEN 2>/dev/null || true)
+  [ -n "$pids" ] && kill $pids 2>/dev/null || true
+done
+
 echo "▶ Iniciando la API…"
 (cd api && .venv/bin/python -m uvicorn capa3d_api.main:create_app --factory --port 8000) &
 API_PID=$!
@@ -57,5 +64,5 @@ echo
 echo "▶ Iniciando el sitio… se abrirá en http://localhost:3000"
 echo "  Panel de pedidos: http://localhost:3000/admin   Clave: $ADMIN"
 echo
-(sleep 6 && abrir http://localhost:3000) &
+(sleep 6 && abrir http://localhost:3000 && abrir http://localhost:3000/admin) &
 cd web && npm run dev

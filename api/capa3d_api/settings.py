@@ -16,6 +16,8 @@ class Settings(BaseSettings):
     data_dir: Path = API_ROOT / "data"
     catalog_path: Path = API_ROOT / "config" / "catalog.toml"
     slicer_path: str = ""
+    # Ejecutable de OpenSCAD para los llaveros con nombre (vacío = buscarlo solo).
+    openscad_path: str = ""
     # Desactiva el laminado y cotiza solo con el estimado (útil sin PrusaSlicer).
     slicer_enabled: bool = True
     slice_timeout_s: int = 600
@@ -33,6 +35,8 @@ class Settings(BaseSettings):
     # Opcional: con la llave privada la API consulta los pagos por referencia, sin depender
     # del regreso del cliente ni de los eventos (útil en tu computador).
     wompi_private_key: str = ""
+    # Duración máxima de una conexión en vivo; el navegador se reconecta solo al cerrarse.
+    stream_max_seconds: int = 1800
     # Clave del panel de administración (/admin en la web). Vacía = panel desactivado.
     admin_token: str = ""
     # Lista separada por comas: "https://capa3d.co,https://www.capa3d.co".

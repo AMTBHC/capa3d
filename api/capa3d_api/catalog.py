@@ -46,6 +46,12 @@ def normalize_city(city: str) -> str:
     return " ".join("".join(c for c in s if not unicodedata.combining(c)).split())
 
 
+class Payments(BaseModel):
+    """Opciones de pago. Con deposit_percent > 0 el cliente puede abonar y pagar el resto al recibir."""
+
+    deposit_percent: int = Field(default=50, ge=0, lt=100)
+
+
 class Material(BaseModel):
     price_per_gram: float
     density: float = Field(gt=0)
@@ -66,6 +72,7 @@ class Catalog(BaseModel):
     printer: Printer
     calibration: Calibration = Calibration()
     shipping: Shipping = Shipping()
+    payments: Payments = Payments()
     materials: dict[str, Material]
     qualities: dict[str, Quality]
     # Carpeta del catálogo, para resolver la ruta del perfil.

@@ -12,6 +12,7 @@ FIXTURES = Path(__file__).parent / "fixtures"
 HAS_SLICER = bool(shutil.which("prusa-slicer"))
 
 needs_slicer = pytest.mark.skipif(not HAS_SLICER, reason="PrusaSlicer no está instalado")
+needs_openscad = pytest.mark.skipif(not shutil.which("openscad"), reason="OpenSCAD no está instalado")
 
 
 @pytest.fixture
