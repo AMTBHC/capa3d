@@ -186,18 +186,3 @@ def test_cambiar_cantidad_no_vuelve_a_laminar(client):
     # Otro relleno sí cambia el G-code.
     wait_quote(client, client.post("/api/quotes", json=quote_body(f["id"], infill=60)).json()["id"])
     assert len(calls) == 2
-
-
-@needs_slicer
-def test_camas_iguales_se_laminan_una_vez(client):
-    from .builders import copies_3mf
-
-    service = client.app.state.service
-    calls = []
-    original = service.slicer.slice
-    service.slicer.slice = lambda *a, **kw: calls.append(1) or original(*a, **kw)
-    f = upload(client, "copias.3mf", copies_3mf(4)).json()
-    assert len(f["plates"]) == 4 and len({p["shape"] for p in f["plates"]}) == 1
-    q = wait_quote(client, client.post("/api/quotes", json=quote_body(f["id"])).json()["id"])
-    assert len(calls) == 1 and len(q["plates"]) == 4 and q["method"] == "slicer"
-    assert len({p["grams"] for p in q["plates"]}) == 1

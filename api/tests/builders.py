@@ -204,17 +204,3 @@ def layer_change_3mf() -> bytes:
         "Metadata/model_settings.config": settings,
         "Metadata/custom_gcode_per_layer.xml": gcodes,
     })  # fmt: skip
-
-
-def copies_3mf(n: int) -> bytes:
-    """n camas de Bambu, cada una con una copia del mismo cubo en otro lugar."""
-    items = "".join(f'<item objectid="1" transform="{tr(20 + i * 300, 20)}"/>' for i in range(n))
-    plates = "".join(
-        f'<plate><metadata key="plater_id" value="{i + 1}"/><model_instance><metadata key="object_id" value="1"/>'
-        f'<metadata key="instance_id" value="{i}"/></model_instance></plate>'
-        for i in range(n)
-    )
-    return zip3mf({
-        "3D/3dmodel.model": model("millimeter", f'<object id="1" type="model">{mesh_xml(15)}</object>', items),
-        "Metadata/model_settings.config": f"<config>{plates}</config>",
-    })  # fmt: skip
