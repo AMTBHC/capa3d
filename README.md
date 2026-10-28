@@ -8,6 +8,7 @@ Sitio de impresión 3D con cotizador en línea. El cliente sube su modelo (STL, 
    - [Node.js](https://nodejs.org) (versión LTS)
    - [Python 3](https://www.python.org/downloads/). En Windows, marca **"Add python.exe to PATH"** en el instalador.
    - [PrusaSlicer](https://www.prusa3d.com/page/prusaslicer_424/). Sin él, el sitio funciona igual, pero con precio estimado y sin abrir STEP.
+   - [OpenSCAD](https://openscad.org/downloads.html), para los llaveros con nombre del catálogo. En Windows usa el instalador; `iniciar` lo encuentra en `C:\Program Files\OpenSCAD`.
 2. Doble clic en **`iniciar.bat`** (Windows) o **`iniciar.command`** (Mac y Linux).
    - La primera vez tarda unos minutos porque instala todo. Después arranca en segundos.
    - En Mac, si no abre con doble clic: clic derecho → Abrir, o en una terminal `bash iniciar.command`.
@@ -145,6 +146,25 @@ WhatsApp no deja adjuntar archivos desde un enlace, por eso el archivo del clien
 
 La clave del panel la genera `iniciar` la primera vez, la muestra al arrancar y la guarda en `api/.env` como `CAPA3D_ADMIN_TOKEN`. En producción usa una clave larga.
 
+## Catálogo
+
+Además del cotizador, el sitio tiene una tienda de productos listos para imprimir:
+
+- `/catalogo`: las colecciones (Lo más pedido, Virales, Flexibles, Llaveros, Hogar, Decoración, Vehículos, Regalos). En la página de inicio aparece la sección **Elige algo listo para imprimir**.
+- `/catalogo/<colección>`: los productos, filtrables por subsección.
+- `/producto/<producto>`: fotos, vista 3D, tamaño, material, color y cantidad. El precio se calcula laminando el modelo, y **Pedirlo** usa el mismo flujo de pedido y pago del cotizador.
+
+Todo se maneja en el panel, en la pestaña **Catálogo**:
+
+1. **+ Nueva colección** o **Editar** (nombre, emoji, descripción, orden, publicada). Toca la portada para subir una foto.
+2. **+ Producto** en una colección: nombre, subsección (por ejemplo "Animales"), descripción, etiquetas (Viral, Más pedido, Nuevo), tamaños como % de escala sobre el modelo, y color sugerido.
+3. Después de crearlo, sube el modelo (STL, 3MF, OBJ o STEP) y las fotos. La primera foto es la portada.
+4. Marca **Publicado**. Un producto sin modelo no aparece en la tienda, y una colección sin productos visibles tampoco.
+
+El **Llavero con tu nombre** viene creado: el cliente escribe el nombre y OpenSCAD genera el modelo en uno o dos segundos (plantilla en `api/config/templates/llavero_nombre.scad`). Si OpenSCAD no está instalado, el producto queda oculto y el panel lo avisa.
+
+Publica solo modelos que puedas vender: tuyos, con licencia comercial o de dominio público. Los packs de modelos con personajes de marcas (Disney, Marvel, Pokémon…) no dan derecho a venderlos. Usa fotos de tus propias impresiones.
+
 ## Calibrar con Bambu Studio
 
 La API lamina con PrusaSlicer usando un perfil que imita la velocidad de las Bambu. Aun así, el tiempo y los gramos no salen idénticos a los de Bambu Studio. Para que coincidan, calcula un factor de corrección con piezas reales:
@@ -199,4 +219,5 @@ El estimado no tiene en cuenta los soportes ni la orientación. Sirve para mostr
 1. ✅ **Frontend**: migración del mockup a Next.js, visor WebGL con capas visibles y volumen de la impresora, lectura correcta de 3MF (unidades, componentes y transformaciones), análisis en un Web Worker.
 2. ✅ **Backend de cotización** (Python + FastAPI): subida del archivo, laminado real con PrusaSlicer (gramos y tiempo exactos, con soportes), conversión de STEP para verlo y cotizarlo, y precios en el servidor.
 3. ✅ **Pedidos y pagos**: pedido sin pago, confirmación del precio en el panel, pago con Wompi (o manual), estados hasta la entrega, página de seguimiento para el cliente.
-4. **Panel de administración**: pedidos, precios y materiales sin tocar código.
+4. ✅ **Catálogo**: colecciones, productos con fotos y modelo, precio laminado por tamaño, llaveros con nombre generados con OpenSCAD.
+5. **Panel de administración**: pedidos, precios y materiales sin tocar código.

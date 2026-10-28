@@ -16,6 +16,8 @@ class Settings(BaseSettings):
     data_dir: Path = API_ROOT / "data"
     catalog_path: Path = API_ROOT / "config" / "catalog.toml"
     slicer_path: str = ""
+    # Ejecutable de OpenSCAD para los llaveros con nombre (vacío = buscarlo solo).
+    openscad_path: str = ""
     # Desactiva el laminado y cotiza solo con el estimado (útil sin PrusaSlicer).
     slicer_enabled: bool = True
     slice_timeout_s: int = 600

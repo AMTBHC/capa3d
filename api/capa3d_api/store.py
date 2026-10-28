@@ -49,6 +49,34 @@ CREATE TABLE IF NOT EXISTS order_events (
   note TEXT,
   created_at TEXT NOT NULL
 );
+CREATE TABLE IF NOT EXISTS collections (
+  id TEXT PRIMARY KEY,
+  name TEXT NOT NULL,
+  description TEXT NOT NULL DEFAULT '',
+  emoji TEXT NOT NULL DEFAULT '',
+  cover TEXT,
+  sort INTEGER NOT NULL DEFAULT 0,
+  published INTEGER NOT NULL DEFAULT 1,
+  created_at TEXT NOT NULL
+);
+CREATE TABLE IF NOT EXISTS products (
+  id TEXT PRIMARY KEY,
+  collection_id TEXT NOT NULL REFERENCES collections(id),
+  kind TEXT NOT NULL DEFAULT 'model',
+  name TEXT NOT NULL,
+  subsection TEXT NOT NULL DEFAULT '',
+  description TEXT NOT NULL DEFAULT '',
+  badges TEXT NOT NULL DEFAULT '[]',
+  images TEXT NOT NULL DEFAULT '[]',
+  sizes TEXT NOT NULL DEFAULT '[]',
+  default_color TEXT NOT NULL DEFAULT '',
+  file_id TEXT,
+  price_quote_id TEXT,
+  sort INTEGER NOT NULL DEFAULT 0,
+  published INTEGER NOT NULL DEFAULT 0,
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL
+);
 CREATE TABLE IF NOT EXISTS payments (
   reference TEXT PRIMARY KEY,
   order_id TEXT NOT NULL REFERENCES orders(id),
@@ -246,6 +274,71 @@ class Store:
     def payments(self, order_id: str) -> list[dict[str, Any]]:
         rows = self._exec("SELECT * FROM payments WHERE order_id=? ORDER BY created_at", (order_id,))
         return [dict(r) for r in rows]
+
+    # Catálogo
+
+    def collections(self) -> list[dict[str, Any]]:
+        rows = self._exec("SELECT * FROM collections ORDER BY sort, created_at")
+        return [{**dict(r), "published": bool(r["published"])} for r in rows]
+
+    def get_collection(self, id: str) -> dict[str, Any] | None:
+        rows = self._exec("SELECT * FROM collections WHERE id=?", (id,))
+        return {**dict(rows[0]), "published": bool(rows[0]["published"])} if rows else None
+
+    def save_collection(self, c: dict[str, Any]) -> None:
+        cols = ("id", "name", "description", "emoji", "cover", "sort", "published")
+        vals = tuple(int(c[k]) if k == "published" else c.get(k) for k in cols)
+        self._exec(
+            f"INSERT INTO collections ({', '.join(cols)}, created_at) VALUES ({', '.join('?' * len(cols))}, ?) "
+            f"ON CONFLICT(id) DO UPDATE SET {', '.join(f'{k}=excluded.{k}' for k in cols[1:])}",
+            (*vals, now()),
+        )
+
+    def delete_collection(self, id: str) -> None:
+        self._exec("DELETE FROM collections WHERE id=?", (id,))
+
+    def products(self, collection_id: str | None = None) -> list[dict[str, Any]]:
+        if collection_id:
+            rows = self._exec(
+                "SELECT * FROM products WHERE collection_id=? ORDER BY sort, created_at", (collection_id,)
+            )
+        else:
+            rows = self._exec("SELECT * FROM products ORDER BY sort, created_at")
+        return [_product(r) for r in rows]
+
+    def get_product(self, id: str) -> dict[str, Any] | None:
+        rows = self._exec("SELECT * FROM products WHERE id=?", (id,))
+        return _product(rows[0]) if rows else None
+
+    def save_product(self, p: dict[str, Any]) -> None:
+        cols = (
+            "id", "collection_id", "kind", "name", "subsection", "description", "badges", "images", "sizes",
+            "default_color", "file_id", "price_quote_id", "sort", "published",
+        )  # fmt: skip
+        enc = {"badges": json.dumps, "images": json.dumps, "sizes": json.dumps, "published": int}
+        vals = tuple(enc.get(k, lambda x: x)(p.get(k)) for k in cols)
+        marks = ", ".join("?" * len(cols))
+        updates = ", ".join(f"{k}=excluded.{k}" for k in cols[1:])
+        self._exec(
+            f"INSERT INTO products ({', '.join(cols)}, created_at, updated_at) VALUES ({marks}, ?, ?) "
+            f"ON CONFLICT(id) DO UPDATE SET {updates}, updated_at=excluded.updated_at",
+            (*vals, now(), now()),
+        )
+
+    def delete_product(self, id: str) -> None:
+        self._exec("DELETE FROM products WHERE id=?", (id,))
+
+    def file_by_name(self, name: str) -> dict[str, Any] | None:
+        rows = self._exec("SELECT id FROM files WHERE name=? ORDER BY created_at DESC LIMIT 1", (name,))
+        return self.get_file(rows[0]["id"]) if rows else None
+
+
+def _product(row: sqlite3.Row) -> dict[str, Any]:
+    r = dict(row)
+    for k in ("badges", "images", "sizes"):
+        r[k] = json.loads(r[k])
+    r["published"] = bool(r["published"])
+    return r
 
 
 def _order(row: sqlite3.Row) -> dict[str, Any]:

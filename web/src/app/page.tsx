@@ -11,6 +11,7 @@ import { Faq } from "@/components/Faq";
 import { Cta } from "@/components/Cta";
 import { Footer } from "@/components/Footer";
 import { WhatsAppFab } from "@/components/WhatsAppFab";
+import { CatalogSection } from "@/components/catalog/CatalogSection";
 
 export default function Home() {
   return (
@@ -37,6 +38,7 @@ export default function Home() {
       <main>
         <Hero />
         <Marquee />
+        <CatalogSection />
         <Features />
         <Quoter />
         <Gallery />

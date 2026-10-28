@@ -30,6 +30,7 @@ export function Nav() {
           {LINKS.map(([href, label]) => (
             <a key={href} href={href} style={{ padding: "10px 14px", textDecoration: "none", color: "var(--text-2)" }}>{label}</a>
           ))}
+          <Link href="/catalogo" style={{ padding: "10px 14px", textDecoration: "none", color: "var(--text-2)" }}>Catálogo</Link>
           <Link href="/mis-pedidos" style={{ padding: "10px 14px", textDecoration: "none", color: "var(--text-2)" }}>Mis pedidos</Link>
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>

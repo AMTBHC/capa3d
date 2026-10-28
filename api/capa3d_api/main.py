@@ -15,10 +15,12 @@ from pydantic import BaseModel, Field
 from starlette.concurrency import run_in_threadpool
 
 from .catalog import load_catalog
+from .openscad import OpenScad
 from .orders import Checkout, Lookup, OrderAction, OrderCreate, OrderError, OrderService
 from .schemas import AdminQuote, FileOut, QuoteOut, QuoteRequest
 from .service import QuoteService, UploadError
 from .settings import Settings, get_settings
+from .shop import IMAGE_TYPES, CollectionIn, Personalize, ProductIn, Shop, ShopError
 from .slicer import PrusaSlicer
 from .store import Store
 from .wompi import Wompi, WompiError
@@ -43,6 +45,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         settings.wompi_private_key,
     )
     orders = OrderService(settings, catalog, store, service, wompi)
+    shop = Shop(store, service, OpenScad(settings.openscad_path))
+    shop.seed()
 
     @asynccontextmanager
     async def lifespan(app: FastAPI):
@@ -54,7 +58,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.add_middleware(
         CORSMiddleware,
         allow_origins=settings.cors_origins,
-        allow_methods=["GET", "POST"],
+        allow_methods=["GET", "POST", "PUT", "DELETE"],
         allow_headers=["Content-Type", "Authorization"],
         # Para que el panel lea el nombre del zip al descargarlo.
         expose_headers=["Content-Disposition"],
@@ -62,6 +66,10 @@ def create_app(settings: Settings | None = None) -> FastAPI:
 
     @app.exception_handler(UploadError)
     async def upload_error(_: Request, e: UploadError):
+        return JSONResponse({"detail": str(e)}, status_code=e.status)
+
+    @app.exception_handler(ShopError)
+    async def shop_error(_: Request, e: ShopError):
         return JSONResponse({"detail": str(e)}, status_code=e.status)
 
     @app.exception_handler(OrderError)
@@ -127,6 +135,31 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         """El cliente tocó "Pedir por WhatsApp": queda marcada para el panel."""
         if not quote_id.isalnum() or not store.mark_requested(quote_id, body.color):
             raise HTTPException(404, "Cotización no encontrada")
+
+    # Catálogo público
+
+    @app.get("/api/catalog/collections")
+    def catalog_collections():
+        return shop.collections_out()
+
+    @app.get("/api/catalog/collections/{cid}")
+    def catalog_collection(cid: str):
+        return shop.collection_out(cid)
+
+    @app.get("/api/catalog/products/{pid}")
+    def catalog_product(pid: str):
+        return shop.get_product(pid)
+
+    @app.post("/api/catalog/products/{pid}/personalize")
+    def catalog_personalize(pid: str, body: Personalize):
+        """Genera el llavero con el texto del cliente; devuelve el archivo para cotizarlo y verlo."""
+        return {"file_id": shop.personalize(pid, body.text)}
+
+    @app.get("/api/catalog/images/{name}")
+    def catalog_image(name: str):
+        path = shop.image_path(name)
+        media = IMAGE_TYPES[path.suffix.lstrip(".")]
+        return FileResponse(path, media_type=media, headers={"Cache-Control": "public, max-age=31536000, immutable"})
 
     # Pedidos del cliente: se identifican con el id y su token secreto (?t=).
 
@@ -273,5 +306,52 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             raise
         background.add_task(tmp.unlink, missing_ok=True)
         return FileResponse(tmp, media_type="application/zip", filename=name)
+
+    # Catálogo en el panel
+
+    @app.get("/api/admin/catalog", dependencies=[Depends(admin)])
+    def admin_catalog():
+        return {"collections": shop.admin_out(), "openscad": shop.openscad.available}
+
+    @app.post("/api/admin/catalog/collections", dependencies=[Depends(admin)], status_code=201)
+    def admin_new_collection(body: CollectionIn):
+        return shop.save_collection(body)
+
+    @app.put("/api/admin/catalog/collections/{cid}", dependencies=[Depends(admin)])
+    def admin_edit_collection(cid: str, body: CollectionIn):
+        return shop.save_collection(body, cid)
+
+    @app.delete("/api/admin/catalog/collections/{cid}", dependencies=[Depends(admin)], status_code=204)
+    def admin_delete_collection(cid: str):
+        shop.delete_collection(cid)
+
+    @app.post("/api/admin/catalog/collections/{cid}/cover", dependencies=[Depends(admin)])
+    async def admin_collection_cover(cid: str, file: Annotated[UploadFile, File()]):
+        return {"image": shop.add_image(("collection", cid), file.filename or "", await file.read())}
+
+    @app.post("/api/admin/catalog/products", dependencies=[Depends(admin)], status_code=201)
+    def admin_new_product(body: ProductIn):
+        return shop.save_product(body)
+
+    @app.put("/api/admin/catalog/products/{pid}", dependencies=[Depends(admin)])
+    def admin_edit_product(pid: str, body: ProductIn):
+        return shop.save_product(body, pid)
+
+    @app.delete("/api/admin/catalog/products/{pid}", dependencies=[Depends(admin)], status_code=204)
+    def admin_delete_product(pid: str):
+        shop.delete_product(pid)
+
+    @app.post("/api/admin/catalog/products/{pid}/model", dependencies=[Depends(admin)])
+    async def admin_product_model(pid: str, file: Annotated[UploadFile, File()]):
+        return await run_in_threadpool(shop.set_model, pid, file.filename or "modelo.stl", file.file)
+
+    @app.post("/api/admin/catalog/products/{pid}/images", dependencies=[Depends(admin)])
+    async def admin_product_image(pid: str, file: Annotated[UploadFile, File()]):
+        shop.add_image(("product", pid), file.filename or "", await file.read())
+        return shop.product_out(store.get_product(pid), admin=True)
+
+    @app.delete("/api/admin/catalog/products/{pid}/images/{name}", dependencies=[Depends(admin)])
+    def admin_product_image_delete(pid: str, name: str):
+        return shop.remove_image(pid, name)
 
     return app

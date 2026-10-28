@@ -388,3 +388,155 @@ export function adminOrderAction(
 export async function downloadOrder(token: string, id: string): Promise<{ blob: Blob; name: string }> {
   return downloadZip(`/api/admin/orders/${id}/download`, token, id);
 }
+
+// Catálogo
+
+export type Badge = "viral" | "mas_pedido" | "nuevo";
+
+export const BADGE_LABEL: Record<Badge, string> = { viral: "🔥 Viral", mas_pedido: "⭐ Más pedido", nuevo: "✨ Nuevo" };
+
+export interface ProductSize {
+  label: string;
+  /** Escala en % sobre el modelo original. */
+  scale: number;
+}
+
+export interface CatalogCollection {
+  id: string;
+  name: string;
+  emoji: string;
+  description: string;
+  cover: string | null;
+  count: number;
+  price_from: number | null;
+}
+
+export interface CatalogProduct {
+  id: string;
+  collection_id: string;
+  kind: "model" | "name_keychain";
+  name: string;
+  subsection: string;
+  description: string;
+  badges: Badge[];
+  images: string[];
+  sizes: ProductSize[];
+  default_color: string;
+  file_id: string | null;
+  price_from: number | null;
+  personalize: { max_length: number } | null;
+  collection?: { id: string; name: string; emoji: string };
+}
+
+export interface AdminProduct extends CatalogProduct {
+  published: boolean;
+  sort: number;
+  /** Tiene modelo (o OpenSCAD para los llaveros con nombre). */
+  ready: boolean;
+}
+
+export interface AdminCollection extends Omit<CatalogCollection, "count" | "price_from"> {
+  published: boolean;
+  sort: number;
+  products: AdminProduct[];
+}
+
+export const imageUrl = (name: string) => `${API_URL}/api/catalog/images/${name}`;
+
+export function listCollections(): Promise<CatalogCollection[]> {
+  return request("/api/catalog/collections");
+}
+
+export function getCollection(id: string): Promise<CatalogCollection & { products: CatalogProduct[] }> {
+  return request(`/api/catalog/collections/${encodeURIComponent(id)}`);
+}
+
+export function getProduct(id: string): Promise<CatalogProduct> {
+  return request(`/api/catalog/products/${encodeURIComponent(id)}`);
+}
+
+/** Genera el llavero con el texto; devuelve el archivo para verlo y cotizarlo. */
+export async function personalize(productId: string, text: string): Promise<string> {
+  const r = await request<{ file_id: string }>(`/api/catalog/products/${encodeURIComponent(productId)}/personalize`, json({ text }));
+  return r.file_id;
+}
+
+export function getServerFile(id: string): Promise<ServerFile> {
+  return request(`/api/files/${id}`);
+}
+
+// Catálogo en el panel
+
+const adminJson = (token: string, method: string, body?: unknown): RequestInit => ({
+  method,
+  headers: { ...auth(token), ...(body === undefined ? {} : { "Content-Type": "application/json" }) },
+  body: body === undefined ? undefined : JSON.stringify(body),
+});
+
+const adminUpload = (token: string, file: File): RequestInit => {
+  const body = new FormData();
+  body.append("file", file);
+  return { method: "POST", headers: auth(token), body };
+};
+
+export interface CollectionInput {
+  name: string;
+  description: string;
+  emoji: string;
+  sort: number;
+  published: boolean;
+}
+
+export interface ProductInput {
+  collection_id: string;
+  name: string;
+  subsection: string;
+  description: string;
+  badges: Badge[];
+  sizes: ProductSize[];
+  default_color: string;
+  sort: number;
+  published: boolean;
+}
+
+export function getAdminCatalog(token: string): Promise<{ collections: AdminCollection[]; openscad: boolean }> {
+  return request("/api/admin/catalog", { headers: auth(token) });
+}
+
+export function saveCollection(token: string, data: CollectionInput, id?: string): Promise<unknown> {
+  return id
+    ? request(`/api/admin/catalog/collections/${id}`, adminJson(token, "PUT", data))
+    : request("/api/admin/catalog/collections", adminJson(token, "POST", data));
+}
+
+export async function deleteCollection(token: string, id: string): Promise<void> {
+  const res = await fetch(`${API_URL}/api/admin/catalog/collections/${id}`, adminJson(token, "DELETE"));
+  if (!res.ok) throw new ApiError((await res.json().catch(() => ({}))).detail ?? res.statusText, res.status);
+}
+
+export function uploadCover(token: string, id: string, file: File): Promise<unknown> {
+  return request(`/api/admin/catalog/collections/${id}/cover`, adminUpload(token, file));
+}
+
+export function saveProduct(token: string, data: ProductInput, id?: string): Promise<AdminProduct> {
+  return id
+    ? request(`/api/admin/catalog/products/${id}`, adminJson(token, "PUT", data))
+    : request("/api/admin/catalog/products", adminJson(token, "POST", data));
+}
+
+export async function deleteProduct(token: string, id: string): Promise<void> {
+  const res = await fetch(`${API_URL}/api/admin/catalog/products/${id}`, adminJson(token, "DELETE"));
+  if (!res.ok) throw new ApiError(res.statusText, res.status);
+}
+
+export function uploadProductModel(token: string, id: string, file: File): Promise<AdminProduct> {
+  return request(`/api/admin/catalog/products/${id}/model`, adminUpload(token, file));
+}
+
+export function uploadProductImage(token: string, id: string, file: File): Promise<AdminProduct> {
+  return request(`/api/admin/catalog/products/${id}/images`, adminUpload(token, file));
+}
+
+export function deleteProductImage(token: string, id: string, name: string): Promise<AdminProduct> {
+  return request(`/api/admin/catalog/products/${id}/images/${name}`, adminJson(token, "DELETE"));
+}
