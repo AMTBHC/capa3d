@@ -38,6 +38,11 @@ cost = 15000
 # Ciudades con otra tarifa, por ejemplo la del taller (sin importar tildes ni mayúsculas).
 # "Medellín" = 8000
 
+[payments]
+# El cliente puede pagar el 100 % en línea, o abonar este porcentaje en línea y pagar
+# el resto en efectivo al recibir. 0 = solo pago total.
+deposit_percent = 50
+
 # price_per_gram en COP. density en g/cm³. Temperaturas en °C.
 # max_volumetric_speed (mm³/s) y min_layer_time (s) como en los perfiles de filamento
 # genéricos de Bambu Studio: limitan la velocidad real y por eso pesan en el tiempo.

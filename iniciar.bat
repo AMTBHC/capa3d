@@ -69,6 +69,7 @@ echo Si no ves el precio laminado, revisa http://localhost:8000/api/health: "sli
 echo Si dice null, instala PrusaSlicer desde https://www.prusa3d.com/page/prusaslicer_424/
 timeout /t 10 /nobreak >nul
 start http://localhost:3000
+start http://localhost:3000/admin
 exit /b 0
 
 :error

@@ -33,6 +33,8 @@ class Settings(BaseSettings):
     # Opcional: con la llave privada la API consulta los pagos por referencia, sin depender
     # del regreso del cliente ni de los eventos (útil en tu computador).
     wompi_private_key: str = ""
+    # Duración máxima de una conexión en vivo; el navegador se reconecta solo al cerrarse.
+    stream_max_seconds: int = 1800
     # Clave del panel de administración (/admin en la web). Vacía = panel desactivado.
     admin_token: str = ""
     # Lista separada por comas: "https://capa3d.co,https://www.capa3d.co".

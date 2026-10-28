@@ -56,7 +56,10 @@ export function AdminPanel() {
           <span className="display" style={{ fontWeight: 700, fontSize: 20 }}>Capa3D</span>
           <span style={{ color: "var(--text-3)", fontSize: 14 }}>· Panel</span>
         </Link>
-        {token && <button className="chip-btn" onClick={logout}>Salir</button>}
+        <div style={{ display: "flex", gap: 8 }}>
+          <Link href="/" className="chip-btn" style={{ textDecoration: "none" }}>Ver sitio</Link>
+          {token && <button className="chip-btn" onClick={logout}>Salir</button>}
+        </div>
       </header>
       {!API_URL ? (
         <Notice>Para usar el panel, configura <code>NEXT_PUBLIC_API_URL</code> en <code>web/.env.local</code>.</Notice>

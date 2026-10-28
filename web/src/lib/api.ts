@@ -257,6 +257,14 @@ export interface Order {
   print_price: number;
   shipping: number;
   total: number;
+  /** Lo que ya pagó el cliente (abono o total). */
+  paid_amount: number;
+  /** Lo que falta por pagar; con abono, se paga en efectivo al recibir. */
+  balance: number;
+  plan: "full" | "deposit" | null;
+  /** Abono disponible para este pedido; 0 si el taller no ofrece abono. */
+  deposit_amount: number;
+  deposit_percent: number;
   currency: string;
   carrier: string | null;
   tracking: string | null;
@@ -289,8 +297,70 @@ export function getOrder(id: string, token: string): Promise<Order> {
  * URL de Wompi para pagar el pedido confirmado. `returns` es false cuando el sitio corre en una
  * dirección local: Wompi no devolverá al cliente, así que conviene abrirlo en otra pestaña.
  */
-export function checkoutOrder(id: string, token: string): Promise<{ url: string; returns: boolean }> {
-  return request(`/api/orders/${encodeURIComponent(id)}/checkout?t=${encodeURIComponent(token)}`, { method: "POST" });
+export function checkoutOrder(id: string, token: string, plan: "full" | "deposit"): Promise<{ url: string; returns: boolean }> {
+  return request(`/api/orders/${encodeURIComponent(id)}/checkout?t=${encodeURIComponent(token)}`, json({ plan }));
+}
+
+export interface FoundOrder {
+  id: string;
+  token: string;
+  status: OrderStatus;
+  status_label: string;
+  created_at: string;
+  total: number;
+  file_name: string;
+}
+
+/** Pedidos del cliente por correo y celular. */
+export function lookupOrders(email: string, phone: string): Promise<FoundOrder[]> {
+  return request("/api/orders/lookup", json({ email, phone }));
+}
+
+/** Dirección de la conexión en vivo del pedido (EventSource). */
+export function orderStreamUrl(id: string, token: string): string {
+  return `${API_URL}/api/orders/${encodeURIComponent(id)}/stream?t=${encodeURIComponent(token)}`;
+}
+
+/**
+ * Conexión en vivo del panel. EventSource no permite el encabezado de la clave, así que se
+ * lee el flujo con fetch. Se reconecta sola; devuelve una función para cerrarla.
+ */
+export function watchAdmin(token: string, onChange: (data: { count: number; by_status: Record<string, number> }) => void, onState: (live: boolean) => void): () => void {
+  let stopped = false;
+  let ctrl: AbortController | null = null;
+  const run = async () => {
+    while (!stopped) {
+      ctrl = new AbortController();
+      try {
+        const res = await fetch(`${API_URL}/api/admin/stream`, { headers: auth(token), signal: ctrl.signal });
+        if (!res.ok || !res.body) throw new Error(String(res.status));
+        onState(true);
+        const reader = res.body.pipeThrough(new TextDecoderStream()).getReader();
+        let buf = "";
+        for (;;) {
+          const { value, done } = await reader.read();
+          if (done) break;
+          buf += value;
+          let i;
+          while ((i = buf.indexOf("\n\n")) >= 0) {
+            const block = buf.slice(0, i);
+            buf = buf.slice(i + 2);
+            const data = block.split("\n").find((l) => l.startsWith("data: "));
+            if (data) onChange(JSON.parse(data.slice(6)));
+          }
+        }
+      } catch {
+        // desconexión: se reintenta
+      }
+      onState(false);
+      if (!stopped) await new Promise((r) => setTimeout(r, 3000));
+    }
+  };
+  run();
+  return () => {
+    stopped = true;
+    ctrl?.abort();
+  };
 }
 
 /** Al volver de Wompi: la API consulta la transacción y actualiza el pedido. */
@@ -308,7 +378,7 @@ export function adminOrderAction(
   token: string,
   id: string,
   action: OrderActionName,
-  extra: { print_price?: number; shipping?: number; carrier?: string; tracking?: string; note?: string } = {},
+  extra: { print_price?: number; shipping?: number; carrier?: string; tracking?: string; note?: string; plan?: "full" | "deposit" } = {},
 ): Promise<AdminOrder> {
   const init = json({ action, ...extra });
   return request(`/api/admin/orders/${id}/action`, { ...init, headers: { ...init.headers, ...auth(token) } });

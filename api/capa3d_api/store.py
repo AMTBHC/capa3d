@@ -64,6 +64,11 @@ CREATE TABLE IF NOT EXISTS payments (
 MIGRATIONS = [
     ("quotes", "requested_at", "TEXT"),
     ("quotes", "requested_color", "TEXT"),
+    # Pago total ("full") o abono con saldo contra entrega ("deposit").
+    ("orders", "plan", "TEXT"),
+    ("orders", "paid_amount", "INTEGER NOT NULL DEFAULT 0"),
+    # Sube con cada cambio del pedido o de sus pagos: la actualización en vivo lo vigila.
+    ("orders", "version", "INTEGER NOT NULL DEFAULT 0"),
 ]
 
 
@@ -168,7 +173,28 @@ class Store:
     def update_order(self, id: str, **fields: Any) -> None:
         fields["updated_at"] = now()
         sets = ", ".join(f"{k}=?" for k in fields)
-        self._exec(f"UPDATE orders SET {sets} WHERE id=?", (*fields.values(), id))
+        self._exec(f"UPDATE orders SET {sets}, version=version+1 WHERE id=?", (*fields.values(), id))
+
+    def order_version(self, id: str) -> int | None:
+        rows = self._exec("SELECT version FROM orders WHERE id=?", (id,))
+        return rows[0]["version"] if rows else None
+
+    def orders_version(self) -> tuple[int, int]:
+        """(cantidad de pedidos, suma de versiones): cambia con cualquier pedido nuevo o modificado."""
+        r = self._exec("SELECT COUNT(*) AS n, COALESCE(SUM(version), 0) AS v FROM orders")[0]
+        return r["n"], r["v"]
+
+    def count_by_status(self) -> dict[str, int]:
+        return {r["status"]: r["n"] for r in self._exec("SELECT status, COUNT(*) AS n FROM orders GROUP BY status")}
+
+    def orders_by_contact(self, email: str, phone_tail: str) -> list[dict[str, Any]]:
+        """Pedidos con este correo y un celular que termine en estos dígitos."""
+        rows = self._exec(
+            "SELECT * FROM orders WHERE lower(json_extract(customer, '$.email')) = ? "
+            "AND substr(json_extract(customer, '$.phone'), -10) = ? ORDER BY created_at DESC LIMIT 50",
+            (email, phone_tail),
+        )
+        return [_order(r) for r in rows]
 
     def get_order(self, id: str) -> dict[str, Any] | None:
         rows = self._exec("SELECT * FROM orders WHERE id=?", (id,))
@@ -210,6 +236,11 @@ class Store:
         self._exec(
             "UPDATE payments SET status=?, transaction_id=?, updated_at=? WHERE reference=?",
             (status, transaction_id, now(), reference),
+        )
+        # Un pago rechazado también debe llegar en vivo a la página del pedido.
+        self._exec(
+            "UPDATE orders SET version=version+1 WHERE id=(SELECT order_id FROM payments WHERE reference=?)",
+            (reference,),
         )
 
     def payments(self, order_id: str) -> list[dict[str, Any]]:

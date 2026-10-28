@@ -1,3 +1,5 @@
+import Link from "next/link";
+import { AdminShortcut } from "./AdminShortcut";
 import { Icon, ICONS } from "./Icon";
 
 const LINKS = [
@@ -28,8 +30,12 @@ export function Nav() {
           {LINKS.map(([href, label]) => (
             <a key={href} href={href} style={{ padding: "10px 14px", textDecoration: "none", color: "var(--text-2)" }}>{label}</a>
           ))}
+          <Link href="/mis-pedidos" style={{ padding: "10px 14px", textDecoration: "none", color: "var(--text-2)" }}>Mis pedidos</Link>
         </div>
-        <a className="btn btn-primary" href="#quote" style={{ padding: "12px 20px", borderRadius: 12, fontSize: 14 }}>Cotizar ahora</a>
+        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          <AdminShortcut />
+          <a className="btn btn-primary" href="#quote" style={{ padding: "12px 20px", borderRadius: 12, fontSize: 14 }}>Cotizar ahora</a>
+        </div>
       </nav>
     </header>
   );

@@ -64,5 +64,5 @@ echo
 echo "▶ Iniciando el sitio… se abrirá en http://localhost:3000"
 echo "  Panel de pedidos: http://localhost:3000/admin   Clave: $ADMIN"
 echo
-(sleep 6 && abrir http://localhost:3000) &
+(sleep 6 && abrir http://localhost:3000 && abrir http://localhost:3000/admin) &
 cd web && npm run dev

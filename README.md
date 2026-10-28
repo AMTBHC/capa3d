@@ -99,16 +99,23 @@ Textos pendientes de completar: busca `[TU` en `web/src`.
 ## Pedidos y pagos
 
 ```
-Cliente cotiza → "Hacer pedido": datos y dirección, sin pagar          → Recibido
-Tú revisas el archivo en el panel, ajustas impresión y envío, confirmas → Por pagar
-   └ "Avisar al cliente por WhatsApp" le manda el enlace de su pedido
-Cliente abre su enlace → "Pagar ahora" con Wompi (PSE, Nequi, tarjeta)  → Pagado
-Tú imprimes → Imprimiendo → Enviado (transportadora + guía) → Entregado
+Cliente cotiza → "Hacer pedido": datos y dirección, sin pagar             → Recibido
+Tú revisas el archivo en el panel, ajustas impresión y envío, confirmas    → Por pagar
+Cliente elige: pagar todo, o abonar el 50 % y el resto en efectivo al recibir → Pagado
+Tú imprimes → Imprimiendo → Enviado (transportadora + guía) → Entregado (y cobras el saldo)
 ```
 
-- **Página del cliente** (`/pedido/<número>?t=…`): estado, línea de tiempo, total, botón de pago y número de guía. Se actualiza sola.
-- **Panel** (`/admin`): pestaña **Pedidos**, con filtros por estado. Cada pedido muestra los datos del cliente, la pieza, la descarga del archivo y el G-code, el precio editable, el botón del siguiente paso y el aviso por WhatsApp con un mensaje listo. La pestaña **Cotizaciones** guarda todo lo que se ha cotizado.
-- **Sin llaves de Wompi**, el cliente ve "Pagar por WhatsApp" y tú marcas el pago a mano: "Marcar como pagado", para transferencias o efectivo.
+**Para el cliente**
+- Al hacer el pedido ve su **número de pedido**, un botón para **enviarlo a Capa3D por WhatsApp** (así le queda el enlace en el chat) y otro para copiar el enlace.
+- **Mis pedidos** (en el menú y en el pie de página) muestra los pedidos hechos desde ese navegador, y permite buscarlos con el **correo y el celular** del pedido.
+- Su página de pedido se actualiza **en vivo**: cuando confirmas el precio, marcas un estado o entra un pago, lo ve en uno o dos segundos sin recargar.
+
+**Para ti (panel)**
+- Entra desde **"Acceso del taller"** en el pie de página, o con el botón **Panel** del menú, que solo aparece en el navegador donde ya iniciaste sesión. `iniciar` abre el panel solo.
+- El panel está **en vivo**: cuando llega un pedido suena un aviso, aparece arriba y la pestaña muestra cuántos hay por revisar, por ejemplo "(2) Panel". Con "Activar avisos en el computador" también te llega una notificación de Windows.
+- **Pagos con abono:** el panel muestra cuánto se pagó y cuánto falta. Al entregar, el botón dice "Entregado · cobré $…" y registra el cobro. Si te pagan por fuera de Wompi, usa "Recibí el total" o "Recibí el abono".
+- **El porcentaje del abono** se configura en `api/config/catalog.toml` → `[payments] deposit_percent` (0 = solo pago total).
+- **Sin llaves de Wompi**, el cliente ve "Pagar por WhatsApp" y tú registras el pago a mano.
 - **Costo de envío:** `api/config/catalog.toml` → `[shipping]`. Ahí van la tarifa general y las ciudades con otra tarifa. En cada pedido lo puedes ajustar antes de confirmar.
 
 ### Activar Wompi
