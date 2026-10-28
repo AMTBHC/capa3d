@@ -11,6 +11,8 @@ Triangles = np.ndarray
 class ModelObject:
     name: str
     triangles: Triangles
+    # Filamento de cada triángulo (1, 2, …); None = un solo color.
+    colors: np.ndarray | None = None
 
 
 @dataclass
@@ -34,6 +36,12 @@ class Plate:
             return self.objects[0].triangles
         return np.concatenate([o.triangles for o in self.objects])
 
+    @property
+    def colors(self) -> np.ndarray:
+        return np.concatenate(
+            [o.colors if o.colors is not None else np.ones(len(o.triangles), np.int16) for o in self.objects]
+        )
+
 
 @dataclass
 class ProjectInfo:
@@ -44,6 +52,8 @@ class ProjectInfo:
     infill: float | None = None
     supports: bool | None = None
     filaments: list[dict[str, str]] = field(default_factory=list)
+    # Purga promedio por cambio de color según el proyecto (mm³), si la trae.
+    flush_mm3: float | None = None
 
 
 @dataclass

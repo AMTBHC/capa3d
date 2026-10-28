@@ -140,6 +140,9 @@ class Store:
     def add_file(self, id: str, name: str, format: str, size: int, summary: dict[str, Any]) -> None:
         self._exec("INSERT INTO files VALUES (?,?,?,?,?,?)", (id, name, format, size, json.dumps(summary), now()))
 
+    def update_file_summary(self, id: str, summary: dict[str, Any]) -> None:
+        self._exec("UPDATE files SET summary=? WHERE id=?", (json.dumps(summary), id))
+
     def get_file(self, id: str) -> dict[str, Any] | None:
         rows = self._exec("SELECT * FROM files WHERE id=?", (id,))
         if not rows:

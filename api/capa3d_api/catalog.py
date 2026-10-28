@@ -66,6 +66,17 @@ class Quality(BaseModel):
     flow: float = Field(gt=0)
 
 
+class Multicolor(BaseModel):
+    """Lo que cuesta cada cambio de filamento en piezas de varios colores (AMS)."""
+
+    # Purga por cambio (mm³) si el archivo no trae la suya.
+    purge_mm3: float = Field(default=350, ge=0)
+    # Tiempo de cada cambio: cortar, retraer, cargar y purgar.
+    change_seconds: float = Field(default=40, ge=0)
+    # Colores que carga la impresora a la vez.
+    max_colors: int = Field(default=4, ge=1)
+
+
 class Catalog(BaseModel):
     currency: str = "COP"
     pricing: Pricing
@@ -73,6 +84,7 @@ class Catalog(BaseModel):
     calibration: Calibration = Calibration()
     shipping: Shipping = Shipping()
     payments: Payments = Payments()
+    multicolor: Multicolor = Multicolor()
     materials: dict[str, Material]
     qualities: dict[str, Quality]
     # Carpeta del catálogo, para resolver la ruta del perfil.

@@ -41,6 +41,9 @@ export interface Quote {
   unitPrice: number;
   qty: number;
   total: number;
+  /** Solo en el precio del servidor, para piezas de varios colores. */
+  colorChanges?: number;
+  purgeGrams?: number;
 }
 
 /** Espesor de pared equivalente (cm) usado para estimar el volumen del perímetro. */

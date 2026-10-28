@@ -30,6 +30,16 @@ profile = "profiles/bambu-a1.ini"
 time_factor = 1.0
 weight_factor = 1.0
 
+[multicolor]
+# Piezas de varios colores (AMS): cada cambio de filamento purga material y toma tiempo.
+# Los cambios se cuentan con el modelo: en cada capa, (colores en esa capa − 1).
+# Purga por cambio en mm³ cuando el archivo no trae la suya (Bambu guarda su matriz de purga).
+purge_mm3 = 350
+# Segundos por cambio en la A1 con AMS lite (cortar, cambiar, purgar).
+change_seconds = 40
+# Colores que carga tu AMS a la vez; con más, la cotización avisa que hay que confirmarlo.
+max_colors = 4
+
 [shipping]
 # Envío a domicilio en COP. Lo puedes ajustar en cada pedido antes de confirmarlo.
 cost = 15000

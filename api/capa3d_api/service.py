@@ -2,6 +2,7 @@
 
 import hashlib
 import json
+import math
 import secrets
 import shutil
 import zipfile
@@ -15,6 +16,7 @@ import numpy as np
 
 from .catalog import Catalog
 from .mesh.analyze import analyze
+from .mesh.colors import color_profile
 from .mesh.load import CAD_FORMATS, FORMATS, ModelError, load_project, write_stl
 from .pricing import PlateUsage, estimate_usage, price
 from .schemas import UNIT_MM, QuoteRequest
@@ -106,21 +108,45 @@ class QuoteService:
             tris = plate.triangles
             write_stl(tris, folder / f"plate_{plate.id}.stl")
             a = analyze(tris)
+            colors, mix = color_profile(tris, plate.colors)
             plates.append(
                 {
                     "id": plate.id,
                     "name": plate.name,
                     "objects": [o.name for o in plate.objects],
                     **asdict(a),
+                    "colors": colors,
+                    "color_mix_mm": round(mix, 2),
                     "sliced_seconds": plate.sliced.seconds if plate.sliced else None,
                     "sliced_grams": plate.sliced.grams if plate.sliced else None,
                 }
             )
         return {"plates": plates, "info": asdict(project.info)}
 
+    def with_colors(self, row: dict) -> dict:
+        """Archivos subidos antes de que se contaran los colores: se calculan una vez y se guardan."""
+        plates = row["summary"]["plates"]
+        if row["format"] != "3mf" or all("colors" in p for p in plates):
+            return row
+        original = self.file_dir(row["id"]) / "original.3mf"
+        try:
+            project = load_project(
+                original, "3mf", row["name"], self.catalog.printer.bed, self.settings.max_unzipped_mb * 1024 * 1024
+            )
+        except (ModelError, OSError):
+            return row
+        by_id = {p.id: color_profile(p.triangles, p.colors) for p in project.plates}
+        for p in plates:
+            colors, mix = by_id.get(p["id"], (1, 0.0))
+            p.update(colors=colors, color_mix_mm=round(mix, 2))
+        row["summary"].setdefault("info", {})["flush_mm3"] = project.info.flush_mm3
+        self.store.update_file_summary(row["id"], row["summary"])
+        return row
+
     def file_out(self, row: dict | None) -> dict:
         if row is None:
             raise KeyError("file")
+        row = self.with_colors(row)
         return {"id": row["id"], "name": row["name"], "format": row["format"], "size": row["size"], **row["summary"]}
 
     def plate_stl(self, file_id: str, plate_id: int) -> Path:
@@ -168,7 +194,7 @@ class QuoteService:
     def compute(self, quote_id: str) -> dict:
         q = self.store.get_quote(quote_id)
         req = QuoteRequest(**q["params"])
-        file = self.validate(req)
+        file = self.with_colors(self.validate(req))
         cat = self.catalog
         k = UNIT_MM[req.unit] * req.scale / 100
         mat, quality = cat.materials[req.material], cat.qualities[req.quality]
@@ -202,6 +228,12 @@ class QuoteService:
             if usage is None:
                 vol, area = p["volume_cm3"] * k**3, p["area_cm2"] * k**2
                 usage = estimate_usage(vol, area, mat.density, quality.flow, req.infill)
+            colors = p.get("colors", 1)
+            if req.multicolor and colors > 1:
+                usage = self._color_changes(usage, p, k, quality.layer_height, mat.density, file)
+                if colors > cat.multicolor.max_colors:
+                    most = cat.multicolor.max_colors
+                    note = f"Tiene {colors} colores y la impresora carga {most}: te confirmamos cómo hacerlo"
             usages.append(usage)
             plates_out.append(
                 {
@@ -211,6 +243,9 @@ class QuoteService:
                     "grams": usage.grams,
                     "hours": usage.print_hours + cat.pricing.setup_hours_per_plate,
                     "note": note,
+                    "colors": colors if req.multicolor else 1,
+                    "color_changes": usage.color_changes,
+                    "purge_grams": usage.purge_grams,
                 }
             )
 
@@ -221,6 +256,19 @@ class QuoteService:
             "plates": plates_out,
             "price": {"currency": cat.currency, **asdict(pr)},
         }
+
+    def _color_changes(self, usage: PlateUsage, plate: dict, k: float, layer: float, density: float, file: dict):
+        """Suma la purga y el tiempo de cada cambio de filamento de una cama de varios colores."""
+        mc = self.catalog.multicolor
+        changes = math.ceil(plate.get("color_mix_mm", 0) * k / layer)
+        flush = file["summary"].get("info", {}).get("flush_mm3") or mc.purge_mm3
+        purge = changes * flush / 1000 * density
+        return PlateUsage(
+            grams=usage.grams + purge,
+            print_hours=usage.print_hours + changes * mc.change_seconds / 3600,
+            color_changes=changes,
+            purge_grams=purge,
+        )
 
     def _scaled_stl(self, file_id: str, plate_id: int, k: float, work: Path) -> Path:
         src = self.plate_stl(file_id, plate_id)

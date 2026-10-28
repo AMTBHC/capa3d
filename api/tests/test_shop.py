@@ -181,7 +181,9 @@ def fake_drive(tmp_path, monkeypatch, files: dict[str, bytes]):
 
     def download(url, dest, limit_mb):
         calls.append(url)
-        key = next(k for k in files if k in url)
+        key = next((k for k in files if k in url), None)
+        if key is None:
+            raise shop_module.DownloadError("no está en Drive")
         dest.write_bytes(files[key])
         return dest
 

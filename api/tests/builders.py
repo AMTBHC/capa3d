@@ -115,3 +115,48 @@ def bambu_project() -> bytes:
             "Metadata/project_settings.config": project,
         }
     )
+
+
+def bambu_multicolor() -> bytes:
+    """Un objeto de Bambu con dos partes de distinto filamento y una parte negativa."""
+    sub = model(
+        "millimeter",
+        f'<object id="1" type="model">{mesh_xml(20)}</object>'
+        f'<object id="2" type="model">{mesh_xml(10)}</object>'
+        f'<object id="3" type="model">{mesh_xml(50)}</object>',
+        "",
+    )
+    comp = '<component p:path="/3D/Objects/object_1.model" objectid="{n}" transform="1 0 0 0 1 0 0 0 1 0 0 0"/>'
+    root = (
+        '<?xml version="1.0"?><model unit="millimeter" xmlns="http://schemas.microsoft.com/3dmanufacturing/core/2015/02"'
+        ' xmlns:p="http://schemas.microsoft.com/3dmanufacturing/production/2015/06"><resources>'
+        f'<object id="9" type="model"><components>{"".join(comp.format(n=n) for n in (1, 2, 3))}</components></object>'
+        f'</resources><build><item objectid="9" transform="{tr(100, 100)}"/></build></model>'
+    )
+    settings = (
+        '<config><object id="9"><metadata key="name" value="Llavero"/><metadata key="extruder" value="1"/>'
+        '<part id="1" subtype="normal_part"><metadata key="extruder" value="1"/></part>'
+        '<part id="2" subtype="normal_part"><metadata key="extruder" value="2"/></part>'
+        '<part id="3" subtype="negative_part"><metadata key="extruder" value="0"/></part>'
+        "</object></config>"
+    )
+    return zip3mf(
+        {"3D/3dmodel.model": root, "3D/Objects/object_1.model": sub, "Metadata/model_settings.config": settings}
+    )
+
+
+def painted_3mf() -> bytes:
+    """Cubo de 20 mm con una cara lateral pintada con el filamento 2."""
+    vs = "".join(f'<vertex x="{x}" y="{y}" z="{z}"/>' for x, y, z in cube_vertices(20))
+    ts = "".join(
+        f'<triangle v1="{a}" v2="{b}" v3="{c}"' + (' paint_color="8"' if i == 4 else "") + "/>"
+        for i, (a, b, c) in enumerate(CUBE_FACES)
+    )
+    mesh = f"<mesh><vertices>{vs}</vertices><triangles>{ts}</triangles></mesh>"
+    return zip3mf(
+        {
+            "3D/3dmodel.model": model(
+                "millimeter", f'<object id="1" type="model">{mesh}</object>', '<item objectid="1"/>'
+            )
+        }
+    )

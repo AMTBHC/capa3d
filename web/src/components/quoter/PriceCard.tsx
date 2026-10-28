@@ -39,9 +39,12 @@ interface Props {
   qty: number;
   onQty: (q: number) => void;
   shipping: Shipping | null;
+  /** Colores con que se imprime (más de 1 = como el archivo, con cambios de filamento). */
+  colors: number;
+  fileFilaments: { color: string }[];
 }
 
-export function PriceCard({ fileName, model, opts, supports, dims, quote, server, stage, qty, onQty, shipping }: Props) {
+export function PriceCard({ fileName, model, opts, supports, dims, quote, server, stage, qty, onQty, shipping, colors, fileFilaments }: Props) {
   const [ordering, setOrdering] = useState(false);
   const closeOrder = useCallback(() => setOrdering(false), []);
   const material = MATERIALS[opts.material];
@@ -53,13 +56,16 @@ export function PriceCard({ fileName, model, opts, supports, dims, quote, server
   const exact = stage === "exact";
   const busy = stage === "uploading" || stage === "slicing";
   const quoteId = server.status === "done" ? server.quote.id : null;
+  const multicolor = colors > 1;
+  const colorName = multicolor ? `Multicolor (${colors} colores, como el archivo)` : color.name;
+  const swatches = multicolor ? fileFilaments.map((f) => f.color).filter((c) => /^#[0-9a-f]{6}/i.test(c)).slice(0, colors) : [color.render];
 
   const msg = [
     "Hola Capa3D, quiero cotizar esta impresión:",
     quoteId
       ? `• Ya subí el archivo en la web: ${fileName} (cotización ${quoteId})`
       : `• Archivo: ${fileName || "(lo envío por aquí)"}`,
-    `• Filamento: ${material.id} ${color.name}`,
+    `• Filamento: ${material.id} ${colorName}`,
     `• Calidad: ${quality.name} (${quality.layerMm} mm), relleno ${opts.infill}%${supports ? ", con soportes" : ""}`,
     ...(model
       ? [multi ? `• Proyecto: ${plates.length} camas, ${pieces} piezas` : `• Tamaño: ${num1(dims[0].dx)} × ${num1(dims[0].dy)} × ${num1(dims[0].dz)} mm`, `• Cantidad: ${quote.qty}`]
@@ -102,8 +108,10 @@ export function PriceCard({ fileName, model, opts, supports, dims, quote, server
 
       <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginTop: 14 }}>
         <a href="#paso-filamento" className="chip" style={chipLink}>
-          <span style={{ width: 12, height: 12, borderRadius: "50%", background: color.render, border: "1px solid var(--line-3)" }} />
-          {material.id} {color.name}
+          <span style={{ display: "flex" }}>
+            {swatches.map((c, i) => <span key={i} style={{ width: 12, height: 12, marginLeft: i ? -4 : 0, borderRadius: "50%", background: c, border: "1px solid var(--line-3)" }} />)}
+          </span>
+          {material.id} {multicolor ? `${colors} colores` : color.name}
         </a>
         <a href="#paso-ajustes" className="chip" style={chipLink}>{quality.name}</a>
         <a href="#paso-ajustes" className="chip" style={chipLink}>Relleno {opts.infill}%</a>
@@ -123,6 +131,11 @@ export function PriceCard({ fileName, model, opts, supports, dims, quote, server
               <span className="muted">{k}</span><span className="mono">${money(v as number)}</span>
             </div>
           ))}
+          {!!quote.colorChanges && (
+            <p style={{ fontSize: 12, color: "var(--text-3)", margin: "10px 0 0", lineHeight: 1.5 }}>
+              Incluye {quote.colorChanges} cambios de color: {num1(quote.purgeGrams ?? 0)} g de filamento que se purga en cada cambio y el tiempo de la impresora para hacerlos.
+            </p>
+          )}
         </div>
       </details>
 
@@ -137,7 +150,7 @@ export function PriceCard({ fileName, model, opts, supports, dims, quote, server
             No pagas nada todavía: primero revisamos tu archivo.
           </p>
           <a className="btn btn-ghost" href={whatsappUrl(msg)} target="_blank" rel="noopener noreferrer"
-            onClick={() => markRequested(quoteId, color.name)}
+            onClick={() => markRequested(quoteId, colorName)}
             style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8, marginTop: 10, padding: 12, borderRadius: 14, fontSize: 14 }}>
             <Icon d={ICONS.chat} size={18} stroke={2} />
             Preguntar por WhatsApp
@@ -158,8 +171,8 @@ export function PriceCard({ fileName, model, opts, supports, dims, quote, server
       {ordering && quoteId && (
         <OrderDialog
           quoteId={quoteId}
-          color={color.name}
-          summary={`${fileName} · ${material.id} ${color.name} · ${quality.name} · relleno ${opts.infill}%${quote.qty > 1 ? ` · ${quote.qty} unidades` : ""}`}
+          color={colorName}
+          summary={`${fileName} · ${material.id} ${colorName} · ${quality.name} · relleno ${opts.infill}%${quote.qty > 1 ? ` · ${quote.qty} unidades` : ""}`}
           printPrice={quote.total}
           shipping={shipping}
           onClose={closeOrder}

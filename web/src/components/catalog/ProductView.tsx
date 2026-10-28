@@ -4,7 +4,7 @@
 import dynamic from "next/dynamic";
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { BADGE_LABEL, getCollection, getProduct, getServerFile, imageUrl, personalize, prepareProduct, type CatalogProduct, type QuoteParams } from "@/lib/api";
+import { BADGE_LABEL, getCollection, getProduct, getServerFile, imageUrl, personalize, prepareProduct, type CatalogProduct, type QuoteParams, type ServerFile } from "@/lib/api";
 import { COLORS, MATERIALS } from "@/lib/catalog";
 import { whatsappUrl } from "@/lib/config";
 import { money, num1 } from "@/lib/format";
@@ -12,7 +12,7 @@ import { loadServerModel, type ServerPlateMesh } from "@/lib/serverModel";
 import { Icon, ICONS } from "../Icon";
 import { SiteHeader } from "../SiteHeader";
 import { grid, ProductCard } from "./Cards";
-import { FilamentPicker } from "../quoter/Options";
+import { ColorMode, FilamentPicker } from "../quoter/Options";
 import { OrderDialog } from "../quoter/OrderDialog";
 import { useCatalog, useServerQuote } from "../quoter/useServer";
 
@@ -119,19 +119,24 @@ function Product({ p }: { p: CatalogProduct }) {
     };
   }, [fileId, p.personalize]);
 
-  // Medidas de los tamaños: del resumen del archivo, sin descargar la malla.
-  const [fileDims, setFileDims] = useState<{ dx: number; dy: number; dz: number } | null>(null);
+  // Medidas de los tamaños y colores del modelo: del resumen del archivo, sin descargar la malla.
+  const [fileInfo, setFileInfo] = useState<ServerFile | null>(null);
+  const [multicolor, setMulticolor] = useState(true);
   useEffect(() => {
     if (!fileId || p.personalize) return;
     let alive = true;
-    getServerFile(fileId).then((f) => alive && f.plates[0] && setFileDims(f.plates[0]), () => {});
+    getServerFile(fileId).then((f) => alive && setFileInfo(f), () => {});
     return () => {
       alive = false;
     };
   }, [fileId, p.personalize]);
 
   const s = p.sizes[size];
-  const params: QuoteParams = { material: MATERIALS[material].id, quality: "estandar", infill: 20, qty, unit: "mm", scale: s.scale, supports: true };
+  const fileDims = fileInfo?.plates[0] ?? null;
+  const fileColors = Math.max(1, ...(fileInfo?.plates.map((x) => x.colors ?? 1) ?? []));
+  const colors = fileColors > 1 && multicolor ? fileColors : 1;
+  const colorName = colors > 1 ? `Multicolor (${colors} colores, como la foto)` : COLORS[color].name;
+  const params: QuoteParams = { material: MATERIALS[material].id, quality: "estandar", infill: 20, qty, unit: "mm", scale: s.scale, supports: true, multicolor };
   const server = useServerQuote(fileId, params);
   const quote = server.status === "done" ? server.quote.price : null;
   const k = s.scale / 100;
@@ -141,7 +146,7 @@ function Product({ p }: { p: CatalogProduct }) {
   const needsName = !!p.personalize && !name.trim();
   const canOrder = !!quote && server.status === "done" && !needsName && !generating;
   const label = p.personalize ? `${p.name} "${text}"` : p.name;
-  const summary = `${label} · ${s.label} · ${MATERIALS[material].id} ${COLORS[color].name}${qty > 1 ? ` · ${qty} unidades` : ""}`;
+  const summary = `${label} · ${s.label} · ${MATERIALS[material].id} ${colorName}${qty > 1 ? ` · ${qty} unidades` : ""}`;
   const closeOrder = useCallback(() => setOrdering(false), []);
 
   return (
@@ -187,7 +192,10 @@ function Product({ p }: { p: CatalogProduct }) {
         </div>
 
         <div style={box}>
-          <FilamentPicker material={material} color={color} onMaterial={setMaterial} onColor={setColor} />
+          {fileColors > 1 && (
+            <ColorMode colors={fileColors} filaments={fileInfo?.info.filaments ?? []} multicolor={multicolor} onChange={setMulticolor} />
+          )}
+          <FilamentPicker material={material} color={color} onMaterial={setMaterial} onColor={setColor} showColors={colors === 1} />
           <div className="field">
             <div className="field-label">Cantidad</div>
             <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
@@ -204,6 +212,11 @@ function Product({ p }: { p: CatalogProduct }) {
             {quote ? `$${money(quote.total)}` : server.status === "failed" || prepareError ? "—" : <span className="indeterminate" style={{ display: "inline-block", width: 140, height: 8, borderRadius: 99 }} />}
           </div>
           {quote && qty > 1 && <div style={{ fontSize: 13, color: "var(--text-3)" }}>${money(quote.unit_price)} c/u</div>}
+          {!!quote?.color_changes && (
+            <div style={{ fontSize: 12, color: "var(--text-3)", marginTop: 4 }}>
+              Incluye {quote.color_changes} cambios de color ({num1(quote.purge_grams ?? 0)} g de purga). En un solo color sale más económico.
+            </div>
+          )}
           {prepareError
             ? <div className="status status-warn" style={{ marginTop: 8 }}>{prepareError}</div>
             : server.status === "failed" && <div className="status status-warn" style={{ marginTop: 8 }}>No pudimos calcular el precio. Escríbenos por WhatsApp.</div>}
@@ -222,7 +235,7 @@ function Product({ p }: { p: CatalogProduct }) {
       </aside>
 
       {ordering && server.status === "done" && quote && (
-        <OrderDialog quoteId={server.quote.id} color={COLORS[color].name} summary={summary} printPrice={quote.total} shipping={catalog.shipping} onClose={closeOrder} />
+        <OrderDialog quoteId={server.quote.id} color={colorName} summary={summary} printPrice={quote.total} shipping={catalog.shipping} onClose={closeOrder} />
       )}
     </div>
   );

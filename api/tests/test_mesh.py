@@ -2,10 +2,11 @@ import numpy as np
 import pytest
 
 from capa3d_api.mesh.analyze import analyze
+from capa3d_api.mesh.colors import color_profile
 from capa3d_api.mesh.load import ModelError, load_project
-from capa3d_api.mesh.threemf import ThreeMfError, parse_3mf
+from capa3d_api.mesh.threemf import ThreeMfError, paint_state, parse_3mf
 
-from .builders import bambu_project, binary_stl, cube, mesh_xml, model, tr, zip3mf
+from .builders import bambu_multicolor, bambu_project, binary_stl, cube, mesh_xml, model, painted_3mf, tr, zip3mf
 
 BED = (256, 256, 256)
 
@@ -119,3 +120,31 @@ def test_stl_escrito_se_lee_como_binario(tmp_path):
         path = tmp_path / "a.stl"
         write_stl(tris, path)
         assert max(path.read_bytes()[80:208]) > 127
+
+
+def test_colores_por_parte_y_sin_partes_negativas():
+    p = parse_3mf(bambu_multicolor(), BED)
+    plate = p.plates[0]
+    # La parte negativa (cubo de 50) no se imprime.
+    assert len(plate.triangles) == 24 and plate.triangles[:, :, 2].max() == 20
+    assert set(plate.colors.tolist()) == {1, 2}
+    # Dos colores conviven en los primeros 10 mm.
+    colors, mix = color_profile(plate.triangles, plate.colors)
+    assert colors == 2 and mix == pytest.approx(10, abs=0.1)
+
+
+def test_colores_pintados():
+    assert [paint_state(c) for c in ("4", "8", "0C", "", "1")] == [1, 2, 3, 0, 0]
+    plate = parse_3mf(painted_3mf(), BED).plates[0]
+    assert sorted(set(plate.colors.tolist())) == [1, 2]
+    assert color_profile(plate.triangles, plate.colors)[0] == 2
+
+
+def test_un_color():
+    plate = parse_3mf(
+        zip3mf(
+            {"3D/3dmodel.model": model("millimeter", f'<object id="1">{mesh_xml(10)}</object>', '<item objectid="1"/>')}
+        ),
+        BED,
+    ).plates[0]
+    assert color_profile(plate.triangles, plate.colors) == (1, 0.0)

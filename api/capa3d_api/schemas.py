@@ -18,6 +18,9 @@ class PlateSummary(BaseModel):
     volume_cm3: float
     area_cm2: float
     open_edges: int
+    # Colores (filamentos) de la cama y altura en que se mezclan; ver mesh/colors.py.
+    colors: int = 1
+    color_mix_mm: float = 0.0
     sliced_seconds: float | None = None
     sliced_grams: float | None = None
 
@@ -50,6 +53,8 @@ class QuoteRequest(BaseModel):
     scale: float = Field(default=100, ge=10, le=400)
     supports: bool = True
     color: str | None = Field(default=None, max_length=40)
+    # En archivos de varios colores: imprimirlos así (con cambios de filamento) o en uno solo.
+    multicolor: bool = True
 
 
 class PlateQuote(BaseModel):
@@ -60,6 +65,9 @@ class PlateQuote(BaseModel):
     hours: float
     # Por qué no se laminó esta cama, si se usó el estimado.
     note: str | None = None
+    colors: int = 1
+    color_changes: int = 0
+    purge_grams: float = 0.0
 
 
 class PriceOut(BaseModel):
@@ -73,6 +81,8 @@ class PriceOut(BaseModel):
     unit_price: int
     qty: int
     total: int
+    color_changes: int = 0
+    purge_grams: float = 0.0
 
 
 class QuoteOut(BaseModel):

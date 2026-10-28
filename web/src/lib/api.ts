@@ -14,6 +14,9 @@ export interface ServerPlate {
   volume_cm3: number;
   area_cm2: number;
   open_edges: number;
+  /** Filamentos distintos de la cama (archivos de Bambu/Orca/Prusa con varios colores). */
+  colors?: number;
+  color_mix_mm?: number;
   sliced_seconds: number | null;
   sliced_grams: number | null;
 }
@@ -42,6 +45,8 @@ export interface QuoteParams {
   unit: "mm" | "cm" | "in";
   scale: number;
   supports: boolean;
+  /** Archivos de varios colores: imprimirlos así (con cambios de filamento) o en uno solo. */
+  multicolor?: boolean;
 }
 
 export interface ServerQuote {
@@ -61,6 +66,9 @@ export interface ServerQuote {
     unit_price: number;
     qty: number;
     total: number;
+    /** Cambios de filamento y gramos purgados, ya sumados en grams y hours. */
+    color_changes?: number;
+    purge_grams?: number;
   } | null;
   error: string | null;
   created_at: string;

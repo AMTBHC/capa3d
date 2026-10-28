@@ -226,6 +226,14 @@ Cada cotización queda guardada con un número (por ejemplo `Q1A2B3C4D`), su vig
 - **Horas** = volumen / caudal de la calidad × 1,25 + 0,2 h de calentamiento
 - **Precio por unidad** = cargo base + gramos × $/g + horas × tarifa, redondeado a $100
 
+**Piezas de varios colores.** Si el 3MF trae partes con distinto filamento o pintura de color (Bambu Studio, OrcaSlicer, PrusaSlicer), el cliente elige entre imprimirlo **en varios colores, como el diseño**, o **en un solo color**. En varios colores se suma lo que gasta cada cambio de filamento en la A1 con AMS lite:
+
+- **Cambios de color** = en cada capa, (colores en esa capa − 1). Se cuentan con el modelo y la altura de capa de la calidad elegida.
+- **Purga** = cambios × purga por cambio. Se usa la matriz de purga que trae el proyecto de Bambu; si no trae, `purge_mm3` de `[multicolor]` en `api/config/catalog.toml`.
+- **Tiempo** = cambios × `change_seconds` (40 s por defecto).
+
+Esos gramos y ese tiempo entran al precio con las mismas tarifas de filamento y máquina, y el cliente ve cuántos cambios y gramos de purga incluye. Si el archivo tiene más colores de los que carga tu AMS (`max_colors`), la cotización lo avisa. El precio "desde" del catálogo es el de un solo color.
+
 El estimado no tiene en cuenta los soportes ni la orientación. Sirve para mostrar un precio al instante mientras llega el laminado.
 
 ## Hoja de ruta
