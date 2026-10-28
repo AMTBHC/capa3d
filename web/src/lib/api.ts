@@ -73,6 +73,8 @@ export interface ServerQuote {
   error: string | null;
   created_at: string;
   valid_until: string;
+  /** Mientras se lamina: camas listas de cuántas. */
+  progress?: { done: number; total: number } | null;
 }
 
 export interface Shipping {

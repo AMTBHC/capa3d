@@ -22,6 +22,8 @@ class PlateSummary(BaseModel):
     colors: int = 1
     color_mix_mm: float = 0.0
     color_layer_changes: int = 0
+    # Huella de la forma de la cama (camas iguales se laminan una vez).
+    shape: str | None = None
     sliced_seconds: float | None = None
     sliced_grams: float | None = None
 
@@ -97,6 +99,8 @@ class QuoteOut(BaseModel):
     error: str | None = None
     created_at: str
     valid_until: str
+    # Mientras se lamina: camas listas de cuántas.
+    progress: dict[str, int] | None = None
 
 
 class AdminQuote(BaseModel):

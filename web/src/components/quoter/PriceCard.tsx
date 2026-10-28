@@ -189,14 +189,24 @@ function StageBanner({ stage, server }: { stage: PriceStage; server: ServerQuote
       ["Laminando", stage === "slicing" ? "active" : "todo"],
       ["Precio exacto", "todo"],
     ] as const;
+    // Archivos de varias camas: cuántas van laminadas.
+    const progress = server.status === "pending" && server.progress && server.progress.total > 1 ? server.progress : null;
     return (
       <div className="status status-busy" role="status">
         <div style={{ display: "flex", alignItems: "center", gap: 10, fontWeight: 600 }}>
           <span className="spin" aria-hidden="true" />
           Calculando tu precio exacto…
-          <span style={{ marginLeft: "auto", fontWeight: 400, fontSize: 12, color: "var(--text-3)" }}>unos segundos</span>
+          <span style={{ marginLeft: "auto", fontWeight: 400, fontSize: 12, color: "var(--text-3)" }}>
+            {progress ? `cama ${Math.min(progress.done + 1, progress.total)} de ${progress.total}` : "unos segundos"}
+          </span>
         </div>
-        <div className="indeterminate" aria-hidden="true" />
+        {progress ? (
+          <div aria-hidden="true" style={{ height: 4, borderRadius: 2, background: "var(--line-2)", overflow: "hidden" }}>
+            <div style={{ height: "100%", width: `${(progress.done / progress.total) * 100}%`, background: "var(--ac)", transition: "width .4s" }} />
+          </div>
+        ) : (
+          <div className="indeterminate" aria-hidden="true" />
+        )}
         <ol style={{ listStyle: "none", margin: 0, padding: 0, display: "flex", flexWrap: "wrap", gap: "4px 14px", fontSize: 13 }}>
           {steps.map(([text, st]) => (
             <li key={text} style={{ display: "flex", gap: 6, alignItems: "center", color: st === "done" ? "var(--ok)" : st === "active" ? "var(--text)" : "var(--text-4)" }}>

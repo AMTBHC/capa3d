@@ -180,7 +180,7 @@ input[type="range"] { width: 100%; accent-color: var(--ac); }
 .status-ok { background: color-mix(in srgb, var(--ok) 10%, transparent); border: 1px solid color-mix(in srgb, var(--ok) 45%, transparent); }
 .status-warn { background: color-mix(in srgb, var(--warn) 9%, transparent); border: 1px solid color-mix(in srgb, var(--warn) 40%, transparent); }
 .status-info { background: var(--surface-3); border: 1px solid var(--line); }
-.status-busy { background: var(--ac-tint); border: 1px solid var(--ac-line); flex-direction: column; gap: 10px; }
+.status-busy { background: var(--ac-tint); border: 1px solid var(--ac-line); flex-direction: column; align-items: stretch; gap: 10px; }
 .indeterminate { position: relative; height: 4px; border-radius: 2px; background: var(--line-2); overflow: hidden; }
 .indeterminate::after {
   content: ""; position: absolute; top: 0; bottom: 0; width: 40%; border-radius: 2px; background: var(--ac);

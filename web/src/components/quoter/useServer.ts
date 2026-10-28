@@ -23,7 +23,7 @@ export function useCatalog(): ServerCatalog {
 
 export type ServerQuoteState =
   | { status: "off" }
-  | { status: "pending" }
+  | { status: "pending"; progress?: { done: number; total: number } | null }
   | { status: "done"; quote: ServerQuote }
   | { status: "failed"; error: string; quote?: ServerQuote };
 
@@ -47,6 +47,7 @@ export function useServerQuote(fileId: string | undefined, params: QuoteParams |
       try {
         let q = await createQuote(id, p);
         while (alive && q.status === "pending") {
+          set({ status: "pending", progress: q.progress });
           await new Promise((r) => setTimeout(r, POLL_MS));
           q = await getQuote(q.id);
         }

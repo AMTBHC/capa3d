@@ -46,7 +46,10 @@ class QuoteService:
         self.files_dir = settings.data_dir / "files"
         self.pool = ThreadPoolExecutor(max_workers=settings.slicer_workers, thread_name_prefix="slicer")
         # Pool aparte para las camas: una cotización (en self.pool) espera las suyas sin bloquearlo.
-        self.plate_pool = ThreadPoolExecutor(max_workers=settings.plate_workers, thread_name_prefix="plate")
+        workers = settings.plate_workers or min(8, max(2, os.cpu_count() or 2))
+        self.plate_pool = ThreadPoolExecutor(max_workers=workers, thread_name_prefix="plate")
+        # Camas laminadas de cada cotización en curso, para mostrar el avance.
+        self.progress: dict[str, tuple[int, int]] = {}
         self._slice_locks: dict[str, threading.Lock] = {}
         self._slice_locks_guard = threading.Lock()
         # Si cambia el perfil de la impresora o los ajustes de materiales y calidades, el
@@ -118,6 +121,8 @@ class QuoteService:
         for plate in project.plates:
             tris = plate.triangles
             write_stl(tris, folder / f"plate_{plate.id}.stl")
+            # Huella de la forma, sin importar dónde está en la cama: camas iguales comparten laminado.
+            shape = hashlib.sha256(np.ascontiguousarray(tris - tris.reshape(-1, 3).min(axis=0)).round(4).tobytes())
             a = analyze(tris)
             colors, mix = color_profile(tris, plate.colors)
             if plate.layer_color_changes:
@@ -131,6 +136,7 @@ class QuoteService:
                     "colors": colors,
                     "color_mix_mm": round(mix, 2),
                     "color_layer_changes": plate.layer_color_changes,
+                    "shape": shape.hexdigest()[:24],
                     "sliced_seconds": plate.sliced.seconds if plate.sliced else None,
                     "sliced_grams": plate.sliced.grams if plate.sliced else None,
                 }
@@ -204,6 +210,8 @@ class QuoteService:
             self.store.finish_quote(quote_id, result, None)
         except Exception as e:  # el trabajo nunca debe quedar pendiente
             self.store.finish_quote(quote_id, None, str(e) or e.__class__.__name__)
+        finally:
+            self.progress.pop(quote_id, None)
 
     def compute(self, quote_id: str) -> dict:
         q = self.store.get_quote(quote_id)
@@ -225,11 +233,19 @@ class QuoteService:
         plates_out = []
         opts = SliceOptions(req.material, req.quality, req.infill, req.supports)
         # Todas las camas se laminan a la vez; cada una se espera en orden.
-        sliced = (
-            {p["id"]: self.plate_pool.submit(self._slice_plate, req.file_id, p["id"], k, opts, work) for p in plates}
-            if self.can_slice
-            else {}
-        )
+        sliced = {}
+        if self.can_slice:
+            self.progress[quote_id] = (0, len(plates))
+
+            def done(_):
+                with self._slice_locks_guard:
+                    d, t = self.progress.get(quote_id, (0, len(plates)))
+                    self.progress[quote_id] = (d + 1, t)
+
+            for p in plates:
+                fut = self.plate_pool.submit(self._slice_plate, req.file_id, p, k, opts, work)
+                fut.add_done_callback(done)
+                sliced[p["id"]] = fut
         for p in plates:
             note = None
             if self.can_slice:
@@ -274,15 +290,16 @@ class QuoteService:
             "price": {"currency": cat.currency, **asdict(pr)},
         }
 
-    def _slice_plate(
-        self, file_id: str, plate_id: int, k: float, opts: SliceOptions, work: Path
-    ) -> tuple[float, float]:
+    def _slice_plate(self, file_id: str, plate: dict, k: float, opts: SliceOptions, work: Path) -> tuple[float, float]:
         """
-        Gramos y segundos de una cama. El laminado se guarda por los ajustes que cambian el
-        G-code, así que cambiar la cantidad, el color o los varios colores no vuelve a laminar.
+        Gramos y segundos de una cama. El laminado se guarda por la forma de la cama y los
+        ajustes que cambian el G-code: cambiar la cantidad o el color no vuelve a laminar, y
+        las camas iguales de un archivo (32 copias del mismo llavero) se laminan una vez.
         """
+        plate_id = plate["id"]
+        shape = plate.get("shape") or plate_id
         key = hashlib.sha256(
-            json.dumps([self._slice_salt, plate_id, round(k, 6), asdict(opts)], sort_keys=True).encode()
+            json.dumps([self._slice_salt, shape, round(k, 6), asdict(opts)], sort_keys=True).encode()
         ).hexdigest()[:24]
         cache = self.file_dir(file_id) / "slices" / key
         gcode = work / f"plate_{plate_id}.gcode"
@@ -347,7 +364,14 @@ class QuoteService:
             "error": q["error"],
             "created_at": q["created_at"],
             "valid_until": q["valid_until"],
+            "progress": self._progress_out(q),
         }
+
+    def _progress_out(self, q: dict) -> dict | None:
+        if q["status"] != "pending" or q["id"] not in self.progress:
+            return None
+        done, total = self.progress[q["id"]]
+        return {"done": done, "total": total}
 
     # Administración
 
