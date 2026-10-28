@@ -1,0 +1,11 @@
+# Se suma a docker-compose.yml cuando otra app ya usa los puertos 80/443 (lo activa
+# instalar.sh con COMPOSE_FILE en deploy/.env). Caddy queda solo en 127.0.0.1:PUERTO_LOCAL,
+# sin HTTPS propio: el proxy de la otra app hace el HTTPS y le manda el dominio.
+services:
+  caddy:
+    ports: !override
+      - "127.0.0.1:${PUERTO_LOCAL:-8088}:80"
+    volumes: !override
+      - ./Caddyfile.compartido:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config

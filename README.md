@@ -32,6 +32,14 @@ Para que clientes y tú entren desde cualquier lugar, con tu dominio y HTTPS. Si
    Te pide el dominio, tu correo, el WhatsApp y la clave del panel (o genera una), instala Docker, abre solo los puertos web y arranca todo. El certificado HTTPS se pide y se renueva solo.
 4. Listo: el sitio queda en `https://tudominio.com` y el **panel en `https://tudominio.com/admin`**, desde tu PC, tu celular o cualquier navegador. Cada navegador recuerda la clave hasta que toques **Salir**; tras 10 claves equivocadas seguidas, esa conexión queda bloqueada unos minutos.
 
+**Si el servidor ya tiene otra app** (otra web, una API…), pueden convivir. El instalador revisa si los puertos 80/443 ya los usa otra cosa:
+
+- **Libres:** Capa3D los toma y pone su propio HTTPS.
+- **Ocupados (modo compartido):** Capa3D no toca la otra app. Queda escuchando solo en el servidor (`127.0.0.1:8088` o el siguiente puerto libre) y el proxy que ya tienes le pasa tu dominio:
+  - **nginx:** se configura solo. Crea un archivo nuevo, `/etc/nginx/sites-available/capa3d`, lo valida con `nginx -t` antes de recargar (si falla, lo quita) y pide el HTTPS con certbot. Tus otros sitios no se modifican.
+  - **Caddy, Apache o Traefik:** el instalador te muestra las líneas exactas que debes agregar.
+- El firewall no se activa: si ya lo usas, solo se abren los puertos web.
+
 Después:
 
 - **Actualizar** a la última versión: `sudo bash deploy/actualizar.sh` (los pedidos, archivos y catálogo se conservan).
