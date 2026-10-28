@@ -1,9 +1,11 @@
+import json
 import struct
 import time
 import zlib
 
 import pytest
 
+from capa3d_api import shop as shop_module
 from capa3d_api.openscad import scad_string
 from capa3d_api.shop import clean_name, slugify
 
@@ -42,7 +44,7 @@ def wait_price(c, pid: str) -> int:
 
 
 def new_product(c, **kw) -> dict:
-    body = {"collection_id": "hogar", "name": "Soporte para celular", "subsection": "Soportes", "published": True, **kw}
+    body = {"collection_id": "redes", "name": "Soporte para celular", "subsection": "Soportes", "published": True, **kw}
     r = c.post("/api/admin/catalog/products", json=body, headers=ADMIN)
     assert r.status_code == 201, r.text
     return r.json()
@@ -58,7 +60,7 @@ def test_textos():
 def test_colecciones_iniciales(client):
     data = client.get("/api/admin/catalog", headers=ADMIN).json()
     ids = [c["id"] for c in data["collections"]]
-    assert ids[:3] == ["mas-pedido", "virales", "flexibles"] and "llaveros" in ids
+    assert ids == ["mas-pedido", "virales", "redes", "llaveros", "personajes"]
     llaveros = next(c for c in data["collections"] if c["id"] == "llaveros")
     assert llaveros["products"][0]["kind"] == "name_keychain"
 
@@ -76,10 +78,10 @@ def test_producto_con_modelo(client):
     assert up.status_code == 200 and up.json()["ready"] is True
     price = wait_price(client, p["id"])
     pub = client.get(f"/api/catalog/products/{p['id']}").json()
-    assert pub["collection"]["id"] == "hogar" and pub["file_id"] and price > 0
+    assert pub["collection"]["id"] == "redes" and pub["file_id"] and price > 0
     cols = {c["id"]: c for c in client.get("/api/catalog/collections").json()}
-    assert cols["hogar"]["count"] == 1 and cols["hogar"]["price_from"] == price
-    detail = client.get("/api/catalog/collections/hogar").json()
+    assert cols["redes"]["count"] == 1 and cols["redes"]["price_from"] == price
+    detail = client.get("/api/catalog/collections/redes").json()
     assert [x["id"] for x in detail["products"]] == [p["id"]]
     # El archivo del producto lleva su nombre: así se ve en pedidos y en el panel.
     assert client.get(f"/api/files/{pub['file_id']}").json()["name"] == "Soporte para celular.stl"
@@ -91,7 +93,7 @@ def test_producto_sin_publicar_no_se_ve(client):
         f"/api/admin/catalog/products/{p['id']}/model", files={"file": ("a.stl", binary_stl(cube(10)))}, headers=ADMIN
     )
     assert client.get(f"/api/catalog/products/{p['id']}").status_code == 404
-    assert "hogar" not in {c["id"] for c in client.get("/api/catalog/collections").json()}
+    assert "redes" not in {c["id"] for c in client.get("/api/catalog/collections").json()}
 
 
 def test_fotos(client):
@@ -108,7 +110,7 @@ def test_fotos(client):
     assert client.get("/api/catalog/images/..%2F..%2Fcapa3d.db").status_code == 404
     left = client.delete(f"/api/admin/catalog/products/{p['id']}/images/{img}", headers=ADMIN).json()
     assert left["images"] == [] and client.get(f"/api/catalog/images/{img}").status_code == 404
-    cover = client.post("/api/admin/catalog/collections/hogar/cover", files={"file": ("p.png", png())}, headers=ADMIN)
+    cover = client.post("/api/admin/catalog/collections/redes/cover", files={"file": ("p.png", png())}, headers=ADMIN)
     assert cover.status_code == 200
 
 
@@ -130,7 +132,7 @@ def test_colecciones_en_el_panel(client):
 
 def test_catalogo_requiere_clave(client):
     assert client.get("/api/admin/catalog").status_code == 401
-    assert client.post("/api/admin/catalog/products", json={"collection_id": "hogar", "name": "X"}).status_code == 401
+    assert client.post("/api/admin/catalog/products", json={"collection_id": "redes", "name": "X"}).status_code == 401
 
 
 def test_pedir_un_producto_del_catalogo(client):
@@ -171,3 +173,89 @@ def test_llavero_con_nombre(client):
     )
     assert client.post("/api/catalog/products/soporte/personalize", json={"text": "Ana"}).status_code == 404
     assert wait_price(client, "llavero-con-tu-nombre") > 0
+
+
+def fake_drive(tmp_path, monkeypatch, files: dict[str, bytes]):
+    """Descargas de Drive servidas desde archivos locales: id → contenido."""
+    calls = []
+
+    def download(url, dest, limit_mb):
+        calls.append(url)
+        key = next(k for k in files if k in url)
+        dest.write_bytes(files[key])
+        return dest
+
+    monkeypatch.setattr(shop_module, "download", download)
+    return calls
+
+
+def test_importa_catalogo_y_baja_el_modelo_al_abrirlo(tmp_path, monkeypatch):
+    calls = fake_drive(
+        tmp_path, monkeypatch, {"MODELO": binary_stl(cube(20)), "PIEZA": binary_stl(cube(15)), "FOTO": png()}
+    )
+    manifest = tmp_path / "import.json"
+    manifest.write_text(json.dumps({"products": [
+        {"key": "a", "collection": "virales", "subsection": "Juguetes", "name": "Cubo viral", "price": 4500,
+         "model": {"drive": "MODELO", "name": "cubo.stl"}, "image": {"drive": "FOTO"}},
+        {"key": "b", "collection": "redes", "name": "Cubo en piezas",
+         "parts": [{"drive": "PIEZA", "name": "a.stl"}, {"drive": "PIEZA", "name": "b.stl"}]},
+        {"key": "c", "collection": "personajes", "name": "Personaje", "brand": True,
+         "model": {"drive": "MODELO", "name": "p.stl"}},
+    ]}))  # fmt: skip
+    data = tmp_path / "data"
+    with make_client(data, catalog_import=manifest) as c:
+        p = c.get("/api/catalog/products/cubo-viral").json()
+        # Visible de una vez, con el precio de referencia y la foto original mientras se descarga.
+        assert p["file_id"] is None and p["price_from"] == 4500 and p["images"]
+        assert c.get("/api/catalog/products/personaje").status_code == 404  # marcas: borrador
+        file_id = c.post("/api/catalog/products/cubo-viral/prepare").json()["file_id"]
+        assert c.get(f"/api/files/{file_id}").json()["format"] == "stl"
+        assert c.post("/api/catalog/products/cubo-viral/prepare").json()["file_id"] == file_id
+        assert sum("MODELO" in u for u in calls) == 1
+        # Varias piezas: se arman en un 3MF.
+        parts = c.post("/api/catalog/products/cubo-en-piezas/prepare").json()["file_id"]
+        f = c.get(f"/api/files/{parts}").json()
+        assert f["format"] == "3mf" and len(f["plates"][0]["objects"]) == 2
+    # Al reiniciar no se duplica, aunque el producto se haya borrado.
+    with make_client(data, catalog_import=manifest) as c:
+        c.delete("/api/admin/catalog/products/cubo-en-piezas", headers=ADMIN)
+    with make_client(data, catalog_import=manifest) as c:
+        names = [
+            p["name"]
+            for col in c.get("/api/admin/catalog", headers=ADMIN).json()["collections"]
+            for p in col["products"]
+        ]
+        assert sorted(names) == ["Cubo viral", "Llavero con tu nombre", "Personaje"]
+
+
+def test_fotos_importadas_se_guardan(tmp_path, monkeypatch):
+    fake_drive(tmp_path, monkeypatch, {"MODELO": binary_stl(cube(20)), "FOTO": png()})
+    manifest = tmp_path / "import.json"
+    manifest.write_text(json.dumps({"products": [{"key": "a", "collection": "virales", "name": "Cubo",
+        "model": {"drive": "MODELO", "name": "c.stl"}, "image": {"drive": "FOTO"}}]}))  # fmt: skip
+    with make_client(tmp_path / "data", catalog_import=manifest) as c:
+        c.app.state.shop.localize_images()
+        img = c.get("/api/catalog/products/cubo").json()["images"][0]
+        assert img.endswith(".png") and c.get(f"/api/catalog/images/{img}").content == png()
+
+
+def test_quita_colecciones_viejas_vacias(tmp_path):
+    from capa3d_api.store import Store
+
+    store = Store(tmp_path / "capa3d.db")
+    store.save_collection(
+        {"id": "virales", "name": "Virales de redes", "description": "", "emoji": "", "sort": 0, "published": True}
+    )
+    store.save_collection(
+        {"id": "hogar", "name": "Para la casa", "description": "", "emoji": "", "sort": 1, "published": True}
+    )
+    store.save_collection(
+        {"id": "vehiculos", "name": "Vehículos", "description": "", "emoji": "", "sort": 2, "published": True}
+    )
+    carro = {"id": "x", "collection_id": "vehiculos", "name": "Carro", "kind": "model", "subsection": "",
+             "description": "", "default_color": "", "sort": 0, "badges": [], "images": [], "sizes": [],
+             "published": False}  # fmt: skip
+    store.save_product(carro)
+    with make_client(tmp_path) as c:
+        cols = {x["id"]: x for x in c.get("/api/admin/catalog", headers=ADMIN).json()["collections"]}
+        assert "hogar" not in cols and "vehiculos" in cols and cols["virales"]["name"] == "Novedades virales"

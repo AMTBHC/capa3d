@@ -18,6 +18,8 @@ class Settings(BaseSettings):
     slicer_path: str = ""
     # Ejecutable de OpenSCAD para los llaveros con nombre (vacío = buscarlo solo).
     openscad_path: str = ""
+    # Productos que se importan al arrancar (vacío = ninguno).
+    catalog_import: Path | None = API_ROOT / "config" / "catalog_import.json"
     # Desactiva el laminado y cotiza solo con el estimado (útil sin PrusaSlicer).
     slicer_enabled: bool = True
     slice_timeout_s: int = 600
@@ -47,6 +49,13 @@ class Settings(BaseSettings):
     def absolute(cls, v: Path) -> Path:
         # PrusaSlicer corre en otra carpeta: las rutas relativas del .env dejarían de apuntar al archivo.
         return v.expanduser().resolve()
+
+    @field_validator("catalog_import", mode="before")
+    @classmethod
+    def optional_path(cls, v: object) -> object:
+        if v is None or (isinstance(v, str) and not v.strip()):
+            return None
+        return Path(v).expanduser().resolve()
 
     @field_validator("cors_origins", mode="before")
     @classmethod

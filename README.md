@@ -150,20 +150,34 @@ La clave del panel la genera `iniciar` la primera vez, la muestra al arrancar y 
 
 Además del cotizador, el sitio tiene una tienda de productos listos para imprimir:
 
-- `/catalogo`: las colecciones (Lo más pedido, Virales, Flexibles, Llaveros, Hogar, Decoración, Vehículos, Regalos). En la página de inicio aparece la sección **Elige algo listo para imprimir**.
-- `/catalogo/<colección>`: los productos, filtrables por subsección.
+- `/catalogo`: las colecciones **Lo más pedido**, **Novedades virales**, **Virales de redes sociales**, **Llaveros** y **Personajes y figuras**. En la página de inicio aparece la sección **Elige algo listo para imprimir**.
+- `/catalogo/<colección>`: los productos, filtrables por subsección (Juguetes y antiestrés, Hogar y cocina, Animales articulados, Decoración y lámparas…).
 - `/producto/<producto>`: fotos, vista 3D, tamaño, material, color y cantidad. El precio se calcula laminando el modelo, y **Pedirlo** usa el mismo flujo de pedido y pago del cotizador.
 
-Todo se maneja en el panel, en la pestaña **Catálogo**:
+### Productos importados
 
-1. **+ Nueva colección** o **Editar** (nombre, emoji, descripción, orden, publicada). Toca la portada para subir una foto.
-2. **+ Producto** en una colección: nombre, subsección (por ejemplo "Animales"), descripción, etiquetas (Viral, Más pedido, Nuevo), tamaños como % de escala sobre el modelo, y color sugerido.
+La API trae una lista de productos sacados de las carpetas de Google Drive del área de miembros de Maestro 3D (`api/config/catalog_import.json`). Al arrancar:
+
+1. Crea los productos que falten, con su foto, sus tamaños y un precio de referencia ya laminado.
+2. Descarga las fotos en segundo plano (`api/data/catalog/images`).
+3. El modelo 3D se descarga de Drive **la primera vez que alguien abre el producto** (unos segundos) y desde ahí queda guardado. Así no se bajan gigas de archivos al arrancar.
+
+Los productos con personajes o marcas de terceros (Disney, Marvel, Pokémon, Nintendo, Minecraft, Stanley, Crocs…) se importan como **borrador**: no se ven en la tienda hasta que los publiques. Antes de hacerlo, ten en cuenta que comprar el pack de archivos no da derecho a vender figuras de esos personajes. En el panel, **Publicar borradores** los publica todos de una colección.
+
+Un producto que borres en el panel no se vuelve a importar. Para no importar nada, deja vacío `CAPA3D_CATALOG_IMPORT` en `api/.env`.
+
+### Manejarlo desde el panel
+
+En el panel, pestaña **Catálogo**:
+
+1. **+ Nueva colección** o **Editar** (nombre, emoji, descripción, orden, publicada). Toca la portada para subir una foto; si no, se usa la del primer producto.
+2. **+ Producto** en una colección: nombre, subsección, descripción, etiquetas (Viral, Más pedido, Nuevo), tamaños como % de escala sobre el modelo, y color sugerido.
 3. Después de crearlo, sube el modelo (STL, 3MF, OBJ o STEP) y las fotos. La primera foto es la portada.
 4. Marca **Publicado**. Un producto sin modelo no aparece en la tienda, y una colección sin productos visibles tampoco.
 
 El **Llavero con tu nombre** viene creado: el cliente escribe el nombre y OpenSCAD genera el modelo en uno o dos segundos (plantilla en `api/config/templates/llavero_nombre.scad`). Si OpenSCAD no está instalado, el producto queda oculto y el panel lo avisa.
 
-Publica solo modelos que puedas vender: tuyos, con licencia comercial o de dominio público. Los packs de modelos con personajes de marcas (Disney, Marvel, Pokémon…) no dan derecho a venderlos. Usa fotos de tus propias impresiones.
+Usa fotos de tus propias impresiones cuando puedas: venden mejor y evitas problemas con las fotos de otros.
 
 ## Calibrar con Bambu Studio
 

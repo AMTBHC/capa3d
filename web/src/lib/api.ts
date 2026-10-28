@@ -441,7 +441,8 @@ export interface AdminCollection extends Omit<CatalogCollection, "count" | "pric
   products: AdminProduct[];
 }
 
-export const imageUrl = (name: string) => `${API_URL}/api/catalog/images/${name}`;
+/** Foto del catálogo; las de productos importados pueden ser un enlace externo mientras se descargan. */
+export const imageUrl = (name: string) => (/^https?:\/\//.test(name) ? name : `${API_URL}/api/catalog/images/${name}`);
 
 export function listCollections(): Promise<CatalogCollection[]> {
   return request("/api/catalog/collections");
@@ -458,6 +459,12 @@ export function getProduct(id: string): Promise<CatalogProduct> {
 /** Genera el llavero con el texto; devuelve el archivo para verlo y cotizarlo. */
 export async function personalize(productId: string, text: string): Promise<string> {
   const r = await request<{ file_id: string }>(`/api/catalog/products/${encodeURIComponent(productId)}/personalize`, json({ text }));
+  return r.file_id;
+}
+
+/** Deja listo el modelo de un producto (los importados se descargan la primera vez). */
+export async function prepareProduct(productId: string): Promise<string> {
+  const r = await request<{ file_id: string }>(`/api/catalog/products/${encodeURIComponent(productId)}/prepare`, { method: "POST" });
   return r.file_id;
 }
 

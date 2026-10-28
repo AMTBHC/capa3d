@@ -21,6 +21,7 @@ def catalog():
 
 
 def _client(tmp_path: Path, **kw) -> TestClient:
+    kw.setdefault("catalog_import", None)
     settings = Settings(data_dir=tmp_path, cors_origins=["http://test"], _env_file=None, **kw)
     return TestClient(create_app(settings))
 

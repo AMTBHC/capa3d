@@ -77,6 +77,10 @@ CREATE TABLE IF NOT EXISTS products (
   created_at TEXT NOT NULL,
   updated_at TEXT NOT NULL
 );
+CREATE TABLE IF NOT EXISTS catalog_imports (
+  key TEXT PRIMARY KEY,
+  created_at TEXT NOT NULL
+);
 CREATE TABLE IF NOT EXISTS payments (
   reference TEXT PRIMARY KEY,
   order_id TEXT NOT NULL REFERENCES orders(id),
@@ -97,6 +101,9 @@ MIGRATIONS = [
     ("orders", "paid_amount", "INTEGER NOT NULL DEFAULT 0"),
     # Sube con cada cambio del pedido o de sus pagos: la actualización en vivo lo vigila.
     ("orders", "version", "INTEGER NOT NULL DEFAULT 0"),
+    # Productos importados: de dónde bajar el modelo y la foto, y su precio de referencia.
+    ("products", "source", "TEXT"),
+    ("products", "price_hint", "INTEGER"),
 ]
 
 
@@ -313,9 +320,12 @@ class Store:
     def save_product(self, p: dict[str, Any]) -> None:
         cols = (
             "id", "collection_id", "kind", "name", "subsection", "description", "badges", "images", "sizes",
-            "default_color", "file_id", "price_quote_id", "sort", "published",
+            "default_color", "file_id", "price_quote_id", "sort", "published", "source", "price_hint",
         )  # fmt: skip
-        enc = {"badges": json.dumps, "images": json.dumps, "sizes": json.dumps, "published": int}
+        enc = {
+            "badges": json.dumps, "images": json.dumps, "sizes": json.dumps, "published": int,
+            "source": lambda x: json.dumps(x) if x else None,
+        }  # fmt: skip
         vals = tuple(enc.get(k, lambda x: x)(p.get(k)) for k in cols)
         marks = ", ".join("?" * len(cols))
         updates = ", ".join(f"{k}=excluded.{k}" for k in cols[1:])
@@ -328,6 +338,12 @@ class Store:
     def delete_product(self, id: str) -> None:
         self._exec("DELETE FROM products WHERE id=?", (id,))
 
+    def imported_keys(self) -> set[str]:
+        return {r["key"] for r in self._exec("SELECT key FROM catalog_imports")}
+
+    def mark_imported(self, key: str) -> None:
+        self._exec("INSERT OR IGNORE INTO catalog_imports VALUES (?, ?)", (key, now()))
+
     def file_by_name(self, name: str) -> dict[str, Any] | None:
         rows = self._exec("SELECT id FROM files WHERE name=? ORDER BY created_at DESC LIMIT 1", (name,))
         return self.get_file(rows[0]["id"]) if rows else None
@@ -337,6 +353,7 @@ def _product(row: sqlite3.Row) -> dict[str, Any]:
     r = dict(row)
     for k in ("badges", "images", "sizes"):
         r[k] = json.loads(r[k])
+    r["source"] = json.loads(r["source"]) if r.get("source") else None
     r["published"] = bool(r["published"])
     return r
 

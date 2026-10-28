@@ -2,6 +2,7 @@ import asyncio
 import json
 import secrets
 import tempfile
+import threading
 import time
 from collections import defaultdict, deque
 from contextlib import asynccontextmanager
@@ -47,6 +48,9 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     orders = OrderService(settings, catalog, store, service, wompi)
     shop = Shop(store, service, OpenScad(settings.openscad_path))
     shop.seed()
+    if settings.catalog_import:
+        shop.import_catalog(settings.catalog_import)
+        threading.Thread(target=shop.localize_images, daemon=True).start()
 
     @asynccontextmanager
     async def lifespan(app: FastAPI):
@@ -55,6 +59,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
 
     app = FastAPI(title="Capa3D API", version="0.1.0", lifespan=lifespan)
     app.state.service = service
+    app.state.shop = shop
     app.add_middleware(
         CORSMiddleware,
         allow_origins=settings.cors_origins,
@@ -154,6 +159,10 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     def catalog_personalize(pid: str, body: Personalize):
         """Genera el llavero con el texto del cliente; devuelve el archivo para cotizarlo y verlo."""
         return {"file_id": shop.personalize(pid, body.text)}
+
+    @app.post("/api/catalog/products/{pid}/prepare")
+    async def prepare_product(pid: str):
+        return {"file_id": await run_in_threadpool(shop.prepare, pid)}
 
     @app.get("/api/catalog/images/{name}")
     def catalog_image(name: str):
