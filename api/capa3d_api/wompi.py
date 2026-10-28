@@ -5,10 +5,11 @@ Documentación: https://docs.wompi.co
 
 import hashlib
 import hmac
+import ipaddress
 import json
 import urllib.request
 from dataclasses import dataclass
-from urllib.parse import urlencode
+from urllib.parse import urlencode, urlparse
 
 CHECKOUT_URL = "https://checkout.wompi.co/p/"
 
@@ -25,11 +26,27 @@ class Transaction:
     amount_in_cents: int
 
 
+def is_local_url(url: str) -> bool:
+    """
+    True si la dirección no es alcanzable desde internet (localhost, 127.x, red privada).
+    El firewall de Wompi rechaza con 403 los enlaces de pago que regresan a esas direcciones.
+    """
+    host = (urlparse(url).hostname or "").lower()
+    if host in ("", "localhost") or host.endswith((".localhost", ".local")):
+        return True
+    try:
+        ip = ipaddress.ip_address(host)
+    except ValueError:
+        return False
+    return ip.is_loopback or ip.is_private or ip.is_unspecified or ip.is_link_local
+
+
 @dataclass
 class Wompi:
     public_key: str
     integrity_secret: str
     events_secret: str
+    private_key: str = ""
 
     @property
     def enabled(self) -> bool:
@@ -49,6 +66,7 @@ class Wompi:
         return hashlib.sha256(raw.encode()).hexdigest()
 
     def checkout_url(self, reference: str, amount_in_cents: int, redirect_url: str, customer: dict) -> str:
+        """Enlace de Web Checkout. Sin redirect_url, Wompi muestra su propia página al terminar."""
         params = {
             "public-key": self.public_key,
             "currency": "COP",
@@ -78,6 +96,22 @@ class Wompi:
         except Exception as e:  # red, 404, JSON inesperado
             raise WompiError(f"No se pudo consultar Wompi: {e}") from e
         return _transaction(data)
+
+    def find_by_reference(self, reference: str) -> Transaction | None:
+        """La transacción más reciente con esta referencia (requiere la llave privada)."""
+        if not self.private_key:
+            raise WompiError("Falta la llave privada de Wompi")
+        req = urllib.request.Request(
+            f"{self.api_url}/transactions?{urlencode({'reference': reference})}",
+            headers={"Authorization": f"Bearer {self.private_key}"},
+        )
+        try:
+            with urllib.request.urlopen(req, timeout=15) as r:
+                data = json.load(r)["data"]
+        except Exception as e:
+            raise WompiError(f"No se pudo consultar Wompi: {e}") from e
+        found = [t for t in (data if isinstance(data, list) else [data]) if str(t.get("reference")) == reference]
+        return _transaction(found[0]) if found else None
 
     def parse_event(self, body: dict) -> Transaction | None:
         """

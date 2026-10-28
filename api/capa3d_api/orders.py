@@ -5,6 +5,8 @@ con Wompi (o el taller marca el pago a mano) y el pedido avanza hasta la entrega
 
 import re
 import secrets
+import threading
+import time
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Literal
@@ -15,7 +17,7 @@ from .catalog import Catalog
 from .service import QuoteService
 from .settings import Settings
 from .store import Store
-from .wompi import Transaction, Wompi, WompiError
+from .wompi import Transaction, Wompi, WompiError, is_local_url
 
 Status = Literal["received", "confirmed", "paid", "printing", "shipped", "delivered", "cancelled"]
 
@@ -41,6 +43,9 @@ STATUS_TEXT: dict[str, str] = {
 }
 
 FLOW = ["received", "confirmed", "paid", "printing", "shipped", "delivered"]
+
+# Cada cuánto se puede consultar en Wompi el pago pendiente de un pedido.
+REFRESH_EVERY_S = 10
 
 # Acción del panel → (estados desde los que se puede, estado al que lleva).
 ACTIONS: dict[str, tuple[set[str], str]] = {
@@ -112,6 +117,8 @@ class OrderService:
         self.store = store
         self.quotes = quotes
         self.wompi = wompi
+        self._checked: dict[str, float] = {}
+        self._lock = threading.Lock()
 
     # Cliente
 
@@ -145,8 +152,11 @@ class OrderService:
             raise OrderError("Pedido no encontrado", 404)
         return o
 
-    def checkout(self, order_id: str, token: str) -> str:
-        """URL de pago de Wompi para el total confirmado."""
+    def checkout(self, order_id: str, token: str) -> tuple[str, bool]:
+        """
+        URL de pago de Wompi para el total confirmado, y si Wompi devolverá al cliente al sitio.
+        Con el sitio en una dirección local no se envía la de regreso: Wompi la rechaza (403).
+        """
         o = self.get_for_customer(order_id, token)
         if o["status"] != "confirmed":
             raise OrderError("Este pedido no está pendiente de pago", 409)
@@ -156,7 +166,30 @@ class OrderService:
         reference = f"{o['id']}-{len(self.store.payments(o['id'])) + 1}"
         self.store.add_payment(reference, o["id"], total)
         redirect = f"{self.settings.site_url.rstrip('/')}/pedido/{o['id']}?t={o['token']}"
-        return self.wompi.checkout_url(reference, total * 100, redirect, o["customer"])
+        returns = not is_local_url(redirect)
+        return self.wompi.checkout_url(reference, total * 100, redirect if returns else "", o["customer"]), returns
+
+    def refresh_payment(self, o: dict) -> dict:
+        """
+        Si el pedido espera pago y hay llave privada, consulta en Wompi el último intento.
+        Así el pago se confirma aunque no lleguen eventos ni el cliente vuelva al sitio.
+        """
+        if o["status"] != "confirmed" or not self.wompi.private_key:
+            return o
+        pays = self.store.payments(o["id"])
+        if not pays or pays[-1]["status"] != "PENDING":
+            return o
+        with self._lock:
+            if time.monotonic() - self._checked.get(o["id"], 0) < REFRESH_EVERY_S:
+                return o
+            self._checked[o["id"]] = time.monotonic()
+        try:
+            tx = self.wompi.find_by_reference(pays[-1]["reference"])
+        except WompiError:
+            return o
+        if tx:
+            self.apply_transaction(tx)
+        return self.store.get_order(o["id"])
 
     def payment_return(self, order_id: str, token: str, transaction_id: str) -> dict:
         """El cliente volvió de Wompi: se consulta la transacción para no depender del webhook."""

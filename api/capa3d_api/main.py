@@ -26,7 +26,12 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     store = Store(settings.data_dir / "capa3d.db")
     slicer = PrusaSlicer(settings.slicer_path, catalog, settings.slice_timeout_s)
     service = QuoteService(settings, catalog, store, slicer)
-    wompi = Wompi(settings.wompi_public_key, settings.wompi_integrity_secret, settings.wompi_events_secret)
+    wompi = Wompi(
+        settings.wompi_public_key,
+        settings.wompi_integrity_secret,
+        settings.wompi_events_secret,
+        settings.wompi_private_key,
+    )
     orders = OrderService(settings, catalog, store, service, wompi)
 
     @asynccontextmanager
@@ -122,11 +127,14 @@ def create_app(settings: Settings | None = None) -> FastAPI:
 
     @app.get("/api/orders/{order_id}")
     def get_order(order_id: str, t: str = ""):
-        return orders.public(orders.get_for_customer(order_id, t))
+        o = orders.get_for_customer(order_id, t)
+        return orders.public(orders.refresh_payment(o))
 
     @app.post("/api/orders/{order_id}/checkout")
     def checkout(order_id: str, t: str = ""):
-        return {"url": orders.checkout(order_id, t)}
+        url, returns = orders.checkout(order_id, t)
+        # returns=False: Wompi no devolverá al cliente al sitio (sitio local); la web lo abre en otra pestaña.
+        return {"url": url, "returns": returns}
 
     class PaymentReturn(BaseModel):
         transaction_id: str = Field(max_length=64)
