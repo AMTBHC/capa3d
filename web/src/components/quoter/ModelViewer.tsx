@@ -50,7 +50,7 @@ export default function ModelViewer(props: Props) {
       aria-label="Vista 3D de tu modelo. Arrastra para girarlo y usa la rueda para acercar."
       role="img"
     >
-      <hemisphereLight args={["#ffffff", "#30303a", 1.1]} />
+      <hemisphereLight args={["#ffffff", "#8a8a90", 1.2]} />
       <directionalLight position={[-160, -220, 300]} intensity={1.6} />
       <directionalLight position={[220, 160, 120]} intensity={0.5} />
       <Scene {...props} />
@@ -154,7 +154,7 @@ function BedGrid({ bed }: { bed: Bed }) {
   useEffect(() => () => geometry.dispose(), [geometry]);
   return (
     <lineSegments geometry={geometry}>
-      <lineBasicMaterial color="#ffffff" transparent opacity={0.08} />
+      <lineBasicMaterial color="#111111" transparent opacity={0.08} />
     </lineSegments>
   );
 }
@@ -175,7 +175,7 @@ function BuildVolume({ bed, fits }: { bed: Bed; fits: boolean }) {
   useEffect(() => () => geometry.dispose(), [geometry]);
   return (
     <lineSegments geometry={geometry}>
-      <lineBasicMaterial color={fits ? "#ffffff" : "#EF4F52"} transparent opacity={fits ? 0.12 : 0.6} />
+      <lineBasicMaterial color={fits ? "#111111" : "#C62828"} transparent opacity={fits ? 0.18 : 0.6} />
     </lineSegments>
   );
 }

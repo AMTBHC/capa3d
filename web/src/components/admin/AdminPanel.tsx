@@ -116,7 +116,7 @@ function Login({ onLogin }: { onLogin: (token: string) => void }) {
       <h1 className="step-title" style={{ fontSize: 24 }}>Panel de Capa3D</h1>
       <p className="step-sub" style={{ marginBottom: 18 }}>Escribe la clave del panel. Está en <code>api/.env</code> como <code>CAPA3D_ADMIN_TOKEN</code>.</p>
       <input type="password" value={value} onChange={(e) => setValue(e.target.value)} placeholder="Clave" autoFocus required
-        style={{ width: "100%", padding: "14px 16px", borderRadius: 12, border: "1px solid rgba(255,255,255,.2)", background: "var(--surface-3)", color: "var(--text)", fontSize: 16 }} />
+        style={{ width: "100%", padding: "14px 16px", borderRadius: 12, border: "1px solid var(--line-3)", background: "var(--surface-3)", color: "var(--text)", fontSize: 16 }} />
       {error && <p style={{ color: "var(--bad)", fontSize: 14, margin: "10px 0 0" }}>{error}</p>}
       <button className="btn btn-primary" disabled={busy || !value.trim()} style={{ width: "100%", marginTop: 14, padding: 14, borderRadius: 12, fontSize: 15 }}>
         {busy ? "Entrando…" : "Entrar"}

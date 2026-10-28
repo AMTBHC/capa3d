@@ -1,9 +1,7 @@
-import type { Metadata } from "next";
-import { CollectionView } from "@/components/catalog/CollectionView";
+import { redirect } from "next/navigation";
 
-export const metadata: Metadata = { title: "Catálogo · Capa3D" };
-
+/** Enlaces viejos a una colección: el catálogo la muestra filtrada. */
 export default async function CollectionPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  return <CollectionView id={id} />;
+  redirect(`/catalogo?c=${encodeURIComponent(id)}`);
 }

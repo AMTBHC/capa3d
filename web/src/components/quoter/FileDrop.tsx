@@ -29,7 +29,7 @@ export function FileDrop({ fileName, status, upload, onFile }: Props) {
   const [over, setOver] = useState(false);
   const loaded = status === "ok" || status === "reading";
   const bad = status === "error" || status === "big" || status === "manual";
-  const border = over ? "var(--ac)" : bad ? "var(--warn)" : loaded ? "var(--line)" : "rgba(255,255,255,.22)";
+  const border = over ? "var(--ac)" : bad ? "var(--warn)" : loaded ? "var(--line)" : "var(--line-3)";
 
   return (
     <div
@@ -66,7 +66,7 @@ export function FileDrop({ fileName, status, upload, onFile }: Props) {
               {status === "reading" ? SUB.reading : upload.status === "error" ? "No pudimos subirlo para el precio exacto; te mostramos un estimado." : "Listo"}
             </div>
           </div>
-          <span style={{ flex: "none", fontSize: 13, fontWeight: 600, padding: "8px 12px", borderRadius: 10, border: "1px solid rgba(255,255,255,.18)" }}>Cambiar</span>
+          <span style={{ flex: "none", fontSize: 13, fontWeight: 600, padding: "8px 12px", borderRadius: 10, border: "1px solid var(--line-3)" }}>Cambiar</span>
         </>
       ) : (
         <>

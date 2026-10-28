@@ -285,6 +285,13 @@ class Shop:
             out.append({**_collection(c, cover), "count": len(products), "price_from": min(prices) if prices else None})
         return out
 
+    def all_products(self) -> list[dict]:
+        """Todos los productos visibles, para buscar y filtrar en el navegador."""
+        published = {c["id"] for c in self.store.collections() if c["published"]}
+        return [
+            self.product_out(p) for p in self.store.products() if p["collection_id"] in published and self.visible(p)
+        ]
+
     def featured(self, limit: int) -> list[dict]:
         """Productos con foto para la galería: se alternan las subsecciones para que haya de todo."""
         groups: dict[str, list[dict]] = {}

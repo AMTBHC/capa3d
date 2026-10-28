@@ -4,13 +4,14 @@
 import dynamic from "next/dynamic";
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { BADGE_LABEL, getProduct, imageUrl, personalize, prepareProduct, type CatalogProduct, type QuoteParams } from "@/lib/api";
+import { BADGE_LABEL, getCollection, getProduct, getServerFile, imageUrl, personalize, prepareProduct, type CatalogProduct, type QuoteParams } from "@/lib/api";
 import { COLORS, MATERIALS } from "@/lib/catalog";
 import { whatsappUrl } from "@/lib/config";
 import { money, num1 } from "@/lib/format";
 import { loadServerModel, type ServerPlateMesh } from "@/lib/serverModel";
 import { Icon, ICONS } from "../Icon";
 import { SiteHeader } from "../SiteHeader";
+import { grid, ProductCard } from "./Cards";
 import { FilamentPicker } from "../quoter/Options";
 import { OrderDialog } from "../quoter/OrderDialog";
 import { useCatalog, useServerQuote } from "../quoter/useServer";
@@ -20,7 +21,7 @@ const ModelViewer = dynamic(() => import("../quoter/ModelViewer"), { ssr: false 
 /** Texto de muestra del llavero mientras el cliente no escribe el suyo. */
 const SAMPLE_NAME = "Ana";
 const NAME_DEBOUNCE_MS = 600;
-/** Color inicial si el producto no sugiere uno: se ve bien en el visor oscuro. */
+/** Color inicial si el producto no sugiere uno. */
 const DEFAULT_COLOR = "Naranja";
 
 const box = { background: "var(--surface)", border: "1px solid var(--line)", borderRadius: 20, padding: 20 } as const;
@@ -41,11 +42,13 @@ export function ProductView({ id }: { id: string }) {
       <SiteHeader />
       <nav aria-label="Ruta" style={{ fontSize: 13, color: "var(--text-3)", marginBottom: 12 }}>
         <Link href="/catalogo" style={{ color: "var(--text-3)" }}>Catálogo</Link>
-        {p?.collection && <> › <Link href={`/catalogo/${p.collection.id}`} style={{ color: "var(--text-3)" }}>{p.collection.name}</Link></>}
+        {p?.collection && <> › <Link href={`/catalogo?c=${p.collection.id}`} style={{ color: "var(--text-3)" }}>{p.collection.name}</Link></>}
+        {p?.collection && p.subsection && <> › <Link href={`/catalogo?c=${p.collection.id}&s=${encodeURIComponent(p.subsection)}`} style={{ color: "var(--text-3)" }}>{p.subsection}</Link></>}
         {" "}› {p?.name ?? "…"}
       </nav>
       {missing && <div className="status status-warn">Este producto no existe o ya no está disponible. <Link href="/catalogo">Ver el catálogo</Link></div>}
-      {p && <Product p={p} />}
+      {p && <Product key={p.id} p={p} />}
+      {p && <Related p={p} />}
     </main>
   );
 }
@@ -105,22 +108,34 @@ function Product({ p }: { p: CatalogProduct }) {
   const fileId = p.personalize ? nameFile?.id : p.file_id ?? prepared ?? undefined;
   const generating = !!p.personalize && nameFile?.text !== text;
 
+  // Vista 3D solo en los llaveros con nombre (para ver el texto); los demás productos se muestran con fotos.
   const [plates, setPlates] = useState<{ fileId: string; plates: ServerPlateMesh[] } | null>(null);
   useEffect(() => {
-    if (!fileId) return;
+    if (!fileId || !p.personalize) return;
     let alive = true;
     loadServerModel(fileId).then((x) => alive && setPlates({ fileId, plates: x }), (e) => console.warn("No se pudo cargar el modelo", e));
     return () => {
       alive = false;
     };
-  }, [fileId]);
+  }, [fileId, p.personalize]);
+
+  // Medidas de los tamaños: del resumen del archivo, sin descargar la malla.
+  const [fileDims, setFileDims] = useState<{ dx: number; dy: number; dz: number } | null>(null);
+  useEffect(() => {
+    if (!fileId || p.personalize) return;
+    let alive = true;
+    getServerFile(fileId).then((f) => alive && f.plates[0] && setFileDims(f.plates[0]), () => {});
+    return () => {
+      alive = false;
+    };
+  }, [fileId, p.personalize]);
 
   const s = p.sizes[size];
   const params: QuoteParams = { material: MATERIALS[material].id, quality: "estandar", infill: 20, qty, unit: "mm", scale: s.scale, supports: true };
   const server = useServerQuote(fileId, params);
   const quote = server.status === "done" ? server.quote.price : null;
   const k = s.scale / 100;
-  const first = plates?.plates[0]?.analysis;
+  const first = p.personalize ? plates?.plates[0]?.analysis : fileDims;
   const viewerPlates = useMemo(() => plates?.plates.map((x) => ({ positions: x.positions, analysis: x.analysis, fits: true })) ?? [], [plates]);
 
   const needsName = !!p.personalize && !name.trim();
@@ -134,7 +149,7 @@ function Product({ p }: { p: CatalogProduct }) {
       <div style={{ display: "flex", flexDirection: "column", gap: 16, minWidth: 0 }}>
         <Gallery p={p} viewer={
           viewerPlates.length > 0 ? (
-            <ModelViewer plates={viewerPlates} selected={viewerPlates.length > 1 ? -1 : 0} k={k} color={COLORS[color].render} wire={false} autoRotate layerMm={0.2} bed={catalog.bed} />
+            <ModelViewer plates={viewerPlates} selected={0} k={k} color={COLORS[color].render} wire={false} autoRotate layerMm={0.2} bed={catalog.bed} />
           ) : null
         } />
         {p.description && <p className="lead" style={{ margin: 0, whiteSpace: "pre-line" }}>{p.description}</p>}
@@ -224,7 +239,7 @@ function Gallery({ p, viewer }: { p: CatalogProduct; viewer: React.ReactNode }) 
       <div style={{ position: "relative", aspectRatio: "1 / 1", borderRadius: 20, overflow: "hidden", background: "var(--surface-3)", border: "1px solid var(--line)" }}>
         {current?.img ? <img src={imageUrl(current.img)} alt={p.name} style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover" }} />
           : current ? viewer
-          : <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", color: "var(--text-3)" }}>Cargando el modelo…</div>}
+          : <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", color: "var(--text-3)" }}>{p.personalize ? "Generando tu llavero…" : "Foto próximamente"}</div>}
         {current?.key === "3d" && <span className="chip" style={{ position: "absolute", left: 12, bottom: 12 }}>Arrastra para girarlo</span>}
       </div>
       {views.length > 1 && (
@@ -238,5 +253,29 @@ function Gallery({ p, viewer }: { p: CatalogProduct; viewer: React.ReactNode }) 
         </div>
       )}
     </div>
+  );
+}
+
+const RELATED = 8;
+
+/** Más productos de la misma categoría (o de la colección, si la categoría tiene pocos). */
+function Related({ p }: { p: CatalogProduct }) {
+  const [items, setItems] = useState<CatalogProduct[]>([]);
+  useEffect(() => {
+    getCollection(p.collection_id).then((c) => {
+      const others = c.products.filter((x) => x.id !== p.id);
+      const same = others.filter((x) => x.subsection === p.subsection);
+      setItems([...same, ...others.filter((x) => x.subsection !== p.subsection)].slice(0, RELATED));
+    }, () => setItems([]));
+  }, [p.id, p.collection_id, p.subsection]);
+  if (!items.length) return null;
+  return (
+    <section style={{ marginTop: 56 }}>
+      <div style={{ display: "flex", flexWrap: "wrap", justifyContent: "space-between", alignItems: "baseline", gap: 12, marginBottom: 16 }}>
+        <h2 style={{ fontSize: 22, margin: 0 }}>También te puede gustar</h2>
+        <Link href={`/catalogo?c=${p.collection_id}`} style={{ fontSize: 14 }}>Ver todo {p.collection?.name ?? "la colección"} →</Link>
+      </div>
+      <div style={grid}>{items.map((x) => <ProductCard key={x.id} p={x} emoji={p.collection?.emoji ?? ""} />)}</div>
+    </section>
   );
 }

@@ -147,6 +147,10 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     def catalog_collections():
         return shop.collections_out()
 
+    @app.get("/api/catalog/products")
+    def all_products():
+        return shop.all_products()
+
     @app.get("/api/catalog/featured")
     def featured(limit: Annotated[int, Query(ge=1, le=60)] = 24):
         return shop.featured(limit)

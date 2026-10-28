@@ -14,7 +14,7 @@ function Placeholder({ emoji }: { emoji: string }) {
 
 export function CollectionCard({ c }: { c: CatalogCollection }) {
   return (
-    <Link href={`/catalogo/${c.id}`} className="tilt" style={{ display: "flex", flexDirection: "column", borderRadius: 20, overflow: "hidden", background: "var(--surface)", border: "1px solid var(--line)", textDecoration: "none", color: "var(--text)" }}>
+    <Link href={`/catalogo?c=${c.id}`} className="tilt" style={{ display: "flex", flexDirection: "column", borderRadius: 20, overflow: "hidden", background: "var(--surface)", border: "1px solid var(--line)", textDecoration: "none", color: "var(--text)" }}>
       <div style={{ position: "relative", aspectRatio: "1 / 1", background: "var(--surface-3)" }}>
         {c.cover ? <img src={imageUrl(c.cover)} alt="" loading="lazy" style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover" }} /> : <Placeholder emoji={c.emoji} />}
         <span style={{ position: "absolute", top: 10, right: 10, padding: "4px 10px", borderRadius: 99, fontSize: 12, fontWeight: 600, background: "var(--ac)", color: "var(--bg)" }}>Colección</span>
@@ -37,7 +37,7 @@ export function ProductCard({ p, emoji }: { p: CatalogProduct; emoji: string }) 
         {p.images[0] ? <img src={imageUrl(p.images[0])} alt={p.name} loading="lazy" style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover" }} /> : <Placeholder emoji={p.kind === "name_keychain" ? "🔑" : emoji} />}
         <span style={{ position: "absolute", top: 10, left: 10, display: "flex", flexWrap: "wrap", gap: 6 }}>
           {p.badges.map((b) => (
-            <span key={b} style={{ padding: "4px 9px", borderRadius: 99, fontSize: 11, fontWeight: 600, background: "rgba(11,11,13,.8)", border: "1px solid rgba(255,255,255,.15)" }}>{BADGE_LABEL[b]}</span>
+            <span key={b} style={{ padding: "4px 9px", borderRadius: 99, fontSize: 11, fontWeight: 600, background: "var(--glass)", border: "1px solid var(--line-2)" }}>{BADGE_LABEL[b]}</span>
           ))}
           {p.personalize && <span style={{ padding: "4px 9px", borderRadius: 99, fontSize: 11, fontWeight: 600, background: "var(--ac)", color: "var(--bg)" }}>Con tu nombre</span>}
         </span>

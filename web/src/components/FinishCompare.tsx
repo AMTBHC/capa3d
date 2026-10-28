@@ -19,13 +19,13 @@ export function FinishCompare() {
       <div style={{ flex: "1 1 420px", minWidth: 0, position: "relative", height: 340, borderRadius: 20, overflow: "hidden", background: "radial-gradient(circle at 50% 55%,rgba(255,106,26,.16),transparent 60%),var(--surface-3)" }}>
         <img src="/img/pieza-acabada.svg" alt="Pieza con acabado liso" style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "contain" }} />
         <img src="/img/pieza-cruda.svg" alt="Pieza cruda con líneas de capa" style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "contain", clipPath: `inset(0 ${100 - cmp}% 0 0)` }} />
-        <div style={{ position: "absolute", top: 0, bottom: 0, width: 2, background: "var(--text)", left: `${cmp}%`, boxShadow: "0 0 16px rgba(255,255,255,.6)" }}>
+        <div style={{ position: "absolute", top: 0, bottom: 0, width: 2, background: "var(--text)", left: `${cmp}%`, boxShadow: "0 0 0 1px var(--surface)" }}>
           <span style={{ position: "absolute", top: "50%", left: -19, width: 40, height: 40, marginTop: -20, borderRadius: "50%", background: "var(--text)", color: "var(--bg)", display: "flex", alignItems: "center", justifyContent: "center" }}>
             <Icon d={ICONS.arrows} size={20} stroke={2.2} />
           </span>
         </div>
-        <span className="mono" style={{ position: "absolute", left: 14, bottom: 14, fontSize: 11, letterSpacing: 1, padding: "6px 10px", borderRadius: 8, background: "rgba(11,11,13,.8)" }}>CRUDA</span>
-        <span className="mono" style={{ position: "absolute", right: 14, bottom: 14, fontSize: 11, letterSpacing: 1, padding: "6px 10px", borderRadius: 8, background: "rgba(11,11,13,.8)" }}>ACABADA</span>
+        <span className="mono" style={{ position: "absolute", left: 14, bottom: 14, fontSize: 11, letterSpacing: 1, padding: "6px 10px", borderRadius: 8, background: "var(--glass)" }}>CRUDA</span>
+        <span className="mono" style={{ position: "absolute", right: 14, bottom: 14, fontSize: 11, letterSpacing: 1, padding: "6px 10px", borderRadius: 8, background: "var(--glass)" }}>ACABADA</span>
       </div>
     </div>
   );

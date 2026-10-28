@@ -106,7 +106,7 @@ export function ViewerCard({ status, model, opts, k, plate, onPlate, fits, dims,
         {model && (
           <>
             <div style={{ position: "absolute", left: 12, right: 12, top: 12, display: "flex", gap: 8, justifyContent: "space-between", alignItems: "flex-start", pointerEvents: "none" }}>
-              <div role="group" aria-label="Vista" style={{ display: "flex", gap: 4, padding: 4, borderRadius: 14, background: "rgba(11,11,13,.75)", border: "1px solid rgba(255,255,255,.1)", pointerEvents: "auto" }}>
+              <div role="group" aria-label="Vista" style={{ display: "flex", gap: 4, padding: 4, borderRadius: 14, background: "var(--glass)", border: "1px solid var(--line-2)", pointerEvents: "auto" }}>
                 <ToolBtn on={!wire} onClick={() => setWire(false)} label="Sólido" />
                 <ToolBtn on={wire} onClick={() => setWire(true)} label="Malla" />
                 <ToolBtn on={auto} onClick={() => setAuto(!auto)} label="Girar" />
@@ -126,7 +126,7 @@ export function ViewerCard({ status, model, opts, k, plate, onPlate, fits, dims,
                   ))}
                 </div>
               )}
-              <span className="mono" style={{ fontSize: 11, letterSpacing: 1, color: "var(--text-3)", textAlign: "center", padding: "4px 10px", borderRadius: 8, background: "rgba(11,11,13,.6)" }}>
+              <span className="mono" style={{ fontSize: 11, letterSpacing: 1, color: "var(--text-3)", textAlign: "center", padding: "4px 10px", borderRadius: 8, background: "var(--glass)" }}>
                 {caption.toUpperCase()}{isExpanded ? " · ESC PARA CERRAR" : " · ARRASTRA PARA GIRAR"}
               </span>
             </div>
@@ -148,8 +148,8 @@ function ToolBtn({ on, onClick, label }: { on: boolean; onClick: () => void; lab
 
 function Overlay({ title, sub }: { title: string; sub?: string }) {
   return (
-    <div role="status" style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 12, background: "rgba(11,11,13,.75)", textAlign: "center", padding: 20 }}>
-      <span className="rot" style={{ width: 44, height: 44, borderRadius: "50%", border: "3px solid rgba(255,255,255,.12)", borderTopColor: "var(--ac)" }} />
+    <div role="status" style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 12, background: "var(--glass)", textAlign: "center", padding: 20 }}>
+      <span className="rot" style={{ width: 44, height: 44, borderRadius: "50%", border: "3px solid var(--line-2)", borderTopColor: "var(--ac)" }} />
       <span style={{ fontSize: 16, fontWeight: 600 }}>{title}</span>
       {sub && <span style={{ fontSize: 13, color: "var(--text-3)" }}>{sub}</span>}
     </div>
@@ -157,7 +157,7 @@ function Overlay({ title, sub }: { title: string; sub?: string }) {
 }
 
 const iconBtn: CSSProperties = {
-  width: 40, height: 40, borderRadius: 12, border: "1px solid rgba(255,255,255,.15)", background: "rgba(11,11,13,.75)",
+  width: 40, height: 40, borderRadius: 12, border: "1px solid var(--line-2)", background: "var(--glass)",
   color: "var(--text)", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", pointerEvents: "auto",
 };
 
@@ -165,6 +165,6 @@ const iconBtn: CSSProperties = {
 const plateTab = (on: boolean, fits: boolean): CSSProperties => ({
   padding: "6px 12px",
   fontSize: 12,
-  ...(on ? {} : { background: "rgba(11,11,13,.75)" }),
+  ...(on ? {} : { background: "var(--glass)" }),
   ...(fits || on ? {} : { borderColor: "var(--bad)" }),
 });
