@@ -180,6 +180,8 @@ function QuoteRow({ q, token }: { q: AdminQuote; token: string }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const quality = QUALITIES.find((x) => x.id === q.params.quality)?.name ?? q.params.quality;
+  // Archivo muy grande para el precio en línea: el cliente lo cotiza por WhatsApp.
+  const manual = q.error?.startsWith("Cotización por WhatsApp") ?? false;
   const when = new Date(q.requested_at ?? q.created_at).toLocaleString("es-CO", { dateStyle: "medium", timeStyle: "short" });
   const details = [
     `${q.params.material}${q.color ? ` ${q.color}` : ""}`,
@@ -215,7 +217,7 @@ function QuoteRow({ q, token }: { q: AdminQuote; token: string }) {
           {q.requested_at
             ? <span style={badge("var(--ok)")}>Pidió o consultó</span>
             : <span style={badge("var(--text-3)")}>Solo cotizó</span>}
-          {q.status === "failed" && <span style={badge("var(--bad)")}>Falló</span>}
+          {q.status === "failed" && (manual ? <span style={badge("var(--warn)")}>Cotizar a mano</span> : <span style={badge("var(--bad)")}>Falló</span>)}
           {q.status === "pending" && <span style={badge("var(--warn)")}>Laminando</span>}
           <span style={{ fontSize: 13, color: "var(--text-3)" }}>{when}</span>
         </div>

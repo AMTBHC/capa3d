@@ -42,6 +42,8 @@ class FileOut(BaseModel):
     size: int
     plates: list[PlateSummary]
     info: ProjectInfoOut
+    # Por qué se cotiza por WhatsApp (muy grande); None si se cotiza en línea.
+    review: str | None = None
 
 
 class QuoteRequest(BaseModel):
@@ -97,6 +99,8 @@ class QuoteOut(BaseModel):
     error: str | None = None
     created_at: str
     valid_until: str
+    # Muy grande para cotizarlo en línea: el motivo. No trae precio.
+    review: str | None = None
 
 
 class AdminQuote(BaseModel):

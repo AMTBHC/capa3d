@@ -12,6 +12,7 @@ const LABEL: Record<PriceStage, string> = {
   exact: "Precio exacto",
   failed: "Precio estimado",
   nofit: "No cabe en la impresora",
+  review: "Archivo grande",
 };
 
 /** En celular, el precio queda visible abajo mientras se eligen las opciones del cotizador. */
@@ -51,11 +52,11 @@ export function MobilePriceBar({ total, stage }: { total: number; stage: PriceSt
           {busy && <span className="spin" aria-hidden="true" />}
           {LABEL[stage]}
         </div>
-        <div className="display" style={{ fontSize: 22, fontWeight: 700, opacity: busy ? 0.6 : 1 }}>
-          {stage === "exact" ? "" : "≈ "}${money(total)} <span className="mono muted" style={{ fontSize: 12, fontWeight: 400 }}>COP</span>
+        <div className="display" style={{ fontSize: stage === "review" ? 16 : 22, fontWeight: 700, opacity: busy ? 0.6 : 1 }}>
+          {stage === "review" ? "Cotización por WhatsApp" : <>{stage === "exact" ? "" : "≈ "}${money(total)} <span className="mono muted" style={{ fontSize: 12, fontWeight: 400 }}>COP</span></>}
         </div>
       </div>
-      <a href="#precio" className="btn btn-primary" style={{ padding: "12px 16px", borderRadius: 12, fontSize: 14 }}>Ver y pedir</a>
+      <a href="#precio" className="btn btn-primary" style={{ padding: "12px 16px", borderRadius: 12, fontSize: 14 }}>{stage === "review" ? "Ver" : "Ver y pedir"}</a>
     </div>
   );
 }

@@ -26,6 +26,13 @@ from .settings import Settings
 from .slicer import PrusaSlicer, SliceOptions, SlicerError
 from .store import Store
 
+# Error de las cotizaciones que no se laminan por ser muy grandes: el cliente escribe por WhatsApp.
+REVIEW_PREFIX = "Cotización por WhatsApp: "
+
+
+def _review(error: str | None) -> str | None:
+    return error[len(REVIEW_PREFIX) :] if error and error.startswith(REVIEW_PREFIX) else None
+
 
 class UploadError(ValueError):
     def __init__(self, message: str, status: int = 400):
@@ -161,7 +168,8 @@ class QuoteService:
         if row is None:
             raise KeyError("file")
         row = self.with_colors(row)
-        return {"id": row["id"], "name": row["name"], "format": row["format"], "size": row["size"], **row["summary"]}
+        out = {"id": row["id"], "name": row["name"], "format": row["format"], "size": row["size"], **row["summary"]}
+        return {**out, "review": self.review_reason(row)}
 
     def plate_stl(self, file_id: str, plate_id: int) -> Path:
         if self.store.get_file(file_id) is None:
@@ -183,8 +191,34 @@ class QuoteService:
             raise UploadError("Archivo no encontrado", 404)
         return file
 
+    def review_reason(self, file: dict, req: QuoteRequest | None = None) -> str | None:
+        """Por qué un archivo se cotiza por WhatsApp en vez de en línea; None si se cotiza aquí."""
+        lim = self.catalog.limits
+        plates = file["summary"]["plates"]
+        if len(plates) > lim.max_plates:
+            return f"tiene {len(plates)} camas (cotizamos en línea hasta {lim.max_plates})"
+        if file["size"] > lim.max_file_mb * 1024 * 1024:
+            return f"pesa {file['size'] / 1024 / 1024:.0f} MB (cotizamos en línea hasta {lim.max_file_mb:g} MB)"
+        if req is not None:
+            k = UNIT_MM[req.unit] * req.scale / 100
+            bed = self.catalog.printer.bed
+            if not all(_fits([p["dx"] * k, p["dy"] * k, p["dz"] * k], bed) for p in plates):
+                return None  # la cotización dirá que no cabe
+            mat, quality = self.catalog.materials[req.material], self.catalog.qualities[req.quality]
+            hours = sum(
+                estimate_usage(
+                    p["volume_cm3"] * k**3, p["area_cm2"] * k**2, mat.density, quality.flow, req.infill
+                ).print_hours
+                for p in plates
+            )
+            if hours > lim.max_print_hours:
+                return (
+                    f"tardaría unas {hours:.0f} horas en imprimirse (cotizamos en línea hasta {lim.max_print_hours:g})"
+                )
+        return None
+
     def create_quote(self, req: QuoteRequest) -> dict:
-        self.validate(req)
+        file = self.validate(req)
         params = req.model_dump()
         # El color no cambia el precio: no forma parte de la clave de caché.
         key_params = {k: v for k, v in params.items() if k != "color"}
@@ -195,7 +229,11 @@ class QuoteService:
         quote_id = "Q" + secrets.token_hex(4).upper()
         valid = datetime.now(UTC) + timedelta(days=self.catalog.pricing.quote_valid_days)
         self.store.add_quote(quote_id, req.file_id, params, key, valid.isoformat(timespec="seconds"))
-        self.pool.submit(self._run_quote, quote_id)
+        if reason := self.review_reason(file, req):
+            # Sin laminar: el archivo queda en el panel y el cliente escribe por WhatsApp.
+            self.store.finish_quote(quote_id, None, REVIEW_PREFIX + reason)
+        else:
+            self.pool.submit(self._run_quote, quote_id)
         return self.store.get_quote(quote_id)
 
     def _run_quote(self, quote_id: str) -> None:
@@ -347,6 +385,7 @@ class QuoteService:
             "error": q["error"],
             "created_at": q["created_at"],
             "valid_until": q["valid_until"],
+            "review": _review(q["error"]),
         }
 
     # Administración

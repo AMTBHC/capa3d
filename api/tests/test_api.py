@@ -186,3 +186,29 @@ def test_cambiar_cantidad_no_vuelve_a_laminar(client):
     # Otro relleno sí cambia el G-code.
     wait_quote(client, client.post("/api/quotes", json=quote_body(f["id"], infill=60)).json()["id"])
     assert len(calls) == 2
+
+
+def test_archivo_muy_grande_se_cotiza_por_whatsapp(client_no_slicer):
+    from .builders import bambu_project
+
+    service = client_no_slicer.app.state.service
+    service.catalog.limits.max_plates = 1
+    f = upload(client_no_slicer, "proyecto.3mf", bambu_project()).json()
+    assert "camas" in f["review"]
+    q = client_no_slicer.post("/api/quotes", json=quote_body(f["id"])).json()
+    # Sin precio y sin laminar: queda en el panel para revisarlo.
+    assert q["status"] == "failed" and q["price"] is None and "camas" in q["review"]
+    assert client_no_slicer.get("/api/catalog").json()["limits"]["max_plates"] == 1
+
+
+def test_impresion_muy_larga_se_cotiza_por_whatsapp(client_no_slicer):
+    service = client_no_slicer.app.state.service
+    f = upload(client_no_slicer, "cubo.stl", binary_stl(cube(100))).json()
+    assert f["review"] is None
+    service.catalog.limits.max_print_hours = 1
+    q = client_no_slicer.post("/api/quotes", json=quote_body(f["id"], infill=100)).json()
+    assert "horas" in q["review"] and q["price"] is None
+    normal = wait_quote(
+        client_no_slicer, client_no_slicer.post("/api/quotes", json=quote_body(f["id"], scale=10)).json()["id"]
+    )
+    assert normal["review"] is None and normal["price"]

@@ -100,6 +100,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             "slicing": service.can_slice,
             "shipping": catalog.shipping.model_dump(),
             "payments": wompi.enabled,
+            "limits": catalog.limits.model_dump(),
         }
 
     @app.post("/api/files", response_model=FileOut, status_code=201)

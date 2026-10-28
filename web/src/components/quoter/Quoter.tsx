@@ -111,10 +111,18 @@ export function Quoter() {
       ? { material: material.id, quality: quality.id, infill: opts.infill, qty, unit, scale, supports, multicolor }
       : null;
   const server = useServerQuote(file.upload.file?.id, params);
+  // Archivos muy grandes no reciben precio en línea: se cotizan por WhatsApp.
+  const lim = catalog.limits;
+  const review =
+    (model && lim && model.plates.length > lim.maxPlates ? `tiene ${model.plates.length} camas (cotizamos en línea hasta ${lim.maxPlates})` : null) ??
+    (model && lim && file.fileSize > lim.maxFileMb * 1024 * 1024 ? `pesa ${Math.round(file.fileSize / 1024 / 1024)} MB (cotizamos en línea hasta ${lim.maxFileMb} MB)` : null) ??
+    file.upload.file?.review ??
+    (server.status === "failed" ? server.quote?.review : null) ??
+    null;
   const quote = (server.status === "done" && fromServer(server.quote, plates.map((p) => p.plate.id))) || estimate;
   const fileOptions = model ? optionsFromFile(model.info) : {};
 
-  const stage = priceStage(model, file.upload.status, server, report?.fits ?? true);
+  const stage = priceStage(model, file.upload.status, server, report?.fits ?? true, review);
   const dims = plates.length ? plates.map((p) => p.metrics) : [SAMPLE_MODEL];
   const onQty = (q: number) => setQty(Math.min(printer.maxQty, Math.max(1, q)));
 
@@ -152,6 +160,7 @@ export function Quoter() {
             shipping={catalog.shipping}
             colors={colors}
             fileFilaments={model?.info.filaments ?? []}
+            review={review}
           />
         </aside>
 

@@ -35,6 +35,8 @@ export interface ServerFile {
     infill: number | null;
     filaments: { type: string; color: string }[];
   };
+  /** Muy grande para cotizarlo en línea: el motivo. */
+  review?: string | null;
 }
 
 export interface QuoteParams {
@@ -73,6 +75,8 @@ export interface ServerQuote {
   error: string | null;
   created_at: string;
   valid_until: string;
+  /** Muy grande para cotizarlo en línea: el motivo (no trae precio). */
+  review?: string | null;
 }
 
 export interface Shipping {
@@ -88,6 +92,8 @@ export interface ServerCatalog {
   shipping: Shipping | null;
   /** Pago en línea con Wompi disponible. */
   payments: boolean;
+  /** Más allá de esto no hay precio en línea: se cotiza por WhatsApp. */
+  limits: { maxPlates: number; maxFileMb: number } | null;
 }
 
 /** Igual que normalize_city en la API: sin tildes, minúsculas y espacios simples. */
@@ -130,6 +136,7 @@ export async function fetchCatalog(): Promise<ServerCatalog> {
     slicing: boolean;
     shipping?: Shipping;
     payments?: boolean;
+    limits?: { max_plates: number; max_file_mb: number };
   }>("/api/catalog");
   const pricePerGram = { ...pricing.pricePerGram };
   for (const id of Object.keys(pricePerGram) as MaterialId[]) {
@@ -148,6 +155,7 @@ export async function fetchCatalog(): Promise<ServerCatalog> {
     slicing: c.slicing,
     shipping: c.shipping ?? null,
     payments: !!c.payments,
+    limits: c.limits ? { maxPlates: c.limits.max_plates, maxFileMb: c.limits.max_file_mb } : null,
   };
 }
 
@@ -176,7 +184,7 @@ export function getQuote(id: string): Promise<ServerQuote> {
   return request<ServerQuote>(`/api/quotes/${id}`);
 }
 
-export const defaultCatalog: ServerCatalog = { rates: pricing, bed: printer.bed, slicing: false, shipping: null, payments: false };
+export const defaultCatalog: ServerCatalog = { rates: pricing, bed: printer.bed, slicing: false, shipping: null, payments: false, limits: null };
 
 /** El cliente tocó "Pedir por WhatsApp": la cotización queda marcada en el panel. */
 export function markRequested(quoteId: string, color: string): void {
