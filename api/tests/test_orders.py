@@ -32,6 +32,7 @@ CUSTOMER = {
 
 
 def make_client(tmp_path, **kw) -> TestClient:
+    kw.setdefault("catalog_import", None)
     settings = Settings(
         data_dir=tmp_path, admin_token="clave", slicer_enabled=False, site_url="https://capa3d.co", _env_file=None, **kw
     )

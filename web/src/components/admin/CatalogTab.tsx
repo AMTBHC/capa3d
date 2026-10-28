@@ -56,6 +56,17 @@ export function CatalogTab({ token, onUnauthorized }: Props) {
   };
 
   // El editor guarda en la API y luego avisa; el producto abierto se refresca con la respuesta.
+  const publishAll = async (c: AdminCollection) => {
+    const drafts = c.products.filter((p) => !p.published && p.ready);
+    if (!confirm(`¿Publicar ${drafts.length} productos de ${c.name}? Revisa antes que tengas permiso para venderlos.`)) return;
+    try {
+      for (const p of drafts) await saveProduct(token, { ...toInput(p), published: true }, p.id);
+    } catch (err) {
+      fail(err);
+    }
+    load();
+  };
+
   const productSaved = (p: AdminProduct) => {
     setEditProd((x) => (x ? { ...x, p } : x));
     load();
@@ -89,13 +100,18 @@ export function CatalogTab({ token, onUnauthorized }: Props) {
                 <div style={{ fontWeight: 700, fontSize: 17 }}>{c.emoji} {c.name} {!c.published && <span style={{ fontSize: 12, color: "var(--warn)" }}>· oculta</span>}</div>
                 <div style={{ fontSize: 13, color: "var(--text-3)" }}>{c.products.length} productos · {c.products.filter((p) => p.published && p.ready).length} visibles</div>
               </div>
-              <div style={{ display: "flex", gap: 8 }}>
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+                {c.products.some((p) => !p.published && p.ready) && (
+                  <button className="chip-btn" onClick={() => publishAll(c)}>Publicar borradores ({c.products.filter((p) => !p.published && p.ready).length})</button>
+                )}
                 <button className="chip-btn" onClick={() => setEditCol(c)}>Editar</button>
                 <button className="chip-btn" onClick={() => setEditProd({ p: null, collection: c.id })}>+ Producto</button>
               </div>
             </div>
             {c.products.length > 0 && (
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))", gap: 10, marginTop: 14 }}>
+              <details open={c.products.length <= 12} style={{ marginTop: 14 }}>
+              <summary style={{ cursor: "pointer", fontSize: 13, color: "var(--text-3)" }}>Productos ({c.products.length})</summary>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))", gap: 10, marginTop: 10 }}>
                 {c.products.map((p) => (
                   <button key={p.id} onClick={() => setEditProd({ p, collection: c.id })}
                     style={{ display: "flex", gap: 10, alignItems: "center", padding: 8, borderRadius: 12, border: "1px solid var(--line)", background: "var(--surface-3)", color: "var(--text)", textAlign: "left", cursor: "pointer" }}>
@@ -105,12 +121,13 @@ export function CatalogTab({ token, onUnauthorized }: Props) {
                     <span style={{ minWidth: 0 }}>
                       <span style={{ display: "block", fontWeight: 600, fontSize: 14, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{p.name}</span>
                       <span style={{ fontSize: 12, color: !p.ready ? "var(--bad)" : p.published ? "var(--ok)" : "var(--text-3)" }}>
-                        {!p.ready ? "Falta el modelo" : p.published ? `Publicado${p.price_from ? ` · $${money(p.price_from)}` : ""}` : "Borrador"}
+                        {!p.ready ? "Falta el modelo" : p.published ? `Publicado${p.price_from ? ` · $${money(p.price_from)}` : ""}` : "Borrador (sin publicar)"}
                       </span>
                     </span>
                   </button>
                 ))}
               </div>
+              </details>
             )}
           </section>
         ))}
@@ -125,6 +142,11 @@ export function CatalogTab({ token, onUnauthorized }: Props) {
       )}
     </>
   );
+}
+
+function toInput(p: AdminProduct): ProductInput {
+  const { collection_id, name, subsection, description, badges, sizes, default_color, sort, published } = p;
+  return { collection_id, name, subsection, description, badges, sizes, default_color, sort, published };
 }
 
 function Modal({ title, onClose, children }: { title: string; onClose: () => void; children: React.ReactNode }) {
@@ -316,7 +338,11 @@ function ProductEditor({ token, p, collectionId, collections, onSaved, onDeleted
         <div style={{ borderTop: "1px solid var(--line)", marginTop: 18, paddingTop: 18, display: "flex", flexDirection: "column", gap: 16 }}>
           {p.kind === "model" ? (
             <div>
-              <div style={{ fontSize: 13, color: "var(--text-2)", marginBottom: 6 }}>Modelo 3D {p.file_id ? <span style={{ color: "var(--ok)" }}>· cargado</span> : <span style={{ color: "var(--bad)" }}>· falta, sin él no se publica</span>}</div>
+              <div style={{ fontSize: 13, color: "var(--text-2)", marginBottom: 6 }}>
+                Modelo 3D {p.file_id ? <span style={{ color: "var(--ok)" }}>· cargado</span>
+                  : p.ready ? <span style={{ color: "var(--text-3)" }}>· se descarga de Drive la primera vez que alguien abre el producto</span>
+                  : <span style={{ color: "var(--bad)" }}>· falta, sin él no se publica</span>}
+              </div>
               <label className="chip-btn" style={{ display: "inline-block" }}>
                 {busy === "model" ? "Subiendo y revisando…" : p.file_id ? "Reemplazar archivo" : "Subir STL / 3MF / OBJ / STEP"}
                 <input type="file" accept={MODEL_ACCEPT} hidden disabled={!!busy} onChange={(e) => { const file = e.target.files?.[0]; if (file) run("model", () => uploadProductModel(token, p.id, file)); }} />

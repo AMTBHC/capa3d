@@ -50,4 +50,4 @@ export function ProductCard({ p, emoji }: { p: CatalogProduct; emoji: string }) 
   );
 }
 
-export const grid = { display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))", gap: 16 } as const;
+export const grid = { display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(clamp(150px, 40vw, 220px), 1fr))", gap: 16 } as const;

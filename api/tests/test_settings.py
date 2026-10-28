@@ -12,3 +12,10 @@ def test_rutas_relativas_se_vuelven_absolutas(monkeypatch, tmp_path):
     s = Settings(_env_file=None)
     assert s.data_dir == tmp_path / "data"
     assert s.data_dir.is_absolute()
+
+
+def test_importacion_vacia_desactiva(monkeypatch):
+    monkeypatch.setenv("CAPA3D_CATALOG_IMPORT", "")
+    assert Settings(_env_file=None).catalog_import is None
+    monkeypatch.setenv("CAPA3D_CATALOG_IMPORT", "lista.json")
+    assert Settings(_env_file=None).catalog_import.is_absolute()

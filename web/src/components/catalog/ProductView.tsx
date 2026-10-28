@@ -4,7 +4,7 @@
 import dynamic from "next/dynamic";
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { BADGE_LABEL, getProduct, imageUrl, personalize, type CatalogProduct, type QuoteParams } from "@/lib/api";
+import { BADGE_LABEL, getProduct, imageUrl, personalize, prepareProduct, type CatalogProduct, type QuoteParams } from "@/lib/api";
 import { COLORS, MATERIALS } from "@/lib/catalog";
 import { whatsappUrl } from "@/lib/config";
 import { money, num1 } from "@/lib/format";
@@ -20,6 +20,8 @@ const ModelViewer = dynamic(() => import("../quoter/ModelViewer"), { ssr: false 
 /** Texto de muestra del llavero mientras el cliente no escribe el suyo. */
 const SAMPLE_NAME = "Ana";
 const NAME_DEBOUNCE_MS = 600;
+/** Color inicial si el producto no sugiere uno: se ve bien en el visor oscuro. */
+const DEFAULT_COLOR = "Naranja";
 
 const box = { background: "var(--surface)", border: "1px solid var(--line)", borderRadius: 20, padding: 20 } as const;
 
@@ -50,9 +52,12 @@ export function ProductView({ id }: { id: string }) {
 
 function Product({ p }: { p: CatalogProduct }) {
   const catalog = useCatalog();
-  const [size, setSize] = useState(Math.min(1, p.sizes.length - 1));
+  const [size, setSize] = useState(() => Math.max(0, p.sizes.findIndex((x) => x.scale === 100)));
   const [material, setMaterial] = useState(0);
-  const [color, setColor] = useState(() => Math.max(0, COLORS.findIndex((c) => c.name === p.default_color)));
+  const [color, setColor] = useState(() => {
+    const i = COLORS.findIndex((c) => c.name === (p.default_color || DEFAULT_COLOR));
+    return Math.max(0, i);
+  });
   const [qty, setQty] = useState(1);
   const [name, setName] = useState("");
   const [nameFile, setNameFile] = useState<{ text: string; id: string } | null>(null);
@@ -82,7 +87,22 @@ function Product({ p }: { p: CatalogProduct }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [p.id, p.personalize, text]);
 
-  const fileId = p.personalize ? nameFile?.id : p.file_id ?? undefined;
+  // Productos importados: el modelo se baja la primera vez que alguien abre el producto.
+  const [prepared, setPrepared] = useState<string | null>(null);
+  const [prepareError, setPrepareError] = useState("");
+  useEffect(() => {
+    if (p.personalize || p.file_id) return;
+    let alive = true;
+    prepareProduct(p.id).then(
+      (fid) => alive && setPrepared(fid),
+      (e) => alive && setPrepareError(e instanceof Error ? e.message : String(e)),
+    );
+    return () => {
+      alive = false;
+    };
+  }, [p.id, p.personalize, p.file_id]);
+
+  const fileId = p.personalize ? nameFile?.id : p.file_id ?? prepared ?? undefined;
   const generating = !!p.personalize && nameFile?.text !== text;
 
   const [plates, setPlates] = useState<{ fileId: string; plates: ServerPlateMesh[] } | null>(null);
@@ -166,10 +186,13 @@ function Product({ p }: { p: CatalogProduct }) {
         <div style={box}>
           <div style={{ fontSize: 13, color: "var(--text-3)" }}>Precio de impresión</div>
           <div className="display" style={{ fontSize: 34, fontWeight: 700, margin: "4px 0 2px" }} aria-live="polite">
-            {quote ? `$${money(quote.total)}` : server.status === "failed" ? "—" : <span className="indeterminate" style={{ display: "inline-block", width: 140, height: 8, borderRadius: 99 }} />}
+            {quote ? `$${money(quote.total)}` : server.status === "failed" || prepareError ? "—" : <span className="indeterminate" style={{ display: "inline-block", width: 140, height: 8, borderRadius: 99 }} />}
           </div>
           {quote && qty > 1 && <div style={{ fontSize: 13, color: "var(--text-3)" }}>${money(quote.unit_price)} c/u</div>}
-          {server.status === "failed" && <div className="status status-warn" style={{ marginTop: 8 }}>No pudimos calcular el precio. Escríbenos por WhatsApp.</div>}
+          {prepareError
+            ? <div className="status status-warn" style={{ marginTop: 8 }}>{prepareError}</div>
+            : server.status === "failed" && <div className="status status-warn" style={{ marginTop: 8 }}>No pudimos calcular el precio. Escríbenos por WhatsApp.</div>}
+          {!fileId && !prepareError && !p.personalize && <div style={{ fontSize: 12, color: "var(--text-3)", marginTop: 6 }}>Preparando el modelo para cotizarlo…</div>}
           <div style={{ fontSize: 12, color: "var(--text-4)", marginTop: 6 }}>El envío se calcula con tu ciudad. Confirmamos antes de que pagues.</div>
           <button className="btn btn-primary glow" style={{ width: "100%", marginTop: 14, padding: 15, borderRadius: 16, fontSize: 16 }} disabled={!canOrder} onClick={() => setOrdering(true)}>
             {needsName ? "Escribe el nombre para pedirlo" : "Pedirlo"}
