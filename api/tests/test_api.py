@@ -161,3 +161,12 @@ def test_varios_colores_cobra_los_cambios(client_no_slicer):
     assert multi["price"]["purge_grams"] == pytest.approx(50 * 0.35 * 1.24, rel=0.01)
     assert single["price"]["color_changes"] == 0
     assert multi["price"]["total"] > single["price"]["total"]
+
+
+def test_cambios_de_color_por_altura_suman(client_no_slicer):
+    from .builders import layer_change_3mf
+
+    f = upload(client_no_slicer, "placa.3mf", layer_change_3mf()).json()
+    assert f["plates"][0]["colors"] == 2 and f["plates"][0]["color_layer_changes"] == 2
+    q = wait_quote(client_no_slicer, client_no_slicer.post("/api/quotes", json=quote_body(f["id"])).json()["id"])
+    assert q["price"]["color_changes"] == 2

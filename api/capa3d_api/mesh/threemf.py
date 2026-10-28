@@ -21,7 +21,7 @@ UNIT_MM = {"micron": 0.001, "millimeter": 1.0, "centimeter": 10.0, "inch": 25.4,
 
 IDENTITY = np.array([[1, 0, 0], [0, 1, 0], [0, 0, 1], [0, 0, 0]], dtype=np.float64)
 
-WANTED = re.compile(r"\.(model|rels|config|json)$", re.I)
+WANTED = re.compile(r"\.(model|rels|config|json|xml)$", re.I)
 
 
 class ThreeMfError(ValueError):
@@ -234,6 +234,8 @@ def parse_3mf(data: bytes, bed: tuple[float, float, float], max_unzipped: int = 
                 subtype = _attr(tag.group(1), "subtype") or "normal_part"
                 parts[(oid, pid)] = (subtype, _int(_metadata(part).get("extruder")))
 
+    volumes = _prusa_volumes(text("Metadata/Slic3r_PE_model.config"))
+
     def emit(path: str, oid: str, mat: np.ndarray, out: list[np.ndarray], cols: list[np.ndarray], depth: int,
              filament: int, root: str | None) -> None:  # fmt: skip
         if depth > 32:
@@ -245,11 +247,23 @@ def parse_3mf(data: bytes, bed: tuple[float, float, float], max_unzipped: int = 
         if obj.vertices is not None and obj.triangles is not None and len(obj.triangles):
             tri = obj.triangles
             if tri.max() < len(obj.vertices):
+                base = np.full(len(tri), filament, dtype=np.int16)
+                keep = None
+                if path == root_path and oid in volumes:
+                    # PrusaSlicer: un mismo objeto guarda sus volúmenes como rangos de triángulos.
+                    obj_f, vols = volumes[oid]
+                    base[:] = obj_f or filament
+                    keep = np.zeros(len(tri), dtype=bool)
+                    for first, last, printed, f in vols:
+                        base[first : last + 1] = f or obj_f or filament
+                        keep[first : last + 1] = printed
+                paint = obj.paint if obj.paint is not None and len(obj.paint) == len(tri) else None
+                c = np.where(paint > 0, paint, base) if paint is not None else base
+                if keep is not None and keep.any():
+                    tri, c = tri[keep], c[keep]
                 v = obj.vertices @ mat[:3] + mat[3]
                 out.append(v[tri] * unit)
-                base = np.full(len(tri), filament, dtype=np.int16)
-                paint = obj.paint if obj.paint is not None and len(obj.paint) == len(tri) else None
-                cols.append(np.where(paint > 0, paint, base) if paint is not None else base)
+                cols.append(c)
         for cpath, cid, cmat in obj.components:
             f = filament
             if root is not None:
@@ -301,9 +315,59 @@ def parse_3mf(data: bytes, bed: tuple[float, float, float], max_unzipped: int = 
             if plate:
                 plate.sliced = SlicedPlate(seconds=_pos(md.get("prediction")), grams=_pos(md.get("weight")))
 
+    for plate_id, changes in _layer_color_changes(text).items():
+        target = plates if plate_id is None else [p for p in plates if p.id == plate_id]
+        for p in target:
+            p.layer_color_changes = changes
+
     info = _project_settings(text)
     info.plates_from = plates_from
     return Project(plates=plates, info=info)
+
+
+def _prusa_volumes(config: str | None) -> dict[str, tuple[int, list[tuple[int, int, bool, int]]]]:
+    """Volúmenes de PrusaSlicer por objeto: (filamento del objeto, [(primero, último, se imprime, filamento)])."""
+    out: dict[str, tuple[int, list[tuple[int, int, bool, int]]]] = {}
+    for om in re.finditer(r"<object\b([^>]*)>([\s\S]*?)</object>", config or ""):
+        oid = _attr(om.group(1), "id")
+        if not oid:
+            continue
+        head = re.split(r"<volume\b", om.group(2))[0]
+        vols = []
+        for vm in re.finditer(r"<volume\b([^>]*)>([\s\S]*?)</volume>", om.group(2)):
+            first, last = _int(_attr(vm.group(1), "firstid")), _int(_attr(vm.group(1), "lastid"))
+            md = _metadata(vm.group(2))
+            printed = md.get("volume_type", "ModelPart") == "ModelPart" and md.get("modifier", "0") != "1"
+            vols.append((first, last, printed, _int(md.get("extruder"))))
+        if vols:
+            out[oid] = (_int(_metadata(head).get("extruder")), vols)
+    return out
+
+
+def _layer_color_changes(text) -> dict[int | None, int]:
+    """
+    Cambios de color a una altura ("cambiar filamento en esta capa") por cama; None = todas.
+    Bambu/Orca los guardan por cama; PrusaSlicer, para todo el proyecto.
+    """
+    out: dict[int | None, int] = {}
+    bambu = text("Metadata/custom_gcode_per_layer.xml")
+    for pm in re.finditer(r"<plate>([\s\S]*?)</plate>", bambu or ""):
+        info = re.search(r'<plate_info\b[^>]*\bid="(\d+)"', pm.group(1))
+        n = sum(1 for lm in re.finditer(r"<layer\b([^>]*)>", pm.group(1)) if _is_color_change(lm.group(1)))
+        if info and n:
+            out[int(info.group(1))] = n
+    prusa = text("Metadata/Prusa_Slicer_custom_gcode_per_print_z.xml")
+    n = sum(1 for cm in re.finditer(r"<code\b([^>]*)>", prusa or "") if _is_color_change(cm.group(1)))
+    if n:
+        out[None] = n
+    return out
+
+
+def _is_color_change(attrs: str) -> bool:
+    # Tipo 0 = cambio de color (M600); también cuenta un cambio de herramienta (T1, T2…).
+    kind = _attr(attrs, "type")
+    gcode = (_attr(attrs, "gcode") or "").upper()
+    return kind == "0" or "M600" in gcode or bool(re.fullmatch(r"T\d+", gcode.strip()))
 
 
 def _mean_flush(matrix, multiplier) -> float | None:

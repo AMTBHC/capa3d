@@ -109,6 +109,8 @@ class QuoteService:
             write_stl(tris, folder / f"plate_{plate.id}.stl")
             a = analyze(tris)
             colors, mix = color_profile(tris, plate.colors)
+            if plate.layer_color_changes:
+                colors = max(colors, 2)
             plates.append(
                 {
                     "id": plate.id,
@@ -117,6 +119,7 @@ class QuoteService:
                     **asdict(a),
                     "colors": colors,
                     "color_mix_mm": round(mix, 2),
+                    "color_layer_changes": plate.layer_color_changes,
                     "sliced_seconds": plate.sliced.seconds if plate.sliced else None,
                     "sliced_grams": plate.sliced.grams if plate.sliced else None,
                 }
@@ -135,10 +138,10 @@ class QuoteService:
             )
         except (ModelError, OSError):
             return row
-        by_id = {p.id: color_profile(p.triangles, p.colors) for p in project.plates}
+        by_id = {p.id: (*color_profile(p.triangles, p.colors), p.layer_color_changes) for p in project.plates}
         for p in plates:
-            colors, mix = by_id.get(p["id"], (1, 0.0))
-            p.update(colors=colors, color_mix_mm=round(mix, 2))
+            colors, mix, layer = by_id.get(p["id"], (1, 0.0, 0))
+            p.update(colors=max(colors, 2) if layer else colors, color_mix_mm=round(mix, 2), color_layer_changes=layer)
         row["summary"].setdefault("info", {})["flush_mm3"] = project.info.flush_mm3
         self.store.update_file_summary(row["id"], row["summary"])
         return row
@@ -260,7 +263,7 @@ class QuoteService:
     def _color_changes(self, usage: PlateUsage, plate: dict, k: float, layer: float, density: float, file: dict):
         """Suma la purga y el tiempo de cada cambio de filamento de una cama de varios colores."""
         mc = self.catalog.multicolor
-        changes = math.ceil(plate.get("color_mix_mm", 0) * k / layer)
+        changes = math.ceil(plate.get("color_mix_mm", 0) * k / layer) + plate.get("color_layer_changes", 0)
         flush = file["summary"].get("info", {}).get("flush_mm3") or mc.purge_mm3
         purge = changes * flush / 1000 * density
         return PlateUsage(

@@ -65,4 +65,6 @@ echo "▶ Iniciando el sitio… se abrirá en http://localhost:3000"
 echo "  Panel de pedidos: http://localhost:3000/admin   Clave: $ADMIN"
 echo
 (sleep 6 && abrir http://localhost:3000 && abrir http://localhost:3000/admin) &
+# Sin la compilación anterior: tras actualizar el código, el navegador recibiría la versión vieja.
+rm -rf web/.next
 cd web && npm run dev
