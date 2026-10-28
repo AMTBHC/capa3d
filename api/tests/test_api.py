@@ -131,3 +131,17 @@ def test_step(client):
     assert p["volume_cm3"] == pytest.approx(24 - 3.1416 * 0.64 * 2, rel=0.02)
     q = wait_quote(client, client.post("/api/quotes", json=quote_body(r.json()["id"])).json()["id"])
     assert q["status"] == "done" and q["method"] == "slicer"
+
+
+@needs_slicer
+def test_step_con_carpeta_de_datos_relativa(tmp_path, monkeypatch):
+    """Con CAPA3D_DATA_DIR=./data (como en .env.example) PrusaSlicer debe encontrar el archivo."""
+    from fastapi.testclient import TestClient
+
+    from capa3d_api.main import create_app
+    from capa3d_api.settings import Settings
+
+    monkeypatch.chdir(tmp_path)
+    with TestClient(create_app(Settings(data_dir="./data", _env_file=None))) as c:
+        r = upload(c, "caja.step", (FIXTURES / "caja.step").read_bytes())
+    assert r.status_code == 201, r.text

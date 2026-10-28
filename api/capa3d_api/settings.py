@@ -23,8 +23,23 @@ class Settings(BaseSettings):
     max_upload_mb: int = 100
     # Límite al descomprimir un 3MF, contra archivos zip maliciosos.
     max_unzipped_mb: int = 1024
+    # Dirección pública del sitio web: para los enlaces de pedido y el regreso desde Wompi.
+    site_url: str = "http://localhost:3000"
+    # Wompi (comercios.wompi.co → Desarrolladores). Sin llaves, los pagos se marcan a mano en el panel.
+    # Llaves de prueba (pub_test_…) usan el sandbox de Wompi; las de producción (pub_prod_…), pagos reales.
+    wompi_public_key: str = ""
+    wompi_integrity_secret: str = ""
+    wompi_events_secret: str = ""
+    # Clave del panel de administración (/admin en la web). Vacía = panel desactivado.
+    admin_token: str = ""
     # Lista separada por comas: "https://capa3d.co,https://www.capa3d.co".
     cors_origins: Annotated[list[str], NoDecode] = ["http://localhost:3000"]
+
+    @field_validator("data_dir", "catalog_path")
+    @classmethod
+    def absolute(cls, v: Path) -> Path:
+        # PrusaSlicer corre en otra carpeta: las rutas relativas del .env dejarían de apuntar al archivo.
+        return v.expanduser().resolve()
 
     @field_validator("cors_origins", mode="before")
     @classmethod

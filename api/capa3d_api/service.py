@@ -4,6 +4,7 @@ import hashlib
 import json
 import secrets
 import shutil
+import zipfile
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import asdict
 from datetime import UTC, datetime, timedelta
@@ -248,3 +249,97 @@ class QuoteService:
             "created_at": q["created_at"],
             "valid_until": q["valid_until"],
         }
+
+    # Administración
+
+    def admin_quote_out(self, q: dict) -> dict:
+        res = q["result"] or {}
+        price = res.get("price") or {}
+        plates = q["file_summary"]["plates"]
+        return {
+            "id": q["id"],
+            "status": q["status"],
+            "created_at": q["created_at"],
+            "valid_until": q["valid_until"],
+            "requested_at": q.get("requested_at"),
+            "color": q.get("requested_color") or q["params"].get("color"),
+            "file_name": q["file_name"],
+            "file_format": q["file_format"],
+            "plates": len(plates),
+            "pieces": sum(len(p["objects"]) for p in plates),
+            "params": q["params"],
+            "method": res.get("method"),
+            "grams": price.get("grams"),
+            "hours": price.get("hours"),
+            "total": price.get("total"),
+            "currency": price.get("currency"),
+            "error": q["error"],
+        }
+
+    def order_zip(self, quote_id: str, dest: Path, header: str = "") -> str:
+        """Zip con el archivo del cliente, el G-code de cada cama y un resumen. Devuelve el nombre sugerido."""
+        q = self.store.get_quote(quote_id)
+        if q is None:
+            raise KeyError(quote_id)
+        file = self.store.get_file(q["file_id"])
+        folder = self.file_dir(q["file_id"])
+        original = next(folder.glob("original.*"), None)
+        stem = Path(file["name"]).stem
+        with zipfile.ZipFile(dest, "w", zipfile.ZIP_DEFLATED) as z:
+            if original:
+                z.write(original, file["name"])
+            for gcode in sorted((folder / "quotes" / quote_id).glob("plate_*.gcode")):
+                z.write(gcode, f"gcode/{stem}-cama-{gcode.stem.split('_')[1]}.gcode")
+            z.writestr("resumen.txt", header + self._summary_text(q, file))
+        return f"{quote_id}-{stem}.zip"
+
+    def _summary_text(self, q: dict, file: dict) -> str:
+        p = q["params"]
+        res = q["result"] or {}
+        price = res.get("price") or {}
+        quality = {"borrador": "Borrador", "estandar": "Estándar", "detalle": "Detalle"}.get(p["quality"], p["quality"])
+        lines = [
+            f"Cotización {q['id']}",
+            f"Creada: {_when(q['created_at'])}  ·  válida hasta: {_when(q['valid_until'])}",
+            f"Pedida por WhatsApp: {_when(q['requested_at']) if q.get('requested_at') else 'no'}",
+            "",
+            f"Archivo: {file['name']} ({_size(file['size'])})",
+            f"Material: {p['material']}  ·  color: {q.get('requested_color') or p.get('color') or 'sin indicar'}",
+            f"Calidad: {quality}  ·  relleno: {p['infill']}%  ·  soportes: {'sí' if p.get('supports') else 'no'}",
+            f"Unidades: {p['unit']}  ·  escala: {p['scale']:g}%  ·  cantidad: {p['qty']}",
+            "",
+        ]
+        for pl in res.get("plates", []):
+            how = "laminado" if pl["method"] == "slicer" else "estimado"
+            note = f" ({pl['note']})" if pl.get("note") else ""
+            lines.append(f"{pl['name']}: {pl['grams']:.1f} g · {_duration(pl['hours'])} · {how}{note}")
+        if price:
+            lines += [
+                "",
+                f"Filamento:          {_money(price['material_cost'])}",
+                f"Máquina:            {_money(price['machine_cost'])}",
+                f"Cargo base:         {_money(price['base_fee'])}",
+                f"Precio por unidad:  {_money(price['unit_price'])} × {price['qty']}",
+                f"TOTAL:              {_money(price['total'])} {price['currency']}",
+            ]
+        if q.get("error"):
+            lines += ["", f"Error: {q['error']}"]
+        return "\n".join(lines) + "\n"
+
+
+def _money(x: float) -> str:
+    """$12.345, como se escribe en Colombia."""
+    return "$" + f"{round(x):,}".replace(",", ".")
+
+
+def _duration(hours: float) -> str:
+    h, m = divmod(round(hours * 60), 60)
+    return f"{h} h {m:02d} min" if h else f"{m} min"
+
+
+def _size(n: int) -> str:
+    return f"{n / 1e6:.1f} MB" if n >= 1e6 else f"{max(1, round(n / 1e3))} KB"
+
+
+def _when(iso: str) -> str:
+    return datetime.fromisoformat(iso).strftime("%Y-%m-%d %H:%M UTC")

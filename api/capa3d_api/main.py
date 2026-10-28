@@ -1,17 +1,23 @@
+import secrets
+import tempfile
 from contextlib import asynccontextmanager
+from pathlib import Path
 from typing import Annotated
 
-from fastapi import FastAPI, File, HTTPException, Request, UploadFile
+from fastapi import BackgroundTasks, Depends, FastAPI, File, Header, HTTPException, Query, Request, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, JSONResponse
+from pydantic import BaseModel, Field
 from starlette.concurrency import run_in_threadpool
 
 from .catalog import load_catalog
-from .schemas import FileOut, QuoteOut, QuoteRequest
+from .orders import OrderAction, OrderCreate, OrderError, OrderService
+from .schemas import AdminQuote, FileOut, QuoteOut, QuoteRequest
 from .service import QuoteService, UploadError
 from .settings import Settings, get_settings
 from .slicer import PrusaSlicer
 from .store import Store
+from .wompi import Wompi, WompiError
 
 
 def create_app(settings: Settings | None = None) -> FastAPI:
@@ -20,6 +26,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     store = Store(settings.data_dir / "capa3d.db")
     slicer = PrusaSlicer(settings.slicer_path, catalog, settings.slice_timeout_s)
     service = QuoteService(settings, catalog, store, slicer)
+    wompi = Wompi(settings.wompi_public_key, settings.wompi_integrity_secret, settings.wompi_events_secret)
+    orders = OrderService(settings, catalog, store, service, wompi)
 
     @asynccontextmanager
     async def lifespan(app: FastAPI):
@@ -32,11 +40,17 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         CORSMiddleware,
         allow_origins=settings.cors_origins,
         allow_methods=["GET", "POST"],
-        allow_headers=["Content-Type"],
+        allow_headers=["Content-Type", "Authorization"],
+        # Para que el panel lea el nombre del zip al descargarlo.
+        expose_headers=["Content-Disposition"],
     )
 
     @app.exception_handler(UploadError)
     async def upload_error(_: Request, e: UploadError):
+        return JSONResponse({"detail": str(e)}, status_code=e.status)
+
+    @app.exception_handler(OrderError)
+    async def order_error(_: Request, e: OrderError):
         return JSONResponse({"detail": str(e)}, status_code=e.status)
 
     @app.get("/api/health")
@@ -55,6 +69,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             },
             "qualities": {k: q.model_dump() for k, q in catalog.qualities.items()},
             "slicing": service.can_slice,
+            "shipping": catalog.shipping.model_dump(),
+            "payments": wompi.enabled,
         }
 
     @app.post("/api/files", response_model=FileOut, status_code=201)
@@ -87,5 +103,93 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         if q is None:
             raise HTTPException(404, "Cotización no encontrada")
         return service.quote_out(q)
+
+    class OrderRequest(BaseModel):
+        color: str | None = Field(default=None, max_length=40)
+
+    @app.post("/api/quotes/{quote_id}/request", status_code=204)
+    def request_order(quote_id: str, body: OrderRequest):
+        """El cliente tocó "Pedir por WhatsApp": queda marcada para el panel."""
+        if not quote_id.isalnum() or not store.mark_requested(quote_id, body.color):
+            raise HTTPException(404, "Cotización no encontrada")
+
+    # Pedidos del cliente: se identifican con el id y su token secreto (?t=).
+
+    @app.post("/api/orders", status_code=201)
+    def create_order(body: OrderCreate):
+        o = orders.create(body)
+        return {**orders.public(o), "token": o["token"]}
+
+    @app.get("/api/orders/{order_id}")
+    def get_order(order_id: str, t: str = ""):
+        return orders.public(orders.get_for_customer(order_id, t))
+
+    @app.post("/api/orders/{order_id}/checkout")
+    def checkout(order_id: str, t: str = ""):
+        return {"url": orders.checkout(order_id, t)}
+
+    class PaymentReturn(BaseModel):
+        transaction_id: str = Field(max_length=64)
+
+    @app.post("/api/orders/{order_id}/payment-return")
+    def payment_return(order_id: str, body: PaymentReturn, t: str = ""):
+        return orders.public(orders.payment_return(order_id, t, body.transaction_id))
+
+    @app.post("/api/payments/wompi")
+    async def wompi_events(request: Request):
+        """Eventos de Wompi (configura esta URL en comercios.wompi.co → Desarrolladores → Eventos)."""
+        try:
+            tx = wompi.parse_event(await request.json())
+        except (WompiError, ValueError) as e:
+            raise HTTPException(401, str(e)) from None
+        if tx:
+            orders.apply_transaction(tx)
+        return {"ok": True}
+
+    # Administración: requiere CAPA3D_ADMIN_TOKEN y el encabezado Authorization: Bearer <clave>.
+
+    def admin(authorization: Annotated[str | None, Header()] = None) -> None:
+        token = settings.admin_token
+        if not token:
+            raise HTTPException(503, "Panel desactivado: define CAPA3D_ADMIN_TOKEN en la API")
+        given = (authorization or "").removeprefix("Bearer ").strip()
+        if not secrets.compare_digest(given.encode(), token.encode()):
+            raise HTTPException(401, "Clave incorrecta")
+
+    @app.get("/api/admin/quotes", response_model=list[AdminQuote], dependencies=[Depends(admin)])
+    def admin_quotes(
+        limit: Annotated[int, Query(ge=1, le=500)] = 100,
+        requested: bool = False,
+    ):
+        return [service.admin_quote_out(q) for q in store.list_quotes(limit, requested)]
+
+    @app.get("/api/admin/quotes/{quote_id}/download", dependencies=[Depends(admin)])
+    def admin_download(quote_id: str, background: BackgroundTasks):
+        if not quote_id.isalnum() or store.get_quote(quote_id) is None:
+            raise HTTPException(404, "Cotización no encontrada")
+        tmp = Path(tempfile.mkstemp(suffix=".zip")[1])
+        name = service.order_zip(quote_id, tmp)
+        background.add_task(tmp.unlink, missing_ok=True)
+        return FileResponse(tmp, media_type="application/zip", filename=name)
+
+    @app.get("/api/admin/orders", dependencies=[Depends(admin)])
+    def admin_orders(status: str = "", limit: Annotated[int, Query(ge=1, le=500)] = 200):
+        statuses = [x for x in status.split(",") if x] or None
+        return [orders.admin_view(o) for o in store.list_orders(statuses, limit)]
+
+    @app.post("/api/admin/orders/{order_id}/action", dependencies=[Depends(admin)])
+    def admin_order_action(order_id: str, body: OrderAction):
+        return orders.admin_view(orders.act(order_id, body))
+
+    @app.get("/api/admin/orders/{order_id}/download", dependencies=[Depends(admin)])
+    def admin_order_download(order_id: str, background: BackgroundTasks):
+        tmp = Path(tempfile.mkstemp(suffix=".zip")[1])
+        try:
+            name = orders.order_zip(order_id, tmp)
+        except OrderError:
+            tmp.unlink(missing_ok=True)
+            raise
+        background.add_task(tmp.unlink, missing_ok=True)
+        return FileResponse(tmp, media_type="application/zip", filename=name)
 
     return app

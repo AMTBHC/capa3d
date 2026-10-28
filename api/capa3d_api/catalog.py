@@ -1,4 +1,5 @@
 import tomllib
+import unicodedata
 from pathlib import Path
 
 from pydantic import BaseModel, Field
@@ -24,6 +25,27 @@ class Calibration(BaseModel):
     weight_factor: float = Field(default=1.0, gt=0)
 
 
+class Shipping(BaseModel):
+    """Costo de envío a domicilio en COP. Se confirma o ajusta al revisar el pedido."""
+
+    cost: int = Field(default=15000, ge=0)
+    # Ciudades con otra tarifa (por ejemplo la ciudad del taller).
+    cities: dict[str, int] = {}
+
+    def cost_for(self, city: str) -> int:
+        key = normalize_city(city)
+        for name, cost in self.cities.items():
+            if normalize_city(name) == key:
+                return cost
+        return self.cost
+
+
+def normalize_city(city: str) -> str:
+    """'  Bogotá D.C. ' → 'bogota d.c.'"""
+    s = unicodedata.normalize("NFKD", city.strip().lower())
+    return " ".join("".join(c for c in s if not unicodedata.combining(c)).split())
+
+
 class Material(BaseModel):
     price_per_gram: float
     density: float = Field(gt=0)
@@ -43,6 +65,7 @@ class Catalog(BaseModel):
     pricing: Pricing
     printer: Printer
     calibration: Calibration = Calibration()
+    shipping: Shipping = Shipping()
     materials: dict[str, Material]
     qualities: dict[str, Quality]
     # Carpeta del catálogo, para resolver la ruta del perfil.

@@ -186,6 +186,13 @@ details.more > summary::-webkit-details-marker { display: none; }
 details.more > summary::before { content: "›"; display: inline-block; transition: transform .2s; font-size: 18px; line-height: 1; }
 details.more[open] > summary::before { transform: rotate(90deg); }
 
+/* Línea de tiempo del pedido: en pantallas angostas solo se lee el estado actual. */
+.tl-label { overflow: hidden; text-overflow: ellipsis; }
+@media (max-width: 560px) {
+  .tl-label { visibility: hidden; }
+  .tl-label[data-now] { visibility: visible; overflow: visible; }
+}
+
 .mobile-bar { display: none; }
 @media (max-width: 980px) {
   .mobile-bar {

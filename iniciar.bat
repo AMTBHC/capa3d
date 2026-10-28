@@ -44,6 +44,12 @@ if not exist "web\node_modules\.listo" (
   popd
 )
 
+rem Configuracion de la API con una clave para el panel de pedidos.
+if not exist "api\.env" copy /y "api\.env.example" "api\.env" >nul
+findstr /r /b /c:"CAPA3D_ADMIN_TOKEN=." api\.env >nul 2>nul || (api\.venv\Scripts\python -c "import secrets; print('CAPA3D_ADMIN_TOKEN=' + secrets.token_urlsafe(9))")>>api\.env
+set "ADMIN="
+for /f "tokens=2 delims==" %%t in ('findstr /b /c:"CAPA3D_ADMIN_TOKEN=" api\.env') do set "ADMIN=%%t"
+
 rem La web debe saber donde esta la API.
 findstr /b /c:"NEXT_PUBLIC_API_URL=http" web\.env.local >nul 2>nul || (echo NEXT_PUBLIC_API_URL=http://localhost:8000)>>web\.env.local
 
@@ -51,7 +57,10 @@ echo Iniciando la API y el sitio...
 start "Capa3D API" cmd /k "cd /d api && .venv\Scripts\python -m uvicorn capa3d_api.main:create_app --factory --port 8000"
 start "Capa3D Web" cmd /k "cd /d web && npm run dev"
 
+echo.
 echo Se abrira http://localhost:3000 en unos segundos.
+echo Panel de pedidos: http://localhost:3000/admin   Clave: %ADMIN%
+echo.
 echo Si no ves el precio laminado, revisa http://localhost:8000/api/health: "slicer" debe tener una version.
 echo Si dice null, instala PrusaSlicer desde https://www.prusa3d.com/page/prusaslicer_424/
 timeout /t 10 /nobreak >nul
