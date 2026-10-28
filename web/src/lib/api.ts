@@ -285,10 +285,12 @@ export function getOrder(id: string, token: string): Promise<Order> {
   return request(`/api/orders/${encodeURIComponent(id)}?t=${encodeURIComponent(token)}`);
 }
 
-/** URL de Wompi para pagar el pedido confirmado. */
-export async function checkoutOrder(id: string, token: string): Promise<string> {
-  const r = await request<{ url: string }>(`/api/orders/${encodeURIComponent(id)}/checkout?t=${encodeURIComponent(token)}`, { method: "POST" });
-  return r.url;
+/**
+ * URL de Wompi para pagar el pedido confirmado. `returns` es false cuando el sitio corre en una
+ * dirección local: Wompi no devolverá al cliente, así que conviene abrirlo en otra pestaña.
+ */
+export function checkoutOrder(id: string, token: string): Promise<{ url: string; returns: boolean }> {
+  return request(`/api/orders/${encodeURIComponent(id)}/checkout?t=${encodeURIComponent(token)}`, { method: "POST" });
 }
 
 /** Al volver de Wompi: la API consulta la transacción y actualiza el pedido. */

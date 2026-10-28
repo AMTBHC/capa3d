@@ -215,6 +215,11 @@ function OrderDetail({ o, token, onChange }: { o: AdminOrder; token: string; onC
             </button>
           </>
         )}
+        {o.status === "confirmed" && o.payments.at(-1)?.status === "PENDING" && (
+          <p style={{ margin: "10px 0 0", fontSize: 13, lineHeight: 1.5, color: "var(--warn)" }}>
+            El cliente abrió el pago en Wompi (ref. {o.payments.at(-1)!.reference}). Si en comercios.wompi.co aparece aprobado y aquí no ha cambiado, márcalo como pagado.
+          </p>
+        )}
         {o.status === "confirmed" && (
           <button className="chip-btn" disabled={busy} style={{ marginTop: 8 }}
             onClick={() => run("mark_paid", { note: "Pago registrado a mano" }, `¿Confirmas que recibiste $${money(o.total)} por el pedido ${o.id}?`)}>

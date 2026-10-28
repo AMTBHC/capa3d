@@ -233,3 +233,72 @@ def test_wompi_sandbox_o_produccion():
     assert Wompi("pub_test_x", "s", "e").api_url == "https://sandbox.wompi.co/v1"
     assert Wompi("pub_prod_x", "s", "e").api_url == "https://production.wompi.co/v1"
     assert not Wompi("", "", "").enabled
+
+
+@pytest.mark.parametrize(
+    ("url", "local"),
+    [
+        ("http://localhost:3000/pedido/P1", True),
+        ("http://127.0.0.1:3000/x", True),
+        ("http://192.168.1.20:3000/x", True),
+        ("http://capa3d.local/x", True),
+        ("https://capa3d.co/pedido/P1", False),
+        ("https://capa3d.vercel.app/x", False),
+    ],
+)
+def test_direcciones_locales(url, local):
+    from capa3d_api.wompi import is_local_url
+
+    assert is_local_url(url) is local
+
+
+def test_sitio_local_no_envia_direccion_de_regreso(tmp_path):
+    """El firewall de Wompi responde 403 si redirect-url apunta a localhost."""
+    settings = Settings(
+        data_dir=tmp_path, admin_token="clave", slicer_enabled=False, site_url="http://localhost:3000",
+        _env_file=None, **WOMPI,
+    )  # fmt: skip
+    with TestClient(create_app(settings)) as c:
+        o = new_order(c)
+        act(c, o["id"], "confirm")
+        r = c.post(f"/api/orders/{o['id']}/checkout?t={o['token']}").json()
+    assert r["returns"] is False
+    assert "redirect-url" not in parse_qs(urlparse(r["url"]).query)
+
+
+def test_sitio_publico_si_envia_direccion_de_regreso(paying_client):
+    c = paying_client
+    o = new_order(c)
+    act(c, o["id"], "confirm")
+    r = c.post(f"/api/orders/{o['id']}/checkout?t={o['token']}").json()
+    assert r["returns"] is True and "redirect-url" in parse_qs(urlparse(r["url"]).query)
+
+
+def test_llave_privada_confirma_el_pago_al_consultar(tmp_path, monkeypatch):
+    calls = []
+
+    def fake_find(self, reference):
+        calls.append(reference)
+        return Transaction("tx-1", "APPROVED", reference, total * 100)
+
+    monkeypatch.setattr(Wompi, "find_by_reference", fake_find)
+    with make_client(tmp_path, **WOMPI, wompi_private_key="prv_test_abc") as c:
+        o = new_order(c)
+        url = f"/api/orders/{o['id']}?t={o['token']}"
+        assert c.get(url).json()["status"] == "received"
+        assert calls == []  # sin pago iniciado no se consulta
+        act(c, o["id"], "confirm")
+        total = c.get(url).json()["total"]
+        c.post(f"/api/orders/{o['id']}/checkout?t={o['token']}")
+        v = c.get(url).json()
+    assert v["status"] == "paid" and v["payment_status"] == "APPROVED"
+    assert calls == [f"{o['id']}-1"]
+
+
+def test_sin_llave_privada_no_consulta(paying_client, monkeypatch):
+    monkeypatch.setattr(Wompi, "find_by_reference", lambda self, ref: pytest.fail("no debe consultar"))
+    c = paying_client
+    o = new_order(c)
+    act(c, o["id"], "confirm")
+    c.post(f"/api/orders/{o['id']}/checkout?t={o['token']}")
+    assert c.get(f"/api/orders/{o['id']}?t={o['token']}").json()["status"] == "confirmed"

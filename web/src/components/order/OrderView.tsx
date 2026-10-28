@@ -10,6 +10,13 @@ import { money } from "@/lib/format";
 import { Icon, ICONS } from "../Icon";
 
 const POLL_MS = 15_000;
+/** Mientras el cliente paga en otra pestaña se consulta más seguido. */
+const POLL_PAYING_MS = 5_000;
+
+/** Sitio servido desde el propio computador: Wompi no puede devolver al cliente aquí. */
+function isLocalHost(host: string): boolean {
+  return host === "localhost" || host.endsWith(".local") || /^(127\.|10\.|192\.168\.|172\.(1[6-9]|2\d|3[01])\.)/.test(host) || host === "[::1]";
+}
 
 /** Página del cliente: estado del pedido, pago con Wompi y seguimiento. */
 export function OrderView({ id, token, transactionId }: { id: string; token: string; transactionId: string }) {
@@ -18,6 +25,7 @@ export function OrderView({ id, token, transactionId }: { id: string; token: str
   const [error, setError] = useState("");
   const [paying, setPaying] = useState(false);
   const [justPaid, setJustPaid] = useState(false);
+  const [inOtherTab, setInOtherTab] = useState(false);
   const checkedTx = useRef(false);
 
   const load = useCallback(async () => {
@@ -58,15 +66,37 @@ export function OrderView({ id, token, transactionId }: { id: string; token: str
   const waiting = order?.status === "received" || order?.status === "confirmed";
   useEffect(() => {
     if (!waiting) return;
-    const t = setInterval(load, POLL_MS);
+    const t = setInterval(load, inOtherTab ? POLL_PAYING_MS : POLL_MS);
     return () => clearInterval(t);
-  }, [waiting, load]);
+  }, [waiting, inOtherTab, load]);
+
+  // Al confirmarse el pago mientras Wompi estaba en otra pestaña.
+  const status = order?.status;
+  useEffect(() => {
+    if (inOtherTab && status === "paid") {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setJustPaid(true);
+      setInOtherTab(false);
+    }
+  }, [inOtherTab, status]);
 
   const pay = async () => {
     setPaying(true);
+    // En el computador del taller Wompi no puede volver a esta página: se abre en otra pestaña
+    // (abierta ya, dentro del clic, para que el navegador no la bloquee).
+    const tab = isLocalHost(window.location.hostname) ? window.open("", "_blank") : null;
     try {
-      window.location.href = await checkoutOrder(id, token);
+      const { url, returns } = await checkoutOrder(id, token);
+      if (tab && !returns) {
+        tab.location.href = url;
+        setInOtherTab(true);
+        setPaying(false);
+      } else {
+        tab?.close();
+        window.location.href = url;
+      }
     } catch (e) {
+      tab?.close();
       setError(e instanceof Error ? e.message : String(e));
       setPaying(false);
     }
@@ -128,7 +158,19 @@ export function OrderView({ id, token, transactionId }: { id: string; token: str
                     </a>
                   )}
                 </div>
-                {order.can_pay && <p style={{ margin: "10px 0 0", fontSize: 12, color: "var(--text-3)" }}>Pago seguro con Wompi (Bancolombia): PSE, Nequi, tarjeta o botón Bancolombia.</p>}
+                {inOtherTab ? (
+                  <div className="status status-busy" role="status" style={{ marginTop: 14 }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 10, fontWeight: 600 }}>
+                      <span className="spin" aria-hidden="true" /> Esperando tu pago en la pestaña de Wompi…
+                    </div>
+                    <div className="indeterminate" aria-hidden="true" />
+                    <span style={{ fontSize: 13, color: "var(--text-3)" }}>
+                      Cuando termines, vuelve a esta pestaña: se actualiza sola. Si ya pagaste y no cambia en un par de minutos, escríbenos por WhatsApp.
+                    </span>
+                  </div>
+                ) : (
+                  order.can_pay && <p style={{ margin: "10px 0 0", fontSize: 12, color: "var(--text-3)" }}>Pago seguro con Wompi (Bancolombia): PSE, Nequi, tarjeta o botón Bancolombia.</p>
+                )}
               </div>
             )}
 

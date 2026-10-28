@@ -115,17 +115,22 @@ Tú imprimes → Imprimiendo → Enviado (transportadora + guía) → Entregado
 
 1. Crea tu cuenta de comercio en https://comercios.wompi.co.
 2. En **Desarrolladores** copia la llave pública, el secreto de integridad y el secreto de eventos. Empieza con las de **prueba** (`pub_test_…`): los pagos van al sandbox y no se cobra nada.
-3. Ponlas en `api/.env`:
+3. Ponlas en `api/.env`. La llave **privada** (`prv_test_…`) es opcional, pero en tu computador es la que confirma el pago sola:
    ```
    CAPA3D_WOMPI_PUBLIC_KEY=pub_test_...
    CAPA3D_WOMPI_INTEGRITY_SECRET=test_integrity_...
    CAPA3D_WOMPI_EVENTS_SECRET=test_events_...
+   CAPA3D_WOMPI_PRIVATE_KEY=prv_test_...
    CAPA3D_SITE_URL=http://localhost:3000
    ```
 4. Reinicia `iniciar`. Haz un pedido, confírmalo en el panel y págalo con los datos de prueba que indica la documentación de Wompi.
-5. **En producción:** cambia a las llaves `pub_prod_…`, pon en `CAPA3D_SITE_URL` la dirección real del sitio y, en Wompi → Eventos, registra la URL `https://<tu-api>/api/payments/wompi`.
+5. **En producción:** cambia a las llaves `pub_prod_…` (y `prv_prod_…`), pon en `CAPA3D_SITE_URL` la dirección real del sitio y, en Wompi → Eventos, registra la URL `https://<tu-api>/api/payments/wompi`.
 
-En tu computador, Wompi no puede enviarte eventos porque no tienes una dirección pública. El pago igual queda confirmado: cuando el cliente vuelve de Wompi, la API consulta la transacción. En producción también se confirma por el evento, aunque el cliente cierre la ventana antes de volver.
+**En tu computador funciona un poco distinto.** Wompi bloquea con un error 403 los pagos cuya página de regreso es `localhost`, y tampoco puede enviarte eventos. Por eso, cuando el sitio corre en tu computador:
+- "Pagar ahora" abre Wompi en **otra pestaña**, sin página de regreso, y la página del pedido queda esperando.
+- Con la llave privada, la API consulta el pago en Wompi y la página cambia sola a **Pagado**. Sin ella, revisa el pago en comercios.wompi.co y márcalo como pagado en el panel; el panel te avisa cuando el cliente abrió un pago.
+
+Con el sitio publicado en un dominio real, Wompi devuelve al cliente a su pedido y además envía el evento de pago.
 
 ### Descargar los archivos
 
