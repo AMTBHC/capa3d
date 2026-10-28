@@ -4,7 +4,7 @@
 import dynamic from "next/dynamic";
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { BADGE_LABEL, getCollection, getProduct, imageUrl, personalize, prepareProduct, type CatalogProduct, type QuoteParams } from "@/lib/api";
+import { BADGE_LABEL, getCollection, getProduct, getServerFile, imageUrl, personalize, prepareProduct, type CatalogProduct, type QuoteParams } from "@/lib/api";
 import { COLORS, MATERIALS } from "@/lib/catalog";
 import { whatsappUrl } from "@/lib/config";
 import { money, num1 } from "@/lib/format";
@@ -66,7 +66,6 @@ function Product({ p }: { p: CatalogProduct }) {
   const [nameFile, setNameFile] = useState<{ text: string; id: string } | null>(null);
   const [nameError, setNameError] = useState("");
   const [ordering, setOrdering] = useState(false);
-  const [plateSel, setPlateSel] = useState(0);
 
   // Llaveros con nombre: se genera el modelo con el texto (o el de muestra).
   const text = (name.trim() || SAMPLE_NAME).slice(0, p.personalize?.max_length ?? 14);
@@ -109,22 +108,34 @@ function Product({ p }: { p: CatalogProduct }) {
   const fileId = p.personalize ? nameFile?.id : p.file_id ?? prepared ?? undefined;
   const generating = !!p.personalize && nameFile?.text !== text;
 
+  // Vista 3D solo en los llaveros con nombre (para ver el texto); los demás productos se muestran con fotos.
   const [plates, setPlates] = useState<{ fileId: string; plates: ServerPlateMesh[] } | null>(null);
   useEffect(() => {
-    if (!fileId) return;
+    if (!fileId || !p.personalize) return;
     let alive = true;
     loadServerModel(fileId).then((x) => alive && setPlates({ fileId, plates: x }), (e) => console.warn("No se pudo cargar el modelo", e));
     return () => {
       alive = false;
     };
-  }, [fileId]);
+  }, [fileId, p.personalize]);
+
+  // Medidas de los tamaños: del resumen del archivo, sin descargar la malla.
+  const [fileDims, setFileDims] = useState<{ dx: number; dy: number; dz: number } | null>(null);
+  useEffect(() => {
+    if (!fileId || p.personalize) return;
+    let alive = true;
+    getServerFile(fileId).then((f) => alive && f.plates[0] && setFileDims(f.plates[0]), () => {});
+    return () => {
+      alive = false;
+    };
+  }, [fileId, p.personalize]);
 
   const s = p.sizes[size];
   const params: QuoteParams = { material: MATERIALS[material].id, quality: "estandar", infill: 20, qty, unit: "mm", scale: s.scale, supports: true };
   const server = useServerQuote(fileId, params);
   const quote = server.status === "done" ? server.quote.price : null;
   const k = s.scale / 100;
-  const first = plates?.plates[0]?.analysis;
+  const first = p.personalize ? plates?.plates[0]?.analysis : fileDims;
   const viewerPlates = useMemo(() => plates?.plates.map((x) => ({ positions: x.positions, analysis: x.analysis, fits: true })) ?? [], [plates]);
 
   const needsName = !!p.personalize && !name.trim();
@@ -138,18 +149,7 @@ function Product({ p }: { p: CatalogProduct }) {
       <div style={{ display: "flex", flexDirection: "column", gap: 16, minWidth: 0 }}>
         <Gallery p={p} viewer={
           viewerPlates.length > 0 ? (
-            <>
-              <ModelViewer plates={viewerPlates} selected={Math.min(plateSel, viewerPlates.length - 1)} k={k} color={COLORS[color].render} wire={false} autoRotate layerMm={0.2} bed={catalog.bed} />
-              {viewerPlates.length > 1 && (
-                <div role="group" aria-label="Piezas" style={{ position: "absolute", top: 12, left: 12, display: "flex", flexWrap: "wrap", gap: 6 }}>
-                  {viewerPlates.map((_, i) => (
-                    <button key={i} className="chip-btn" aria-pressed={i === plateSel} onClick={() => setPlateSel(i)} style={{ background: i === plateSel ? undefined : "var(--glass)" }}>
-                      Parte {i + 1}
-                    </button>
-                  ))}
-                </div>
-              )}
-            </>
+            <ModelViewer plates={viewerPlates} selected={0} k={k} color={COLORS[color].render} wire={false} autoRotate layerMm={0.2} bed={catalog.bed} />
           ) : null
         } />
         {p.description && <p className="lead" style={{ margin: 0, whiteSpace: "pre-line" }}>{p.description}</p>}
@@ -239,7 +239,7 @@ function Gallery({ p, viewer }: { p: CatalogProduct; viewer: React.ReactNode }) 
       <div style={{ position: "relative", aspectRatio: "1 / 1", borderRadius: 20, overflow: "hidden", background: "var(--surface-3)", border: "1px solid var(--line)" }}>
         {current?.img ? <img src={imageUrl(current.img)} alt={p.name} style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover" }} />
           : current ? viewer
-          : <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", color: "var(--text-3)" }}>Cargando el modelo…</div>}
+          : <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", color: "var(--text-3)" }}>{p.personalize ? "Generando tu llavero…" : "Foto próximamente"}</div>}
         {current?.key === "3d" && <span className="chip" style={{ position: "absolute", left: 12, bottom: 12 }}>Arrastra para girarlo</span>}
       </div>
       {views.length > 1 && (
