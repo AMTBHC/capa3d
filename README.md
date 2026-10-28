@@ -213,7 +213,7 @@ Cada cama se cotiza como una impresión aparte (con su propio calentamiento). El
 
 ## Cómo se calcula el precio
 
-**Precio laminado (con la API).** Cada cama se lamina con PrusaSlicer usando el perfil de tu impresora, el material, la calidad, el relleno, los soportes y la escala que eligió el cliente. Del G-code salen los gramos y el tiempo, ajustados con los factores de calibración:
+**Precio laminado (con la API).** Cada cama se lamina con PrusaSlicer usando el perfil de tu impresora, el material, la calidad, el relleno, los soportes y la escala que eligió el cliente. Del G-code salen los gramos y el tiempo, ajustados con los factores de calibración: Los soportes automáticos son en árbol (`support_material_style = organic`, como Bambu Studio): solo se ponen donde hacen falta y se calculan mucho más rápido. Las camas de un archivo se laminan a la vez (`CAPA3D_PLATE_WORKERS`, 3 por defecto) y cada laminado queda guardado: cambiar la cantidad, el color o los varios colores no vuelve a laminar.
 
 - **Precio por unidad** = cargo base + gramos × $/g + (horas del slicer + preparación por cama) × tarifa, redondeado a $100
 
