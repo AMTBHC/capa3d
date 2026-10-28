@@ -219,7 +219,7 @@ Cada cama se cotiza como una impresión aparte (con su propio calentamiento). El
 
 Los soportes automáticos son en árbol (`support_material_style = organic`, como Bambu Studio): solo se ponen donde hacen falta y se calculan mucho más rápido. Las camas de un archivo se laminan a la vez (`CAPA3D_PLATE_WORKERS`, 3 por defecto) y cada laminado queda guardado: cambiar la cantidad, el color o los varios colores no vuelve a laminar.
 
-**Archivos muy grandes.** Si el archivo tiene más de `max_plates` camas, pesa más de `max_file_mb` o una copia tardaría más de `max_print_hours` en imprimirse (sección `[limits]` de `api/config/catalog.toml`; por defecto 8 camas, 50 MB y 24 horas), el sitio no muestra precio: avisa que se cotiza por WhatsApp y muestra el botón. El archivo queda en el panel, en Cotizaciones, marcado **Cotizar a mano**, para descargarlo y revisarlo.
+**Archivos muy grandes.** Si el archivo tiene más de `max_plates` camas, pesa más de `max_file_mb` o una copia tardaría más de `max_print_hours` en imprimirse (sección `[limits]` de `api/config/catalog.toml`; por defecto 8 camas, 50 MB y 24 horas), no se lamina ni se muestra precio. El cliente envía una **solicitud de cotización** con sus datos y le llega al panel como pedido **Por revisar**, marcado "Solicitud de cotización · pon el precio". Lo contactas, escribes el precio en **Confirmar precio** y desde ahí sigue el flujo normal: el cliente ve el precio en su página y paga.
 
 Cada cotización queda guardada con un número (por ejemplo `Q1A2B3C4D`), su vigencia y el G-code de cada cama, listo para imprimir. El número aparece en el mensaje de WhatsApp. Si el laminado falla, esa cama se cotiza con el estimado y la respuesta lo indica.
 

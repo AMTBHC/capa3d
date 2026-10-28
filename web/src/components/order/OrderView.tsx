@@ -175,9 +175,15 @@ export function OrderView({ id, token, transactionId, isNew }: { id: string; tok
             <Detail k="Relleno" v={`${order.params.infill}%${order.params.supports ? " · con soportes" : ""}`} />
             <Detail k="Cantidad" v={String(order.params.qty)} />
             <div style={{ borderTop: "1px solid var(--line)", margin: "12px 0", paddingTop: 12 }}>
-              <Detail k="Impresión" v={`$${money(order.print_price)}`} />
-              <Detail k="Envío" v={`$${money(order.shipping)}`} />
-              <Detail k={order.status === "received" ? "Total estimado" : "Total"} v={`$${money(order.total)}`} strong />
+              {order.price_pending ? (
+                <Detail k="Precio" v="te lo enviamos al revisar tu archivo" strong />
+              ) : (
+                <>
+                  <Detail k="Impresión" v={`$${money(order.print_price)}`} />
+                  <Detail k="Envío" v={`$${money(order.shipping)}`} />
+                  <Detail k={order.status === "received" ? "Total estimado" : "Total"} v={`$${money(order.total)}`} strong />
+                </>
+              )}
               {order.paid_amount > 0 && <Detail k="Pagado" v={`$${money(order.paid_amount)}`} />}
               {order.paid_amount > 0 && order.balance > 0 && <Detail k="Pagas al recibir (efectivo)" v={`$${money(order.balance)}`} strong />}
             </div>
@@ -224,17 +230,21 @@ function Welcome({ order, link, onClose }: { order: Order; link: string; onClose
   return (
     <section className="status status-ok pop" style={{ flexDirection: "column", gap: 12, padding: 20 }} aria-labelledby="welcome-t">
       <div>
-        <h2 id="welcome-t" style={{ margin: 0, fontSize: 20 }}>¡Recibimos tu pedido!</h2>
+        <h2 id="welcome-t" style={{ margin: 0, fontSize: 20 }}>{order.price_pending ? "¡Recibimos tu solicitud de cotización!" : "¡Recibimos tu pedido!"}</h2>
         <p style={{ margin: "6px 0 0", color: "var(--text-2)" }}>
-          Tu número de pedido es <strong className="mono" style={{ fontSize: 18, color: "var(--text)" }}>{order.id}</strong>.
-          Te escribimos por WhatsApp cuando confirmemos el precio. Guarda esta página para seguir tu pedido:
+          Tu número es <strong className="mono" style={{ fontSize: 18, color: "var(--text)" }}>{order.id}</strong>.{" "}
+          {order.price_pending
+            ? "Revisamos tu archivo y nosotros te contactamos con el precio. Guarda esta página: aquí verás el precio y podrás pagar."
+            : "Te escribimos por WhatsApp cuando confirmemos el precio. Guarda esta página para seguir tu pedido:"}
         </p>
       </div>
       <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
-        <a className="btn" href={whatsappUrl(`Hola Capa3D, acabo de hacer el pedido ${order.id}. Lo sigo aquí: ${link}`)} target="_blank" rel="noopener noreferrer"
-          style={{ padding: "10px 16px", borderRadius: 12, fontWeight: 600, fontSize: 14, background: "#25D366", color: "#06210F" }}>
-          Enviar el pedido a Capa3D por WhatsApp
-        </a>
+        {!order.price_pending && (
+          <a className="btn" href={whatsappUrl(`Hola Capa3D, acabo de hacer el pedido ${order.id}. Lo sigo aquí: ${link}`)} target="_blank" rel="noopener noreferrer"
+            style={{ padding: "10px 16px", borderRadius: 12, fontWeight: 600, fontSize: 14, background: "#25D366", color: "#06210F" }}>
+            Enviar el pedido a Capa3D por WhatsApp
+          </a>
+        )}
         <button className="chip-btn" onClick={copy}>{copied ? "¡Enlace copiado!" : "Copiar enlace"}</button>
         {typeof navigator !== "undefined" && "share" in navigator && <button className="chip-btn" onClick={share}>Compartir</button>}
         <button className="chip-btn" onClick={onClose} style={{ marginLeft: "auto" }}>Listo</button>

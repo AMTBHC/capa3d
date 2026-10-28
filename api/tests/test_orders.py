@@ -303,3 +303,26 @@ def test_sin_llave_privada_no_consulta(paying_client, monkeypatch):
     act(c, o["id"], "confirm")
     c.post(f"/api/orders/{o['id']}/checkout?t={o['token']}")
     assert c.get(f"/api/orders/{o['id']}?t={o['token']}").json()["status"] == "confirmed"
+
+
+def test_archivo_grande_llega_como_solicitud_sin_precio(tmp_path):
+    from .builders import bambu_project
+
+    with make_client(tmp_path) as c:
+        c.app.state.service.catalog.limits.max_plates = 1
+        f = c.post("/api/files", files={"file": ("proyecto.3mf", bambu_project())}).json()
+        q = c.post(
+            "/api/quotes", json={"file_id": f["id"], "material": "PLA", "quality": "estandar", "infill": 20}
+        ).json()
+        assert q["review"] and q["price"] is None
+        o = c.post("/api/orders", json={"quote_id": q["id"], "color": "Negro", "customer": CUSTOMER}).json()
+        assert o["print_price"] == 0 and o["price_pending"] and "solicitud" in o["status_text"]
+        # El taller no puede confirmarlo sin poner el precio.
+        r = c.post(f"/api/admin/orders/{o['id']}/action", json={"action": "confirm"}, headers=ADMIN)
+        assert r.status_code == 422
+        r = c.post(
+            f"/api/admin/orders/{o['id']}/action", json={"action": "confirm", "print_price": 180000}, headers=ADMIN
+        )
+        assert r.status_code == 200
+        pub = c.get(f"/api/orders/{o['id']}?t={o['token']}").json()
+        assert pub["status"] == "confirmed" and not pub["price_pending"] and pub["print_price"] == 180000

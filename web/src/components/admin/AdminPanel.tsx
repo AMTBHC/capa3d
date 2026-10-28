@@ -181,7 +181,7 @@ function QuoteRow({ q, token }: { q: AdminQuote; token: string }) {
   const [error, setError] = useState("");
   const quality = QUALITIES.find((x) => x.id === q.params.quality)?.name ?? q.params.quality;
   // Archivo muy grande para el precio en línea: el cliente lo cotiza por WhatsApp.
-  const manual = q.error?.startsWith("Cotización por WhatsApp") ?? false;
+  const manual = (q.error?.startsWith("Cotización a mano") || q.error?.startsWith("Cotización por WhatsApp")) ?? false;
   const when = new Date(q.requested_at ?? q.created_at).toLocaleString("es-CO", { dateStyle: "medium", timeStyle: "short" });
   const details = [
     `${q.params.material}${q.color ? ` ${q.color}` : ""}`,

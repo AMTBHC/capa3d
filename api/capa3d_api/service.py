@@ -27,11 +27,21 @@ from .slicer import PrusaSlicer, SliceOptions, SlicerError
 from .store import Store
 
 # Error de las cotizaciones que no se laminan por ser muy grandes: el cliente escribe por WhatsApp.
-REVIEW_PREFIX = "Cotización por WhatsApp: "
+REVIEW_PREFIX = "Cotización a mano: "
+
+
+# Cotizaciones guardadas con el texto de la primera versión.
+_OLD_PREFIXES = (REVIEW_PREFIX, "Cotización por WhatsApp: ")
 
 
 def _review(error: str | None) -> str | None:
-    return error[len(REVIEW_PREFIX) :] if error and error.startswith(REVIEW_PREFIX) else None
+    prefix = next((p for p in _OLD_PREFIXES if error and error.startswith(p)), None)
+    return error[len(prefix) :] if prefix else None
+
+
+def review_of(quote: dict) -> str | None:
+    """Motivo por el que una cotización no tiene precio en línea (archivo muy grande)."""
+    return _review(quote["error"]) if quote["status"] == "failed" else None
 
 
 class UploadError(ValueError):

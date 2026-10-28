@@ -77,30 +77,35 @@ export function PriceCard({ fileName, model, opts, supports, dims, quote, server
   ].join("\n");
 
   if (stage === "review" && review) {
-    const text = [
-      "Hola Capa3D, quiero cotizar un archivo grande:",
-      `• Archivo: ${fileName}${quoteId ? ` (cotización ${quoteId})` : ""}`,
-      `• En la web dice que ${review}`,
-      `• Filamento: ${material.id} ${colorName} · ${quality.name} · relleno ${opts.infill}%`,
-      `• Cantidad: ${qty}`,
-    ].join("\n");
+    // Archivo muy grande: sin precio en línea. El cliente envía una solicitud y el taller lo contacta.
+    const requestId = server.status === "failed" ? (server.quote?.id ?? null) : null;
     return (
       <div id="precio" className="quote-price" style={{ borderRadius: 24, background: "var(--surface)", border: "1px solid var(--line)", padding: 20, scrollMarginTop: 16 }}>
-        <div className="status status-warn" role="alert">
-          <span style={{ ...badge, background: "var(--warn)" }}>!</span>
+        <div className="status status-info" role="status">
+          <span style={{ ...badge, background: "var(--text)" }}>i</span>
           <span>
-            <strong>Este archivo lo cotizamos por WhatsApp.</strong> Es muy grande para darte el precio en línea: {review}.
+            <strong>Este archivo lo cotizamos personalmente.</strong> Es muy grande para darte el precio en línea: {review}.
             <span style={{ display: "block", color: "var(--text-3)", fontSize: 13, marginTop: 4 }}>
-              Ya recibimos tu archivo. Escríbenos y te enviamos el precio revisado por una persona.
+              Envíanos la solicitud con tus datos: revisamos el archivo y te contactamos con el precio.
             </span>
           </span>
         </div>
-        <a className="btn btn-primary" href={whatsappUrl(text)} target="_blank" rel="noopener noreferrer"
-          onClick={() => quoteId && markRequested(quoteId, colorName)}
-          style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 10, marginTop: 16, padding: 15, borderRadius: 16, fontSize: 16 }}>
-          <Icon d={ICONS.chat} size={20} stroke={2} />
-          Cotizar por WhatsApp
-        </a>
+        <button className="btn btn-primary" disabled={!requestId} onClick={() => setOrdering(true)}
+          style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 10, width: "100%", marginTop: 16, padding: 15, borderRadius: 16, fontSize: 16 }}>
+          <Icon d={ICONS.box} size={20} stroke={2} />
+          {requestId ? "Solicitar cotización" : "Preparando…"}
+        </button>
+        {ordering && requestId && (
+          <OrderDialog
+            request
+            quoteId={requestId}
+            color={colorName}
+            summary={`${fileName} · ${material.id} ${colorName} · ${quality.name} · relleno ${opts.infill}%${qty > 1 ? ` · ${qty} unidades` : ""}`}
+            printPrice={0}
+            shipping={shipping}
+            onClose={closeOrder}
+          />
+        )}
       </div>
     );
   }

@@ -93,7 +93,7 @@ function List({ items }: { items: { id: string; token: string; created_at: strin
             <span style={{ flex: "1 1 160px", minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{o.file_name}</span>
             <span style={{ fontSize: 13, color: "var(--text-3)" }}>{new Date(o.created_at).toLocaleDateString("es-CO", { day: "numeric", month: "short" })}</span>
             <span style={{ fontSize: 13, fontWeight: 600 }}>{o.label}</span>
-            <span className="display" style={{ fontWeight: 700 }}>${money(o.total)}</span>
+            <span className="display" style={{ fontWeight: 700 }}>{o.total > 0 ? `$${money(o.total)}` : "Por cotizar"}</span>
           </Link>
         </li>
       ))}

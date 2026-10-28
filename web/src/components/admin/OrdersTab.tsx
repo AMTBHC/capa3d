@@ -59,6 +59,9 @@ function customerMessage(o: AdminOrder): string {
   const total = `$${money(o.total)}`;
   switch (o.status) {
     case "received":
+      if (o.price_pending) {
+        return `Hola ${first}, soy de Capa3D. Recibimos tu solicitud de cotización ${o.id} (${o.file_name}). Ya estamos revisando tu archivo; ¿me cuentas para qué es la pieza y si tienes fecha límite? Así te doy el mejor precio.`;
+      }
       return `Hola ${first}, recibimos tu pedido ${o.id} en Capa3D. Estamos revisando tu archivo y te confirmamos el precio pronto. Puedes seguirlo aquí: ${o.order_url}`;
     case "confirmed":
       return `Hola ${first}, revisamos tu archivo. El total de tu pedido ${o.id} es ${total} (impresión $${money(o.print_price)} + envío $${money(o.shipping)}). ${o.can_pay ? "Puedes pagar aquí" : "Te envío los datos para el pago. Sigue tu pedido aquí"}: ${o.order_url}`;
@@ -194,12 +197,13 @@ function OrderCard({ o, token, open, onToggle, onChange }: {
         style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: 12, width: "100%", padding: 16, background: "none", border: 0, color: "var(--text)", cursor: "pointer", textAlign: "left" }}>
         <span className="mono" style={{ color: "var(--ac)", fontWeight: 600 }}>{o.id}</span>
         <span style={{ fontSize: 12, fontWeight: 600, padding: "3px 10px", borderRadius: 99, color, background: `color-mix(in srgb, ${color} 14%, transparent)` }}>{o.status_label}</span>
+        {o.price_pending && <span style={{ fontSize: 12, fontWeight: 600, padding: "3px 10px", borderRadius: 99, color: "var(--warn)", background: "color-mix(in srgb, var(--warn) 14%, transparent)" }}>Solicitud de cotización · pon el precio</span>}
         <span style={{ flex: "1 1 200px", minWidth: 0 }}>
           <strong style={{ fontWeight: 600 }}>{o.customer.name}</strong>
           <span style={{ color: "var(--text-3)", fontSize: 13 }}> · {o.customer.city} · {o.file_name}</span>
         </span>
         <span style={{ fontSize: 13, color: "var(--text-3)" }}>{new Date(o.created_at).toLocaleDateString("es-CO", { day: "numeric", month: "short" })}</span>
-        <span className="display" style={{ fontWeight: 700 }}>${money(o.total)}</span>
+        <span className="display" style={{ fontWeight: 700 }}>{o.price_pending ? "Por cotizar" : `$${money(o.total)}`}</span>
       </button>
       {open && <OrderDetail o={o} token={token} onChange={onChange} />}
     </article>
