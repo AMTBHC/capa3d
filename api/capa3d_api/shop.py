@@ -285,6 +285,22 @@ class Shop:
             out.append({**_collection(c, cover), "count": len(products), "price_from": min(prices) if prices else None})
         return out
 
+    def featured(self, limit: int) -> list[dict]:
+        """Productos con foto para la galería: se alternan las subsecciones para que haya de todo."""
+        groups: dict[str, list[dict]] = {}
+        published = {c["id"]: c for c in self.store.collections() if c["published"]}
+        products = [p for p in self.store.products() if p["collection_id"] in published and self.visible(p)]
+        # Fotos ya descargadas; las de Drive solo mientras ninguna lo está (recién instalado).
+        with_photo = [p for p in products if p["images"]] or [p for p in products if _preview(p)]
+        for p in with_photo:
+            groups.setdefault(p["subsection"] or published[p["collection_id"]]["name"], []).append(p)
+        out: list[dict] = []
+        while len(out) < limit and any(groups.values()):
+            for items in groups.values():
+                if items and len(out) < limit:
+                    out.append(self.product_out(items.pop(0)))
+        return out
+
     def collection_out(self, cid: str) -> dict:
         c = self.store.get_collection(cid)
         if not c or not c["published"]:
