@@ -6,7 +6,7 @@ import { API_URL } from "@/lib/config";
 import { lookupOrders, type FoundOrder } from "@/lib/api";
 import { money } from "@/lib/format";
 import { orderPath, savedOrders, type SavedOrder } from "@/lib/myOrders";
-import { Icon, ICONS } from "../Icon";
+import { Logo } from "../brand/Logo";
 
 /** Mis pedidos: los de este navegador y búsqueda por correo y celular. */
 export function MyOrders() {
@@ -40,10 +40,7 @@ export function MyOrders() {
     <main style={{ maxWidth: 720, margin: "0 auto", padding: "24px 16px 80px" }}>
       <header style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 24 }}>
         <Link href="/" style={{ display: "flex", alignItems: "center", gap: 10, textDecoration: "none" }}>
-          <span style={{ width: 34, height: 34, borderRadius: 10, display: "flex", alignItems: "center", justifyContent: "center", background: "var(--ac)", color: "var(--bg)" }}>
-            <Icon d={ICONS.layers} size={20} stroke={2} />
-          </span>
-          <span className="display" style={{ fontWeight: 700, fontSize: 20 }}>Capa3D</span>
+          <Logo height={22} />
         </Link>
         <Link className="chip-btn" href="/#quote" style={{ textDecoration: "none" }}>Cotizar otra pieza</Link>
       </header>

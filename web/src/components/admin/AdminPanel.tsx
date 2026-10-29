@@ -6,9 +6,10 @@ import { API_URL } from "@/lib/config";
 import { ApiError, downloadQuote, listAdminQuotes, type AdminQuote } from "@/lib/api";
 import { QUALITIES } from "@/lib/catalog";
 import { duration, money, num1 } from "@/lib/format";
-import { Icon, ICONS } from "../Icon";
+import { Icon } from "../Icon";
 import { CatalogTab } from "./CatalogTab";
 import { OrdersTab } from "./OrdersTab";
+import { Logo } from "../brand/Logo";
 
 const TOKEN_KEY = "capa3d-admin";
 const REFRESH_MS = 30_000;
@@ -51,10 +52,7 @@ export function AdminPanel() {
     <main style={{ maxWidth: 1100, margin: "0 auto", padding: "28px 20px 80px" }}>
       <header style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, marginBottom: 28 }}>
         <Link href="/" style={{ display: "flex", alignItems: "center", gap: 10, textDecoration: "none" }}>
-          <span style={{ width: 34, height: 34, borderRadius: 10, display: "flex", alignItems: "center", justifyContent: "center", background: "var(--ac)", color: "var(--bg)" }}>
-            <Icon d={ICONS.layers} size={20} stroke={2} />
-          </span>
-          <span className="display" style={{ fontWeight: 700, fontSize: 20 }}>Capa3D</span>
+          <Logo height={22} />
           <span style={{ color: "var(--text-3)", fontSize: 14 }}>· Panel</span>
         </Link>
         <div style={{ display: "flex", gap: 8 }}>
@@ -113,7 +111,7 @@ function Login({ onLogin }: { onLogin: (token: string) => void }) {
 
   return (
     <form onSubmit={submit} className="step" style={{ maxWidth: 420, margin: "60px auto 0" }}>
-      <h1 className="step-title" style={{ fontSize: 24 }}>Panel de Capa3D</h1>
+      <h1 className="step-title" style={{ fontSize: 24 }}>Panel de CR3D</h1>
       <p className="step-sub" style={{ marginBottom: 18 }}>
         Escribe la clave del panel. Este navegador la recuerda hasta que toques <strong>Salir</strong>.
         <span style={{ display: "block", fontSize: 12, marginTop: 6, color: "var(--text-4)" }}>

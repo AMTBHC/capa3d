@@ -67,5 +67,5 @@ def write_stl(tris: np.ndarray, path: Path) -> None:
         rec["attr"][:3] = 0xFFFF
         body = np.uint32(n).tobytes() + rec.tobytes()
     with path.open("wb") as f:
-        f.write(b"Capa3D".ljust(80, b"\0"))
+        f.write(b"CR3D".ljust(80, b"\0"))
         f.write(body)

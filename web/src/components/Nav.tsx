@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { AdminShortcut } from "./AdminShortcut";
-import { Icon, ICONS } from "./Icon";
+import { Logo } from "./brand/Logo";
 
 const LINKS = [
   ["#quote", "Cotizador"],
@@ -21,10 +21,7 @@ export function Nav() {
         }}
       >
         <a href="#" style={{ display: "flex", alignItems: "center", gap: 10, textDecoration: "none" }}>
-          <span style={{ width: 34, height: 34, borderRadius: 10, display: "flex", alignItems: "center", justifyContent: "center", background: "var(--ac)", color: "var(--bg)" }}>
-            <Icon d={ICONS.layers} size={20} stroke={2} />
-          </span>
-          <span className="display" style={{ fontWeight: 700, fontSize: 20, letterSpacing: -0.5 }}>Capa3D</span>
+          <Logo height={22} />
         </a>
         <div style={{ display: "flex", flexWrap: "wrap", gap: 6, fontSize: 14 }}>
           {LINKS.map(([href, label]) => (

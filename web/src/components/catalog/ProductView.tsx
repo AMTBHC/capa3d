@@ -33,7 +33,7 @@ export function ProductView({ id }: { id: string }) {
   useEffect(() => {
     getProduct(id).then((x) => {
       setP(x);
-      document.title = `${x.name} · Capa3D`;
+      document.title = `${x.name} · CR3D`;
     }, () => setMissing(true));
   }, [id]);
 

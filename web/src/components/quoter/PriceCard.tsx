@@ -64,7 +64,7 @@ export function PriceCard({ fileName, model, opts, supports, dims, quote, server
   const swatches = multicolor ? fileFilaments.map((f) => f.color).filter((c) => /^#[0-9a-f]{6}/i.test(c)).slice(0, colors) : [color.render];
 
   const msg = [
-    "Hola Capa3D, quiero cotizar esta impresión:",
+    "Hola CR3D, quiero cotizar esta impresión:",
     quoteId
       ? `• Ya subí el archivo en la web: ${fileName} (cotización ${quoteId})`
       : `• Archivo: ${fileName || "(lo envío por aquí)"}`,

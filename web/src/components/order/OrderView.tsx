@@ -8,7 +8,7 @@ import { checkoutOrder, confirmPayment, getOrder, orderStreamUrl, type Order } f
 import { QUALITIES } from "@/lib/catalog";
 import { money } from "@/lib/format";
 import { orderPath, saveOrder } from "@/lib/myOrders";
-import { Icon, ICONS } from "../Icon";
+import { Logo } from "../brand/Logo";
 
 /** Respaldo si la conexión en vivo no está disponible. */
 const POLL_MS = 20_000;
@@ -112,15 +112,12 @@ export function OrderView({ id, token, transactionId, isNew }: { id: string; tok
     <main style={{ maxWidth: 760, margin: "0 auto", padding: "24px 16px 80px" }}>
       <header style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, marginBottom: 24 }}>
         <Link href="/" style={{ display: "flex", alignItems: "center", gap: 10, textDecoration: "none" }}>
-          <span style={{ width: 34, height: 34, borderRadius: 10, display: "flex", alignItems: "center", justifyContent: "center", background: "var(--ac)", color: "var(--bg)" }}>
-            <Icon d={ICONS.layers} size={20} stroke={2} />
-          </span>
-          <span className="display" style={{ fontWeight: 700, fontSize: 20 }}>Capa3D</span>
+          <Logo height={22} />
         </Link>
         <div style={{ display: "flex", gap: 8 }}>
           <Link className="chip-btn" href="/mis-pedidos" style={{ textDecoration: "none" }}>Mis pedidos</Link>
           {order && (
-            <a className="chip-btn" href={whatsappUrl(`Hola Capa3D, tengo una pregunta sobre mi pedido ${order.id}: ${link}`)} target="_blank" rel="noopener noreferrer" style={{ textDecoration: "none" }}>
+            <a className="chip-btn" href={whatsappUrl(`Hola CR3D, tengo una pregunta sobre mi pedido ${order.id}: ${link}`)} target="_blank" rel="noopener noreferrer" style={{ textDecoration: "none" }}>
               WhatsApp
             </a>
           )}
@@ -222,7 +219,7 @@ function Welcome({ order, link, onClose }: { order: Order; link: string; onClose
   };
   const share = async () => {
     try {
-      await navigator.share({ title: `Pedido ${order.id} · Capa3D`, url: link });
+      await navigator.share({ title: `Pedido ${order.id} · CR3D`, url: link });
     } catch {
       // el cliente cerró el menú de compartir
     }
@@ -240,9 +237,9 @@ function Welcome({ order, link, onClose }: { order: Order; link: string; onClose
       </div>
       <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
         {!order.price_pending && (
-          <a className="btn" href={whatsappUrl(`Hola Capa3D, acabo de hacer el pedido ${order.id}. Lo sigo aquí: ${link}`)} target="_blank" rel="noopener noreferrer"
+          <a className="btn" href={whatsappUrl(`Hola CR3D, acabo de hacer el pedido ${order.id}. Lo sigo aquí: ${link}`)} target="_blank" rel="noopener noreferrer"
             style={{ padding: "10px 16px", borderRadius: 12, fontWeight: 600, fontSize: 14, background: "#25D366", color: "#06210F" }}>
-            Enviar el pedido a Capa3D por WhatsApp
+            Enviar el pedido a CR3D por WhatsApp
           </a>
         )}
         <button className="chip-btn" onClick={copy}>{copied ? "¡Enlace copiado!" : "Copiar enlace"}</button>
@@ -293,7 +290,7 @@ function PayBox({ order, paying, inOtherTab, onPay, error }: {
         </button>
       ) : (
         <a className="btn btn-primary" target="_blank" rel="noopener noreferrer"
-          href={whatsappUrl(`Hola Capa3D, quiero pagar ${plan === "deposit" ? `el abono de $${money(amount)}` : `$${money(amount)}`} de mi pedido ${order.id}.`)}
+          href={whatsappUrl(`Hola CR3D, quiero pagar ${plan === "deposit" ? `el abono de $${money(amount)}` : `$${money(amount)}`} de mi pedido ${order.id}.`)}
           style={{ display: "block", textAlign: "center", marginTop: 14, padding: 15, borderRadius: 14 }}>
           Pagar ${money(amount)} por WhatsApp
         </a>

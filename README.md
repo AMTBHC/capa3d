@@ -1,4 +1,4 @@
-# Capa3D
+# CR3D
 
 Sitio de impresión 3D con cotizador en línea. El cliente sube su modelo (STL, OBJ, 3MF o STEP) y lo ve en 3D sobre la cama de la impresora. Elige material, calidad, relleno, color y soportes, y recibe un estimado al instante, que luego se reemplaza por el **precio laminado** con PrusaSlicer en el servidor.
 
@@ -34,8 +34,8 @@ Para que clientes y tú entren desde cualquier lugar, con tu dominio y HTTPS. Si
 
 **Si el servidor ya tiene otra app** (otra web, una API…), pueden convivir. El instalador revisa si los puertos 80/443 ya los usa otra cosa:
 
-- **Libres:** Capa3D los toma y pone su propio HTTPS.
-- **Ocupados (modo compartido):** Capa3D no toca la otra app. Queda escuchando solo en el servidor (`127.0.0.1:8088` o el siguiente puerto libre) y el proxy que ya tienes le pasa tu dominio:
+- **Libres:** CR3D los toma y pone su propio HTTPS.
+- **Ocupados (modo compartido):** CR3D no toca la otra app. Queda escuchando solo en el servidor (`127.0.0.1:8088` o el siguiente puerto libre) y el proxy que ya tienes le pasa tu dominio:
   - **nginx:** se configura solo. Crea un archivo nuevo, `/etc/nginx/sites-available/capa3d`, lo valida con `nginx -t` antes de recargar (si falla, lo quita) y pide el HTTPS con certbot. Tus otros sitios no se modifican.
   - **Caddy, Apache o Traefik:** el instalador te muestra las líneas exactas que debes agregar.
 - El firewall no se activa: si ya lo usas, solo se abren los puertos web.
@@ -140,7 +140,7 @@ Tú imprimes → Imprimiendo → Enviado (transportadora + guía) → Entregado 
 ```
 
 **Para el cliente**
-- Al hacer el pedido ve su **número de pedido**, un botón para **enviarlo a Capa3D por WhatsApp** (así le queda el enlace en el chat) y otro para copiar el enlace.
+- Al hacer el pedido ve su **número de pedido**, un botón para **enviarlo a CR3D por WhatsApp** (así le queda el enlace en el chat) y otro para copiar el enlace.
 - **Mis pedidos** (en el menú y en el pie de página) muestra los pedidos hechos desde ese navegador, y permite buscarlos con el **correo y el celular** del pedido.
 - Su página de pedido se actualiza **en vivo**: cuando confirmas el precio, marcas un estado o entra un pago, lo ve en uno o dos segundos sin recargar.
 

@@ -61,7 +61,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         service.pool.shutdown(wait=False, cancel_futures=True)
         service.plate_pool.shutdown(wait=False, cancel_futures=True)
 
-    app = FastAPI(title="Capa3D API", version="0.1.0", lifespan=lifespan)
+    app = FastAPI(title="CR3D API", version="0.1.0", lifespan=lifespan)
     app.state.service = service
     app.state.shop = shop
     app.add_middleware(

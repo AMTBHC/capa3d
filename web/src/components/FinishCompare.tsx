@@ -16,7 +16,7 @@ export function FinishCompare() {
         </p>
         <input type="range" min={0} max={100} value={cmp} onChange={(e) => setCmp(+e.target.value)} aria-label="Comparar pieza cruda y acabada" />
       </div>
-      <div style={{ flex: "1 1 420px", minWidth: 0, position: "relative", height: 340, borderRadius: 20, overflow: "hidden", background: "radial-gradient(circle at 50% 55%,rgba(255,106,26,.16),transparent 60%),var(--surface-3)" }}>
+      <div style={{ flex: "1 1 420px", minWidth: 0, position: "relative", height: 340, borderRadius: 20, overflow: "hidden", background: "radial-gradient(circle at 50% 55%,rgba(140,83,253,.14),transparent 60%),var(--surface-3)" }}>
         <img src="/img/pieza-acabada.svg" alt="Pieza con acabado liso" style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "contain" }} />
         <img src="/img/pieza-cruda.svg" alt="Pieza cruda con líneas de capa" style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "contain", clipPath: `inset(0 ${100 - cmp}% 0 0)` }} />
         <div style={{ position: "absolute", top: 0, bottom: 0, width: 2, background: "var(--text)", left: `${cmp}%`, boxShadow: "0 0 0 1px var(--surface)" }}>

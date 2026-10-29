@@ -35,7 +35,7 @@ def source_url(src: dict) -> str:
 
 
 def download(url: str, dest: Path, limit_mb: int) -> Path:
-    req = urllib.request.Request(url, headers={"User-Agent": "Capa3D"})
+    req = urllib.request.Request(url, headers={"User-Agent": "CR3D"})
     limit = limit_mb * 1024 * 1024
     size = 0
     try:

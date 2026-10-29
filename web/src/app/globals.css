@@ -17,6 +17,9 @@
   --warn: #b45309;
   --bad: #c62828;
   --ac: #111111;
+  /* Violeta del logo (CR3D): el 3 y los acentos grandes; --brand-ink para texto pequeño. */
+  --brand: #8c53fd;
+  --brand-ink: #7a3ff2;
   --ac-glow: transparent;
   --ac-soft: rgba(17, 17, 17, 0.05);
   --ac-line: rgba(17, 17, 17, 0.25);
@@ -42,7 +45,7 @@ button, input { font-family: inherit; }
 a { color: var(--text); }
 a:hover { color: var(--text-2); }
 img { max-width: 100%; }
-:focus-visible { outline: 2px solid var(--ac); outline-offset: 3px; }
+:focus-visible { outline: 2px solid var(--brand); outline-offset: 3px; }
 
 .mono { font-family: var(--font-mono), ui-monospace, monospace; }
 .display { font-family: var(--font-display), system-ui, sans-serif; }
@@ -57,7 +60,7 @@ img { max-width: 100%; }
 .row { display: flex; flex-wrap: wrap; }
 
 /* Tipografía */
-.eyebrow { font-size: 12px; letter-spacing: 2px; color: var(--text-3); }
+.eyebrow { font-size: 12px; letter-spacing: 2px; color: var(--brand-ink); }
 .h2 { font-size: clamp(28px, 4vw, 44px); line-height: 1.1; margin: 14px 0 0; letter-spacing: -0.03em; }
 .lead { color: var(--text-3); font-size: 17px; line-height: 1.6; margin: 16px 0 0; }
 .label { font-size: 11px; letter-spacing: 2px; color: var(--text-3); }
