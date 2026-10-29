@@ -9,12 +9,12 @@ import { COLORS, MATERIALS } from "@/lib/catalog";
 import { whatsappUrl } from "@/lib/config";
 import { money, num1 } from "@/lib/format";
 import { loadServerModel, type ServerPlateMesh } from "@/lib/serverModel";
-import { Icon, ICONS } from "../Icon";
 import { SiteHeader } from "../SiteHeader";
 import { grid, ProductCard } from "./Cards";
 import { ColorMode, FilamentPicker } from "../quoter/Options";
 import { OrderDialog } from "../quoter/OrderDialog";
 import { useCatalog, useServerQuote } from "../quoter/useServer";
+import { WhatsAppIcon } from "../WhatsAppIcon";
 
 const ModelViewer = dynamic(() => import("../quoter/ModelViewer"), { ssr: false });
 
@@ -232,7 +232,7 @@ function Product({ p }: { p: CatalogProduct }) {
           <a className="btn btn-ghost" target="_blank" rel="noopener noreferrer"
             style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8, marginTop: 10, padding: 12, borderRadius: 14, fontSize: 14 }}
             href={whatsappUrl(`Hola, quiero ${summary}${quote ? ` ($${money(quote.total)})` : ""}`)}>
-            <Icon d={ICONS.chat} size={18} stroke={2} />
+            <WhatsAppIcon size={18} />
             Preguntar por WhatsApp
           </a>
         </div>

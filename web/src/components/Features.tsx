@@ -1,12 +1,13 @@
 import { Icon, ICONS } from "./Icon";
 import { SectionHeader } from "./SectionHeader";
+import { WhatsAppIcon } from "./WhatsAppIcon";
 
 const SMALL = [
   [ICONS.check, "Revisión de archivo", "Verificamos que tu modelo se pueda imprimir y te avisamos si hay que ajustar algo."],
   [ICONS.cycle, "Prototipos que iteran", "Corrige el diseño y vuelve a imprimir hasta que la pieza encaje como necesitas."],
   [ICONS.stack, "Cuatro materiales", "PLA, PETG, ABS y TPU: del prototipo rápido a la pieza que aguanta uso real."],
   [ICONS.box, "Empaque cuidado", "Tus piezas llegan protegidas. [TUS COBERTURAS DE ENVÍO]"],
-  [ICONS.chat, "Hablas con quien imprime", "Asesoría directa por WhatsApp, antes y después de tu pedido."],
+  ["whatsapp", "Hablas con quien imprime", "Asesoría directa por WhatsApp, antes y después de tu pedido."],
 ];
 
 const cardBase = { borderRadius: 28, background: "var(--surface-2)", border: "1px solid var(--line)", minWidth: 0 } as const;
@@ -29,7 +30,7 @@ export function Features() {
         {SMALL.map(([icon, title, text]) => (
           <div key={title} className="tilt" style={{ ...cardBase, flex: "1 1 260px", padding: 30 }}>
             <div style={{ width: 48, height: 48, borderRadius: 14, display: "flex", alignItems: "center", justifyContent: "center", border: "1px solid var(--ac-glow)", color: "var(--ac)", background: "var(--ac-soft)" }}>
-              <Icon d={icon} />
+              {icon === "whatsapp" ? <WhatsAppIcon size={22} /> : <Icon d={icon} />}
             </div>
             <h3 style={{ fontSize: 19, margin: "22px 0 8px" }}>{title}</h3>
             <p style={{ margin: 0, color: "var(--text-3)", lineHeight: 1.6 }}>{text}</p>

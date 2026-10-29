@@ -1,5 +1,6 @@
 /* eslint-disable @next/next/no-img-element */
 import { whatsappUrl } from "@/lib/config";
+import { WhatsAppIcon } from "./WhatsAppIcon";
 
 export function Cta() {
   return (
@@ -14,7 +15,9 @@ export function Cta() {
           </p>
           <div style={{ position: "relative", display: "flex", flexWrap: "wrap", gap: 12, justifyContent: "center" }}>
             <a className="btn btn-primary glow" href="#quote" style={{ padding: "18px 30px", borderRadius: 16 }}>Cotizar mi pieza</a>
-            <a className="btn btn-ghost" href={whatsappUrl()} target="_blank" rel="noopener noreferrer" style={{ padding: "18px 30px", borderRadius: 16 }}>Escribir por WhatsApp</a>
+            <a className="btn btn-ghost" href={whatsappUrl()} target="_blank" rel="noopener noreferrer" style={{ display: "inline-flex", alignItems: "center", gap: 10, padding: "18px 30px", borderRadius: 16 }}>
+              <WhatsAppIcon size={20} />Escribir por WhatsApp
+            </a>
           </div>
         </div>
       </div>
