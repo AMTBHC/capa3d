@@ -5,12 +5,13 @@ import { useEffect, useState, type FormEvent } from "react";
 import { API_URL } from "@/lib/config";
 import { lookupOrders, type FoundOrder } from "@/lib/api";
 import { money } from "@/lib/format";
-import { orderPath, savedOrders, type SavedOrder } from "@/lib/myOrders";
+import { designPath, orderPath, savedDesigns, savedOrders, type SavedDesign, type SavedOrder } from "@/lib/myOrders";
 import { Logo } from "../brand/Logo";
 
 /** Mis pedidos: los de este navegador y búsqueda por correo y celular. */
 export function MyOrders() {
   const [saved, setSaved] = useState<SavedOrder[] | null>(null);
+  const [designs, setDesigns] = useState<SavedDesign[]>([]);
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
   const [found, setFound] = useState<FoundOrder[] | null>(null);
@@ -21,6 +22,7 @@ export function MyOrders() {
     // Lo guardado solo existe en el navegador; se lee después de montar.
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setSaved(savedOrders());
+    setDesigns(savedDesigns());
   }, []);
 
   const search = async (e: FormEvent) => {
@@ -50,6 +52,25 @@ export function MyOrders() {
         <section className="step" style={{ marginBottom: 16 }}>
           <h2 className="step-title" style={{ marginTop: 0 }}>En este dispositivo</h2>
           <List items={saved.map((o) => ({ ...o, label: o.status_label }))} />
+        </section>
+      )}
+
+      {designs.length > 0 && (
+        <section className="step" style={{ marginBottom: 16 }}>
+          <h2 className="step-title" style={{ marginTop: 0 }}>Diseños a medida</h2>
+          <ul style={{ listStyle: "none", margin: 0, padding: 0, display: "flex", flexDirection: "column", gap: 8 }}>
+            {designs.map((d) => (
+              <li key={d.id}>
+                <Link href={designPath(d.id, d.token)}
+                  style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: 12, padding: 14, borderRadius: 14, background: "var(--surface-3)", textDecoration: "none", color: "var(--text)" }}>
+                  <span className="mono" style={{ color: "var(--ac)", fontWeight: 600 }}>{d.id}</span>
+                  <span style={{ flex: "1 1 160px", minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{d.description}</span>
+                  <span style={{ fontSize: 13, color: "var(--text-3)" }}>{new Date(d.created_at).toLocaleDateString("es-CO", { day: "numeric", month: "short" })}</span>
+                  <span style={{ fontSize: 13, fontWeight: 600 }}>{d.status_label}</span>
+                </Link>
+              </li>
+            ))}
+          </ul>
         </section>
       )}
 

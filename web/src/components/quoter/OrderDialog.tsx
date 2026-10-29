@@ -8,20 +8,21 @@ import { money } from "@/lib/format";
 import { orderPath, saveOrder } from "@/lib/myOrders";
 import { Icon, ICONS } from "../Icon";
 
-const DEPARTMENTS = [
+export const DEPARTMENTS = [
   "Amazonas", "Antioquia", "Arauca", "Atlántico", "Bogotá D.C.", "Bolívar", "Boyacá", "Caldas", "Caquetá", "Casanare",
   "Cauca", "Cesar", "Chocó", "Córdoba", "Cundinamarca", "Guainía", "Guaviare", "Huila", "La Guajira", "Magdalena",
   "Meta", "Nariño", "Norte de Santander", "Putumayo", "Quindío", "Risaralda", "San Andrés y Providencia", "Santander",
   "Sucre", "Tolima", "Valle del Cauca", "Vaupés", "Vichada",
 ];
 
-const SAVED = "capa3d-cliente";
+/** Datos del cliente guardados en este navegador (también los usa el formulario de diseños). */
+export const SAVED_CUSTOMER = "capa3d-cliente";
 
 const EMPTY: CustomerData = { name: "", phone: "", email: "", address: "", city: "", department: "", notes: "" };
 
 function loadSaved(): CustomerData {
   try {
-    return { ...EMPTY, ...JSON.parse(localStorage.getItem(SAVED) ?? "{}"), notes: "" };
+    return { ...EMPTY, ...JSON.parse(localStorage.getItem(SAVED_CUSTOMER) ?? "{}"), notes: "" };
   } catch {
     return EMPTY;
   }
@@ -69,7 +70,7 @@ export function OrderDialog({ quoteId, color, summary, printPrice, shipping, onC
     try {
       const o = await createOrder(quoteId, color, c);
       try {
-        localStorage.setItem(SAVED, JSON.stringify({ ...c, notes: "" }));
+        localStorage.setItem(SAVED_CUSTOMER, JSON.stringify({ ...c, notes: "" }));
       } catch {
         // sin almacenamiento: solo no se recuerdan los datos
       }

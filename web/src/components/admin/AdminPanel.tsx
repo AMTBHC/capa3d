@@ -8,6 +8,7 @@ import { QUALITIES } from "@/lib/catalog";
 import { duration, money, num1 } from "@/lib/format";
 import { Icon } from "../Icon";
 import { CatalogTab } from "./CatalogTab";
+import { DesignsTab } from "./DesignsTab";
 import { OrdersTab } from "./OrdersTab";
 import { Logo } from "../brand/Logo";
 
@@ -72,11 +73,11 @@ export function AdminPanel() {
 }
 
 function Tabs({ token, onUnauthorized }: { token: string; onUnauthorized: () => void }) {
-  const [tab, setTab] = useState<"orders" | "quotes" | "catalog">("orders");
+  const [tab, setTab] = useState<"orders" | "designs" | "quotes" | "catalog">("orders");
   return (
     <>
-      <div role="tablist" style={{ display: "flex", gap: 6, marginBottom: 20, borderBottom: "1px solid var(--line)" }}>
-        {([["orders", "Pedidos"], ["quotes", "Cotizaciones"], ["catalog", "Catálogo"]] as const).map(([id, label]) => (
+      <div role="tablist" style={{ display: "flex", gap: 6, overflowX: "auto", scrollbarWidth: "none", marginBottom: 20, borderBottom: "1px solid var(--line)" }}>
+        {([["orders", "Pedidos"], ["designs", "Diseños"], ["quotes", "Cotizaciones"], ["catalog", "Catálogo"]] as const).map(([id, label]) => (
           <button key={id} role="tab" aria-selected={tab === id} onClick={() => setTab(id)}
             style={{ padding: "12px 16px", background: "none", border: 0, borderBottom: `2px solid ${tab === id ? "var(--ac)" : "transparent"}`, color: tab === id ? "var(--text)" : "var(--text-3)", fontSize: 16, fontWeight: 600, cursor: "pointer", marginBottom: -1 }}>
             {label}
@@ -84,6 +85,7 @@ function Tabs({ token, onUnauthorized }: { token: string; onUnauthorized: () => 
         ))}
       </div>
       {tab === "orders" ? <OrdersTab token={token} onUnauthorized={onUnauthorized} />
+        : tab === "designs" ? <DesignsTab token={token} onUnauthorized={onUnauthorized} />
         : tab === "quotes" ? <QuoteList token={token} onUnauthorized={onUnauthorized} />
         : <CatalogTab token={token} onUnauthorized={onUnauthorized} />}
     </>

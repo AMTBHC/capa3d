@@ -12,6 +12,7 @@ import { Cta } from "@/components/Cta";
 import { Footer } from "@/components/Footer";
 import { WhatsAppFab } from "@/components/WhatsAppFab";
 import { CatalogSection } from "@/components/catalog/CatalogSection";
+import { DesignSection } from "@/components/DesignSection";
 
 export default function Home() {
   return (
@@ -41,6 +42,7 @@ export default function Home() {
         <CatalogSection />
         <Features />
         <Quoter />
+        <DesignSection />
         <Gallery />
         <Materials />
         <Process />

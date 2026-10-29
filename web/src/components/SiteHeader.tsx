@@ -12,6 +12,7 @@ export function SiteHeader() {
       <nav aria-label="Secciones" style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: 8 }}>
         <Link className="chip-btn" href="/catalogo" style={{ textDecoration: "none" }}>Catálogo</Link>
         <Link className="chip-btn" href="/#quote" style={{ textDecoration: "none" }}>Cotizar mi archivo</Link>
+        <Link className="chip-btn" href="/disenos" style={{ textDecoration: "none" }}>Diseño a medida</Link>
         <Link className="chip-btn" href="/mis-pedidos" style={{ textDecoration: "none" }}>Mis pedidos</Link>
         <AdminShortcut />
       </nav>

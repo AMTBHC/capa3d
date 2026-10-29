@@ -180,6 +180,18 @@ WhatsApp no deja adjuntar archivos desde un enlace, por eso el archivo del clien
 
 La clave del panel la genera `iniciar` la primera vez, la muestra al arrancar y la guarda en `api/.env` como `CAPA3D_ADMIN_TOKEN`. En producción usa una clave larga.
 
+## Diseños a medida
+
+Para quien no tiene el archivo 3D. En `/disenos` (enlace «Diseño a medida» en el menú y sección en la portada) el cliente sube hasta 6 fotos, bocetos o un PDF (JPG, PNG, WEBP, HEIC, máx. 10 MB c/u). También escribe una descripción, la medida, la cantidad, la fecha y el presupuesto, y deja sus datos. Recibe un enlace `/diseno/<id>?t=…` para seguir la solicitud, que también aparece en «Mis pedidos».
+
+En el panel, pestaña **Diseños**:
+
+1. Ves las referencias y los datos del cliente, con un botón para escribirle por WhatsApp.
+2. Marcas «Empezar diseño» y luego «Envié la propuesta». También puedes guardar notas internas.
+3. Cuando el cliente aprueba, en **Crear pedido con el modelo** subes el STL/3MF, pones el precio (diseño + impresión), el envío y la dirección. Se crea un pedido ya **Por pagar**, el cliente lo ve en su página y lo paga como cualquier otro.
+
+Las imágenes quedan en `data/designs/<id>/` (entran en el respaldo). Cada IP puede enviar hasta 5 solicitudes por hora.
+
 ## Catálogo
 
 Además del cotizador, el sitio tiene una tienda de productos listos para imprimir:

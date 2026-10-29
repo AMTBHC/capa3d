@@ -10,7 +10,7 @@ import { Icon } from "../Icon";
 const REFRESH_MS = 30_000;
 
 /** Dos tonos cortos para avisar un pedido nuevo. */
-function chime() {
+export function chime() {
   try {
     const ctx = new AudioContext();
     [880, 1320].forEach((f, i) => {
@@ -48,7 +48,7 @@ const STATUS_COLOR: Record<OrderStatus, string> = {
 };
 
 /** Número para wa.me: los celulares colombianos de 10 dígitos llevan el 57 adelante. */
-function waPhone(phone: string): string {
+export function waPhone(phone: string): string {
   const d = phone.replace(/\D/g, "");
   return d.length === 10 && d.startsWith("3") ? `57${d}` : d;
 }
@@ -89,6 +89,7 @@ export function OrdersTab({ token, onUnauthorized }: { token: string; onUnauthor
   const [toast, setToast] = useState("");
   const [canNotify, setCanNotify] = useState<NotificationPermission | "unsupported">("unsupported");
   const received = useRef<number | null>(null);
+  const designsReceived = useRef<number | null>(null);
 
   const load = useCallback(async () => {
     try {
@@ -116,6 +117,13 @@ export function OrdersTab({ token, onUnauthorized }: { token: string; onUnauthor
         if (typeof Notification !== "undefined" && Notification.permission === "granted") new Notification("CR3D", { body: text });
       }
       received.current = n;
+      const nd = data.designs?.by_status.received ?? 0;
+      if (designsReceived.current !== null && nd > designsReceived.current) {
+        setToast("Nueva solicitud de diseño a medida: mírala en la pestaña Diseños");
+        chime();
+        if (typeof Notification !== "undefined" && Notification.permission === "granted") new Notification("CR3D", { body: "Nueva solicitud de diseño a medida" });
+      }
+      designsReceived.current = nd;
     }, setLive);
   }, [token, load]);
 
@@ -363,7 +371,7 @@ function OrderDetail({ o, token, onChange }: { o: AdminOrder; token: string; onC
   );
 }
 
-function Box({ title, children }: { title: string; children: React.ReactNode }) {
+export function Box({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <section style={{ padding: 14, borderRadius: 14, background: "var(--surface-3)", minWidth: 0 }}>
       <h3 style={{ fontSize: 13, color: "var(--text-3)", fontFamily: "inherit", fontWeight: 600, margin: "0 0 8px", textTransform: "uppercase", letterSpacing: 1 }}>{title}</h3>
@@ -372,11 +380,11 @@ function Box({ title, children }: { title: string; children: React.ReactNode }) 
   );
 }
 
-function Line({ children, muted }: { children: React.ReactNode; muted?: boolean }) {
+export function Line({ children, muted }: { children: React.ReactNode; muted?: boolean }) {
   return <p style={{ margin: "3px 0", fontSize: 14, lineHeight: 1.5, color: muted ? "var(--text-3)" : "var(--text)", overflowWrap: "anywhere" }}>{children}</p>;
 }
 
-function Money({ label, value, onChange }: { label: string; value: string; onChange: (v: string) => void }) {
+export function Money({ label, value, onChange }: { label: string; value: string; onChange: (v: string) => void }) {
   return (
     <label style={{ fontSize: 12, color: "var(--text-3)", display: "flex", flexDirection: "column", gap: 4 }}>
       {label}
@@ -385,7 +393,7 @@ function Money({ label, value, onChange }: { label: string; value: string; onCha
   );
 }
 
-function Text({ label, value, onChange, placeholder }: { label: string; value: string; onChange: (v: string) => void; placeholder?: string }) {
+export function Text({ label, value, onChange, placeholder }: { label: string; value: string; onChange: (v: string) => void; placeholder?: string }) {
   return (
     <label style={{ fontSize: 12, color: "var(--text-3)", display: "flex", flexDirection: "column", gap: 4 }}>
       {label}
@@ -394,5 +402,5 @@ function Text({ label, value, onChange, placeholder }: { label: string; value: s
   );
 }
 
-const field = { width: "100%", padding: "9px 10px", borderRadius: 10, border: "1px solid var(--line-3)", background: "var(--surface)", color: "var(--text)", fontSize: 14 } as const;
-const actionBtn = { width: "100%", marginTop: 10, padding: 12, borderRadius: 12, fontSize: 14 } as const;
+export const field = { width: "100%", padding: "9px 10px", borderRadius: 10, border: "1px solid var(--line-3)", background: "var(--surface)", color: "var(--text)", fontSize: 14 } as const;
+export const actionBtn = { width: "100%", marginTop: 10, padding: 12, borderRadius: 12, fontSize: 14 } as const;
