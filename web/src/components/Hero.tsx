@@ -44,16 +44,16 @@ export function Hero() {
       <div style={{ flex: "1 1 480px", minWidth: 0 }}>
         <span className="mono" style={{ display: "inline-flex", alignItems: "center", gap: 10, padding: "8px 14px", borderRadius: 99, border: "1px solid var(--line-2)", fontSize: 12, letterSpacing: 1, color: "var(--text-2)" }}>
           <span className="pulse" style={{ width: 8, height: 8, borderRadius: "50%", background: "var(--brand)" }} />
-          IMPRESIÓN 3D FDM · COLOMBIA
+          CREATE BEYOND LIMITS
         </span>
         <h1 style={{ fontSize: "clamp(40px,6vw,76px)", lineHeight: 1.02, margin: "26px 0 24px", letterSpacing: "-0.035em", fontWeight: 600 }}>
-          Da vida a tus ideas,{" "}
-          <span style={{ color: "var(--brand)" }}>
-            capa por capa.
+          Crea más allá
+          <span style={{ display: "block", color: "var(--brand)" }}>
+            de los límites.
           </span>
         </h1>
         <p style={{ fontSize: 19, lineHeight: 1.6, color: "var(--text-3)", maxWidth: 540, margin: "0 0 36px" }}>
-          Sube tu modelo 3D, elige material, calidad y color, y conoce tu precio en segundos. Prototipos, repuestos, miniaturas y decoración con acabado profesional.
+          Si lo puedes imaginar, lo imprimimos. Sube tu modelo 3D y conoce tu precio en segundos, o elige una pieza de nuestro catálogo. Prototipos, repuestos, figuras y decoración con acabado profesional.
         </p>
         <div style={{ display: "flex", flexWrap: "wrap", gap: 12 }}>
           <a className="btn btn-primary glow" href="#quote" style={{ display: "inline-flex", alignItems: "center", gap: 10, padding: "18px 28px", borderRadius: 16 }}>
