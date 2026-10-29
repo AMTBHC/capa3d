@@ -25,7 +25,12 @@ services:
   api:
     build: ../api
     restart: unless-stopped
+    # Núcleos que puede usar al laminar (0 = sin límite). En un servidor pequeño con otras apps
+    # conviene 1, para que PrusaSlicer no las deje sin procesador.
+    cpus: ${API_CPUS:-0}
     environment:
+      CAPA3D_SLICER_WORKERS: ${API_CPUS_TRABAJOS:-2}
+      CAPA3D_PLATE_WORKERS: ${API_CPUS_TRABAJOS:-3}
       CAPA3D_SITE_URL: https://${DOMINIO}
       CAPA3D_CORS_ORIGINS: https://${DOMINIO}
       CAPA3D_ADMIN_TOKEN: ${CLAVE_PANEL:?Falta CLAVE_PANEL en deploy/.env}

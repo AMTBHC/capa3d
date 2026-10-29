@@ -50,6 +50,14 @@ WOMPI_INTEGRITY_SECRET=
 WOMPI_EVENTS_SECRET=
 WOMPI_PRIVATE_KEY=
 CONF
+  if [ "$(nproc)" -le 2 ] && [ -n "$ocupado" ]; then
+    # Servidor pequeño con otras apps: la API lamina con un solo núcleo para no quitárselo a ellas.
+    cat >> .env <<CONF
+# Servidor pequeño con otras apps: laminar con 1 núcleo (sube o borra estas líneas si quieres más).
+API_CPUS=1
+API_CPUS_TRABAJOS=1
+CONF
+  fi
   if [ -n "$ocupado" ]; then
     # Primer puerto local libre desde 8088.
     PUERTO=8088
