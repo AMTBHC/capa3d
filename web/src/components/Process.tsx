@@ -29,13 +29,13 @@ export function Process() {
               style={{
                 flex: "1 1 230px", minWidth: 0, textAlign: "left", cursor: "pointer", color: "var(--text)", display: "flex", flexDirection: "column",
                 alignItems: "flex-start", padding: 24, borderRadius: 24, transition: "all .3s", background: "var(--surface)",
-                border: `1px solid ${on ? "#FF5A1F99" : "var(--line)"}`, transform: on ? "translateY(-6px)" : "none",
+                border: `1px solid ${on ? "#8C53FD99" : "var(--line)"}`, transform: on ? "translateY(-6px)" : "none",
               }}>
               <span style={{ display: "block", height: 4, borderRadius: 2, background: "var(--line-2)", overflow: "hidden", width: "100%" }}>
                 <span className="bar" style={{ display: "block", height: 4, borderRadius: 2, background: "var(--ac)", boxShadow: "0 0 10px var(--ac)", width: `${done ? 100 : on ? sub : 0}%` }} />
               </span>
               <span style={{ display: "flex", justifyContent: "space-between", alignItems: "center", width: "100%", marginTop: 24 }}>
-                <span style={{ width: 52, height: 52, borderRadius: 16, display: "flex", alignItems: "center", justifyContent: "center", color: on || done ? "var(--bg)" : "var(--text-3)", background: on || done ? "var(--ac)" : "var(--surface-3)", boxShadow: on ? "0 0 30px #FF5A1F88" : "none" }}>
+                <span style={{ width: 52, height: 52, borderRadius: 16, display: "flex", alignItems: "center", justifyContent: "center", color: on || done ? "var(--bg)" : "var(--text-3)", background: on || done ? "var(--ac)" : "var(--surface-3)", boxShadow: "none" }}>
                   <Icon d={s.icon} />
                 </span>
                 <span className="mono" style={{ fontSize: 12, color: "var(--text-3)" }}>{s.n}</span>

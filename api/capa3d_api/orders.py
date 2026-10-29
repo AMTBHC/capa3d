@@ -14,7 +14,7 @@ from typing import Literal
 from pydantic import BaseModel, Field, field_validator
 
 from .catalog import Catalog
-from .service import QuoteService
+from .service import QuoteService, review_of
 from .settings import Settings
 from .store import Store
 from .wompi import Transaction, Wompi, WompiError, is_local_url
@@ -41,6 +41,11 @@ STATUS_TEXT: dict[str, str] = {
     "delivered": "Tu pedido fue entregado. ¡Gracias por tu compra!",
     "cancelled": "Este pedido fue cancelado.",
 }
+
+REQUEST_TEXT = (
+    "Recibimos tu solicitud de cotización. Revisamos tu archivo y te contactamos por WhatsApp o correo "
+    "con el precio; cuando lo confirmemos, aquí mismo podrás pagar."
+)
 
 FLOW = ["received", "confirmed", "paid", "printing", "shipped", "delivered"]
 
@@ -140,7 +145,10 @@ class OrderService:
         q = self.store.get_quote(req.quote_id) if req.quote_id.isalnum() else None
         if q is None:
             raise OrderError("Cotización no encontrada", 404)
-        if q["status"] != "done" or not (q["result"] or {}).get("price"):
+        # Archivos muy grandes no tienen precio en línea: el pedido llega como solicitud de
+        # cotización y el taller pone el precio al confirmarlo.
+        request_only = review_of(q) is not None
+        if not request_only and (q["status"] != "done" or not (q["result"] or {}).get("price")):
             raise OrderError("La cotización todavía no tiene precio", 409)
         if q["valid_until"] < datetime.now(UTC).isoformat(timespec="seconds"):
             raise OrderError("La cotización venció; vuelve a cotizar", 409)
@@ -153,7 +161,7 @@ class OrderService:
             "status": "received",
             "customer": req.customer.model_dump(),
             "color": req.color,
-            "print_price": int(q["result"]["price"]["total"]),
+            "print_price": 0 if request_only else int(q["result"]["price"]["total"]),
             "shipping": self.catalog.shipping.cost_for(req.customer.city),
         })  # fmt: skip
         self.store.add_event(order_id, "received")
@@ -280,7 +288,10 @@ class OrderService:
         total = o["print_price"] + o["shipping"]
         paid = o.get("paid_amount") or 0
         balance = max(0, total - paid)
-        text = STATUS_TEXT[o["status"]]
+        review = review_of(q)
+        # Solicitud de cotización (archivo muy grande) que el taller todavía no ha revisado.
+        price_pending = review is not None and o["status"] == "received"
+        text = REQUEST_TEXT if price_pending else STATUS_TEXT[o["status"]]
         if o["status"] in ("paid", "printing", "shipped") and paid and balance:
             text += (
                 f" Pagaste un abono de {_cop(paid)}; los {_cop(balance)} restantes los pagas en efectivo al recibir."
@@ -311,6 +322,8 @@ class OrderService:
             "carrier": o["carrier"],
             "tracking": o["tracking"],
             "can_pay": o["status"] == "confirmed" and self.wompi.enabled,
+            "price_pending": price_pending,
+            "review": review,
             "payment_status": last["status"] if last else None,
         }
 
@@ -336,6 +349,8 @@ class OrderService:
         if a.action == "confirm":
             if a.print_price is not None:
                 fields["print_price"] = a.print_price
+            if not fields.get("print_price", o["print_price"]):
+                raise OrderError("Escribe el precio de la impresión antes de confirmar", 422)
             if a.shipping is not None:
                 fields["shipping"] = a.shipping
         if a.action == "mark_paid":

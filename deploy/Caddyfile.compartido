@@ -1,0 +1,27 @@
+# Modo compartido: otra app del servidor ya usa los puertos 80/443 con su propio proxy (nginx,
+# Apache, Caddy, Traefik…). Ese proxy pone el HTTPS y le pasa el dominio de Capa3D a este Caddy,
+# que solo escucha en un puerto local y reparte entre el sitio y la API.
+{
+	auto_https off
+	servers {
+		# La IP real del cliente llega desde el proxy del servidor.
+		trusted_proxies static private_ranges
+	}
+}
+
+:80 {
+	encode zstd gzip
+
+	handle /api/* {
+		request_body {
+			max_size 110MB
+		}
+		reverse_proxy api:8000 {
+			flush_interval -1
+		}
+	}
+
+	handle {
+		reverse_proxy web:3000
+	}
+}

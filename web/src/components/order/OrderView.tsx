@@ -8,7 +8,7 @@ import { checkoutOrder, confirmPayment, getOrder, orderStreamUrl, type Order } f
 import { QUALITIES } from "@/lib/catalog";
 import { money } from "@/lib/format";
 import { orderPath, saveOrder } from "@/lib/myOrders";
-import { Icon, ICONS } from "../Icon";
+import { Logo } from "../brand/Logo";
 
 /** Respaldo si la conexión en vivo no está disponible. */
 const POLL_MS = 20_000;
@@ -112,15 +112,12 @@ export function OrderView({ id, token, transactionId, isNew }: { id: string; tok
     <main style={{ maxWidth: 760, margin: "0 auto", padding: "24px 16px 80px" }}>
       <header style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, marginBottom: 24 }}>
         <Link href="/" style={{ display: "flex", alignItems: "center", gap: 10, textDecoration: "none" }}>
-          <span style={{ width: 34, height: 34, borderRadius: 10, display: "flex", alignItems: "center", justifyContent: "center", background: "var(--ac)", color: "var(--bg)" }}>
-            <Icon d={ICONS.layers} size={20} stroke={2} />
-          </span>
-          <span className="display" style={{ fontWeight: 700, fontSize: 20 }}>Capa3D</span>
+          <Logo height={22} />
         </Link>
         <div style={{ display: "flex", gap: 8 }}>
           <Link className="chip-btn" href="/mis-pedidos" style={{ textDecoration: "none" }}>Mis pedidos</Link>
           {order && (
-            <a className="chip-btn" href={whatsappUrl(`Hola Capa3D, tengo una pregunta sobre mi pedido ${order.id}: ${link}`)} target="_blank" rel="noopener noreferrer" style={{ textDecoration: "none" }}>
+            <a className="chip-btn" href={whatsappUrl(`Hola CR3D, tengo una pregunta sobre mi pedido ${order.id}: ${link}`)} target="_blank" rel="noopener noreferrer" style={{ textDecoration: "none" }}>
               WhatsApp
             </a>
           )}
@@ -175,9 +172,15 @@ export function OrderView({ id, token, transactionId, isNew }: { id: string; tok
             <Detail k="Relleno" v={`${order.params.infill}%${order.params.supports ? " · con soportes" : ""}`} />
             <Detail k="Cantidad" v={String(order.params.qty)} />
             <div style={{ borderTop: "1px solid var(--line)", margin: "12px 0", paddingTop: 12 }}>
-              <Detail k="Impresión" v={`$${money(order.print_price)}`} />
-              <Detail k="Envío" v={`$${money(order.shipping)}`} />
-              <Detail k={order.status === "received" ? "Total estimado" : "Total"} v={`$${money(order.total)}`} strong />
+              {order.price_pending ? (
+                <Detail k="Precio" v="te lo enviamos al revisar tu archivo" strong />
+              ) : (
+                <>
+                  <Detail k="Impresión" v={`$${money(order.print_price)}`} />
+                  <Detail k="Envío" v={`$${money(order.shipping)}`} />
+                  <Detail k={order.status === "received" ? "Total estimado" : "Total"} v={`$${money(order.total)}`} strong />
+                </>
+              )}
               {order.paid_amount > 0 && <Detail k="Pagado" v={`$${money(order.paid_amount)}`} />}
               {order.paid_amount > 0 && order.balance > 0 && <Detail k="Pagas al recibir (efectivo)" v={`$${money(order.balance)}`} strong />}
             </div>
@@ -216,7 +219,7 @@ function Welcome({ order, link, onClose }: { order: Order; link: string; onClose
   };
   const share = async () => {
     try {
-      await navigator.share({ title: `Pedido ${order.id} · Capa3D`, url: link });
+      await navigator.share({ title: `Pedido ${order.id} · CR3D`, url: link });
     } catch {
       // el cliente cerró el menú de compartir
     }
@@ -224,17 +227,21 @@ function Welcome({ order, link, onClose }: { order: Order; link: string; onClose
   return (
     <section className="status status-ok pop" style={{ flexDirection: "column", gap: 12, padding: 20 }} aria-labelledby="welcome-t">
       <div>
-        <h2 id="welcome-t" style={{ margin: 0, fontSize: 20 }}>¡Recibimos tu pedido!</h2>
+        <h2 id="welcome-t" style={{ margin: 0, fontSize: 20 }}>{order.price_pending ? "¡Recibimos tu solicitud de cotización!" : "¡Recibimos tu pedido!"}</h2>
         <p style={{ margin: "6px 0 0", color: "var(--text-2)" }}>
-          Tu número de pedido es <strong className="mono" style={{ fontSize: 18, color: "var(--text)" }}>{order.id}</strong>.
-          Te escribimos por WhatsApp cuando confirmemos el precio. Guarda esta página para seguir tu pedido:
+          Tu número es <strong className="mono" style={{ fontSize: 18, color: "var(--text)" }}>{order.id}</strong>.{" "}
+          {order.price_pending
+            ? "Revisamos tu archivo y nosotros te contactamos con el precio. Guarda esta página: aquí verás el precio y podrás pagar."
+            : "Te escribimos por WhatsApp cuando confirmemos el precio. Guarda esta página para seguir tu pedido:"}
         </p>
       </div>
       <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
-        <a className="btn" href={whatsappUrl(`Hola Capa3D, acabo de hacer el pedido ${order.id}. Lo sigo aquí: ${link}`)} target="_blank" rel="noopener noreferrer"
-          style={{ padding: "10px 16px", borderRadius: 12, fontWeight: 600, fontSize: 14, background: "#25D366", color: "#06210F" }}>
-          Enviar el pedido a Capa3D por WhatsApp
-        </a>
+        {!order.price_pending && (
+          <a className="btn" href={whatsappUrl(`Hola CR3D, acabo de hacer el pedido ${order.id}. Lo sigo aquí: ${link}`)} target="_blank" rel="noopener noreferrer"
+            style={{ padding: "10px 16px", borderRadius: 12, fontWeight: 600, fontSize: 14, background: "#25D366", color: "#06210F" }}>
+            Enviar el pedido a CR3D por WhatsApp
+          </a>
+        )}
         <button className="chip-btn" onClick={copy}>{copied ? "¡Enlace copiado!" : "Copiar enlace"}</button>
         {typeof navigator !== "undefined" && "share" in navigator && <button className="chip-btn" onClick={share}>Compartir</button>}
         <button className="chip-btn" onClick={onClose} style={{ marginLeft: "auto" }}>Listo</button>
@@ -283,7 +290,7 @@ function PayBox({ order, paying, inOtherTab, onPay, error }: {
         </button>
       ) : (
         <a className="btn btn-primary" target="_blank" rel="noopener noreferrer"
-          href={whatsappUrl(`Hola Capa3D, quiero pagar ${plan === "deposit" ? `el abono de $${money(amount)}` : `$${money(amount)}`} de mi pedido ${order.id}.`)}
+          href={whatsappUrl(`Hola CR3D, quiero pagar ${plan === "deposit" ? `el abono de $${money(amount)}` : `$${money(amount)}`} de mi pedido ${order.id}.`)}
           style={{ display: "block", textAlign: "center", marginTop: 14, padding: 15, borderRadius: 14 }}>
           Pagar ${money(amount)} por WhatsApp
         </a>

@@ -14,7 +14,7 @@ const cardBase = { borderRadius: 28, background: "var(--surface-2)", border: "1p
 export function Features() {
   return (
     <section className="section">
-      <SectionHeader eyebrow="// POR QUÉ CAPA3D" title="Del archivo a la pieza, sin complicaciones" lead="Un proceso claro para que sepas qué recibes, cuánto cuesta y cuándo llega." />
+      <SectionHeader eyebrow="// POR QUÉ CR3D" title="Del archivo a la pieza, sin complicaciones" lead="Un proceso claro para que sepas qué recibes, cuánto cuesta y cuándo llega." />
       <div className="row" style={{ gap: 20 }}>
         <div className="tilt" style={{ ...cardBase, flex: "2 1 520px", minHeight: 300, position: "relative", overflow: "hidden", padding: 36, display: "flex", flexDirection: "column", justifyContent: "flex-end" }}>
           <div aria-hidden="true" style={{ position: "absolute", right: -40, top: -30, width: 360, height: 300, background: "repeating-linear-gradient(0deg,var(--ac-line) 0 2px,transparent 2px 9px)", WebkitMaskImage: "radial-gradient(circle at 60% 40%,#000,transparent 70%)", maskImage: "radial-gradient(circle at 60% 40%,#000,transparent 70%)" }} />

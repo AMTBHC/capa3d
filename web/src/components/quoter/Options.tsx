@@ -145,7 +145,7 @@ export function PrintSettings({ quality, infill, supports, showSupports, onQuali
       <div className="field">
         <div className="field-label">Relleno <span className="muted">cuánto material va por dentro</span></div>
         <div style={{ display: "flex", gap: 16, alignItems: "center" }}>
-          <div aria-hidden="true" style={{ width: 64, height: 64, flex: "none", borderRadius: 12, border: "2px solid var(--ac)", background: infillPattern("#FF5A1F", infill) }} />
+          <div aria-hidden="true" style={{ width: 64, height: 64, flex: "none", borderRadius: 12, border: "2px solid var(--ac)", background: infillPattern("#8C53FD", infill) }} />
           <div style={{ flex: 1, minWidth: 0 }}>
             <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
               {INFILL_PRESETS.map(([v, name, hint]) => (

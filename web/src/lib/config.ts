@@ -10,7 +10,7 @@ export type MaterialId = "PLA" | "PETG" | "ABS" | "TPU";
 export const API_URL = (process.env.NEXT_PUBLIC_API_URL ?? "").replace(/\/+$/, "");
 
 export const business = {
-  name: "Capa3D",
+  name: "CR3D",
   /** Solo dígitos, con indicativo de país (ej. 573001234567). */
   whatsapp: (process.env.NEXT_PUBLIC_WHATSAPP ?? "").replace(/\D/g, ""),
   email: process.env.NEXT_PUBLIC_EMAIL ?? "",

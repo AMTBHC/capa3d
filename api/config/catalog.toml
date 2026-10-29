@@ -1,4 +1,4 @@
-# Catálogo y precios de Capa3D. Esta es la fuente de verdad del precio:
+# Catálogo y precios de CR3D. Esta es la fuente de verdad del precio:
 # la web lo lee de GET /api/catalog para su estimado inmediato.
 
 currency = "COP"

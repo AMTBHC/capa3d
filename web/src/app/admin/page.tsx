@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { AdminPanel } from "@/components/admin/AdminPanel";
 
 export const metadata: Metadata = {
-  title: "Panel · Capa3D",
+  title: "Panel · CR3D",
   robots: { index: false, follow: false },
 };
 

@@ -1,1 +1,1 @@
-"""API de cotización de Capa3D."""
+"""API de cotización de CR3D."""

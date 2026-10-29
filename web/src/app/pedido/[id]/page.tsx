@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { OrderView } from "@/components/order/OrderView";
 
 export const metadata: Metadata = {
-  title: "Tu pedido · Capa3D",
+  title: "Tu pedido · CR3D",
   robots: { index: false, follow: false },
 };
 

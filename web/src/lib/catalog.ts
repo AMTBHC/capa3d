@@ -33,7 +33,7 @@ export const MATERIALS: Material[] = [
     tag: "Fácil y versátil",
     meters: [3, 1, 2],
     density: 1.24,
-    color: "#FF5A1F",
+    color: "#8C53FD",
     desc: "El material más versátil: preciso, económico y con gran variedad de colores. Ideal para empezar.",
     temp: "Hasta ~55 °C",
     ideal: "Prototipos, figuras, decoración",

@@ -98,3 +98,14 @@ def test_migra_base_de_datos_anterior(tmp_path):
     Store(db)
     cols = {r[1] for r in sqlite3.connect(db).execute("PRAGMA table_info(quotes)")}
     assert {"requested_at", "requested_color"} <= cols
+
+
+def test_bloquea_tras_muchas_claves_equivocadas(admin_client):
+    from capa3d_api.main import ADMIN_FAIL_MAX
+
+    assert admin_client.get("/api/admin/quotes", headers=AUTH).status_code == 200
+    for _ in range(ADMIN_FAIL_MAX):
+        assert admin_client.get("/api/admin/quotes", headers={"Authorization": "Bearer mala"}).status_code == 401
+    # Ni la clave buena entra mientras dura el bloqueo de esa IP.
+    assert admin_client.get("/api/admin/quotes", headers={"Authorization": "Bearer mala"}).status_code == 429
+    assert admin_client.get("/api/admin/quotes", headers=AUTH).status_code == 429

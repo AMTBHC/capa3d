@@ -59,7 +59,10 @@ function customerMessage(o: AdminOrder): string {
   const total = `$${money(o.total)}`;
   switch (o.status) {
     case "received":
-      return `Hola ${first}, recibimos tu pedido ${o.id} en Capa3D. Estamos revisando tu archivo y te confirmamos el precio pronto. Puedes seguirlo aquí: ${o.order_url}`;
+      if (o.price_pending) {
+        return `Hola ${first}, soy de CR3D. Recibimos tu solicitud de cotización ${o.id} (${o.file_name}). Ya estamos revisando tu archivo; ¿me cuentas para qué es la pieza y si tienes fecha límite? Así te doy el mejor precio.`;
+      }
+      return `Hola ${first}, recibimos tu pedido ${o.id} en CR3D. Estamos revisando tu archivo y te confirmamos el precio pronto. Puedes seguirlo aquí: ${o.order_url}`;
     case "confirmed":
       return `Hola ${first}, revisamos tu archivo. El total de tu pedido ${o.id} es ${total} (impresión $${money(o.print_price)} + envío $${money(o.shipping)}). ${o.can_pay ? "Puedes pagar aquí" : "Te envío los datos para el pago. Sigue tu pedido aquí"}: ${o.order_url}`;
     case "paid":
@@ -71,7 +74,7 @@ function customerMessage(o: AdminOrder): string {
     case "shipped":
       return `Hola ${first}, tu pedido ${o.id} va en camino con ${o.carrier}, guía ${o.tracking}.${o.balance > 0 ? ` Recuerda tener $${money(o.balance)} en efectivo para pagar al recibir.` : ""} ${o.order_url}`;
     case "delivered":
-      return `Hola ${first}, ¡gracias por tu compra en Capa3D! Esperamos que tu pieza te encante.`;
+      return `Hola ${first}, ¡gracias por tu compra en CR3D! Esperamos que tu pieza te encante.`;
     case "cancelled":
       return `Hola ${first}, tu pedido ${o.id} fue cancelado. Si tienes dudas, escríbenos.`;
   }
@@ -110,7 +113,7 @@ export function OrdersTab({ token, onUnauthorized }: { token: string; onUnauthor
         const text = newest ? `Nuevo pedido ${newest.id} de ${newest.customer.name} · $${money(newest.total)}` : "Nuevo pedido";
         setToast(text);
         chime();
-        if (typeof Notification !== "undefined" && Notification.permission === "granted") new Notification("Capa3D", { body: text });
+        if (typeof Notification !== "undefined" && Notification.permission === "granted") new Notification("CR3D", { body: text });
       }
       received.current = n;
     }, setLive);
@@ -132,7 +135,7 @@ export function OrdersTab({ token, onUnauthorized }: { token: string; onUnauthor
   // Pedidos por revisar en el título de la pestaña: se ven aunque estés en otra.
   const pending = orders?.filter((o) => o.status === "received").length ?? 0;
   useEffect(() => {
-    document.title = pending ? `(${pending}) Panel · Capa3D` : "Panel · Capa3D";
+    document.title = pending ? `(${pending}) Panel · CR3D` : "Panel · CR3D";
   }, [pending]);
 
   const replace = (o: AdminOrder) => setOrders((list) => list?.map((x) => (x.id === o.id ? o : x)) ?? null);
@@ -194,12 +197,13 @@ function OrderCard({ o, token, open, onToggle, onChange }: {
         style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: 12, width: "100%", padding: 16, background: "none", border: 0, color: "var(--text)", cursor: "pointer", textAlign: "left" }}>
         <span className="mono" style={{ color: "var(--ac)", fontWeight: 600 }}>{o.id}</span>
         <span style={{ fontSize: 12, fontWeight: 600, padding: "3px 10px", borderRadius: 99, color, background: `color-mix(in srgb, ${color} 14%, transparent)` }}>{o.status_label}</span>
+        {o.price_pending && <span style={{ fontSize: 12, fontWeight: 600, padding: "3px 10px", borderRadius: 99, color: "var(--warn)", background: "color-mix(in srgb, var(--warn) 14%, transparent)" }}>Solicitud de cotización · pon el precio</span>}
         <span style={{ flex: "1 1 200px", minWidth: 0 }}>
           <strong style={{ fontWeight: 600 }}>{o.customer.name}</strong>
           <span style={{ color: "var(--text-3)", fontSize: 13 }}> · {o.customer.city} · {o.file_name}</span>
         </span>
         <span style={{ fontSize: 13, color: "var(--text-3)" }}>{new Date(o.created_at).toLocaleDateString("es-CO", { day: "numeric", month: "short" })}</span>
-        <span className="display" style={{ fontWeight: 700 }}>${money(o.total)}</span>
+        <span className="display" style={{ fontWeight: 700 }}>{o.price_pending ? "Por cotizar" : `$${money(o.total)}`}</span>
       </button>
       {open && <OrderDetail o={o} token={token} onChange={onChange} />}
     </article>

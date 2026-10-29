@@ -285,6 +285,9 @@ export interface Order {
   carrier: string | null;
   tracking: string | null;
   can_pay: boolean;
+  /** Solicitud de cotización (archivo muy grande) que el taller todavía no ha revisado. */
+  price_pending?: boolean;
+  review?: string | null;
   payment_status: string | null;
 }
 

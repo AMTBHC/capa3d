@@ -7,11 +7,11 @@ const body = Inter({ subsets: ["latin"], weight: ["400", "500", "600"], variable
 const mono = JetBrains_Mono({ subsets: ["latin"], weight: ["400", "500"], variable: "--font-mono" });
 
 export const metadata: Metadata = {
-  title: "Capa3D — Impresión 3D en Colombia",
+  title: "CR3D — Crea más allá de los límites · Impresión 3D en Colombia",
   description:
     "Sube tu modelo 3D (STL, OBJ, 3MF o STEP), elige material, calidad y color, y conoce tu precio en segundos. Impresión FDM en PLA, PETG, ABS y TPU.",
   openGraph: {
-    title: "Capa3D — Impresión 3D",
+    title: "CR3D — Create beyond limits",
     description: "Cotiza tu impresión 3D al instante: sube tu archivo y mira tu pieza antes de pedirla.",
     locale: "es_CO",
     type: "website",

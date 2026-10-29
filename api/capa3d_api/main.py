@@ -26,6 +26,9 @@ from .slicer import PrusaSlicer
 from .store import Store
 from .wompi import Wompi, WompiError
 
+# Panel: intentos fallidos de clave por IP antes de bloquear, en esta ventana de tiempo.
+ADMIN_FAIL_MAX = 10
+ADMIN_FAIL_WINDOW_S = 900
 # Búsqueda de pedidos: máximo de intentos por IP en la ventana de tiempo.
 LOOKUP_MAX = 10
 LOOKUP_WINDOW_S = 600
@@ -58,7 +61,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         service.pool.shutdown(wait=False, cancel_futures=True)
         service.plate_pool.shutdown(wait=False, cancel_futures=True)
 
-    app = FastAPI(title="Capa3D API", version="0.1.0", lifespan=lifespan)
+    app = FastAPI(title="CR3D API", version="0.1.0", lifespan=lifespan)
     app.state.service = service
     app.state.shop = shop
     app.add_middleware(
@@ -272,12 +275,22 @@ def create_app(settings: Settings | None = None) -> FastAPI:
 
     # Administración: requiere CAPA3D_ADMIN_TOKEN y el encabezado Authorization: Bearer <clave>.
 
-    def admin(authorization: Annotated[str | None, Header()] = None) -> None:
+    # Intentos fallidos de clave por IP: con el panel en internet, nadie puede probar claves sin fin.
+    admin_failures: dict[str, deque[float]] = defaultdict(deque)
+
+    def admin(request: Request, authorization: Annotated[str | None, Header()] = None) -> None:
         token = settings.admin_token
         if not token:
             raise HTTPException(503, "Panel desactivado: define CAPA3D_ADMIN_TOKEN en la API")
+        ip = request.client.host if request.client else "?"
+        fails, now = admin_failures[ip], time.monotonic()
+        while fails and now - fails[0] > ADMIN_FAIL_WINDOW_S:
+            fails.popleft()
+        if len(fails) >= ADMIN_FAIL_MAX:
+            raise HTTPException(429, "Demasiados intentos con la clave equivocada. Espera unos minutos.")
         given = (authorization or "").removeprefix("Bearer ").strip()
         if not secrets.compare_digest(given.encode(), token.encode()):
+            fails.append(now)
             raise HTTPException(401, "Clave incorrecta")
 
     @app.get("/api/admin/quotes", response_model=list[AdminQuote], dependencies=[Depends(admin)])

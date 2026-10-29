@@ -43,17 +43,17 @@ export function Hero() {
     <section className="wrap" style={{ padding: "56px 24px 72px", display: "flex", flexWrap: "wrap", gap: 40, alignItems: "center" }}>
       <div style={{ flex: "1 1 480px", minWidth: 0 }}>
         <span className="mono" style={{ display: "inline-flex", alignItems: "center", gap: 10, padding: "8px 14px", borderRadius: 99, border: "1px solid var(--line-2)", fontSize: 12, letterSpacing: 1, color: "var(--text-2)" }}>
-          <span className="pulse" style={{ width: 8, height: 8, borderRadius: "50%", background: "var(--ac)" }} />
-          IMPRESIÓN 3D FDM · COLOMBIA
+          <span className="pulse" style={{ width: 8, height: 8, borderRadius: "50%", background: "var(--brand)" }} />
+          CREATE BEYOND LIMITS
         </span>
         <h1 style={{ fontSize: "clamp(40px,6vw,76px)", lineHeight: 1.02, margin: "26px 0 24px", letterSpacing: "-0.035em", fontWeight: 600 }}>
-          Da vida a tus ideas,{" "}
-          <span style={{ color: "var(--text-4)" }}>
-            capa por capa.
+          Crea más allá
+          <span style={{ display: "block", color: "var(--brand)" }}>
+            de los límites.
           </span>
         </h1>
         <p style={{ fontSize: 19, lineHeight: 1.6, color: "var(--text-3)", maxWidth: 540, margin: "0 0 36px" }}>
-          Sube tu modelo 3D, elige material, calidad y color, y conoce tu precio en segundos. Prototipos, repuestos, miniaturas y decoración con acabado profesional.
+          Si lo puedes imaginar, lo imprimimos. Sube tu modelo 3D y conoce tu precio en segundos, o elige una pieza de nuestro catálogo. Prototipos, repuestos, figuras y decoración con acabado profesional.
         </p>
         <div style={{ display: "flex", flexWrap: "wrap", gap: 12 }}>
           <a className="btn btn-primary glow" href="#quote" style={{ display: "inline-flex", alignItems: "center", gap: 10, padding: "18px 28px", borderRadius: 16 }}>
@@ -79,7 +79,7 @@ export function Hero() {
         <div style={{ position: "absolute", inset: 0, transformStyle: "preserve-3d", transition: "transform .25s ease-out", transform: `rotateX(${tilt.y.toFixed(2)}deg) rotateY(${tilt.x.toFixed(2)}deg)` }}>
           <div className="turn" style={{ position: "absolute", left: "50%", top: "60%", width: 340, height: 340, margin: "-170px 0 0 -170px" }}>
             <div style={{ position: "absolute", inset: 0, boxShadow: "0 0 60px rgba(0,0,0,.6)", borderRadius: 24 }}><BedPlate cell={20} radius={24} /></div>
-            <LayerStack layers={36} size={340} height={175} profile={heroProfile} color="#FF5A1F" infill={30} alpha="14" animate />
+            <LayerStack layers={36} size={340} height={175} profile={heroProfile} color="#8C53FD" infill={30} alpha="14" animate />
           </div>
           <div className="nozY" style={{ position: "absolute", left: 0, right: 0, top: "calc(60% - 104px)", height: 104 }}>
             <div style={{ position: "absolute", left: "6%", right: "6%", top: 14, height: 8, borderRadius: 4, background: "linear-gradient(90deg,#26262B,#3A3A42,#26262B)", boxShadow: "0 4px 18px rgba(0,0,0,.6)" }} />

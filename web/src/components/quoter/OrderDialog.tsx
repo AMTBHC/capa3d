@@ -34,10 +34,12 @@ interface Props {
   printPrice: number;
   shipping: Shipping | null;
   onClose: () => void;
+  /** Archivo muy grande: se envía como solicitud de cotización, sin precio. */
+  request?: boolean;
 }
 
 /** Formulario de pedido: datos de contacto y dirección. No se paga todavía. */
-export function OrderDialog({ quoteId, color, summary, printPrice, shipping, onClose }: Props) {
+export function OrderDialog({ quoteId, color, summary, printPrice, shipping, onClose, request = false }: Props) {
   const router = useRouter();
   const [c, setC] = useState<CustomerData>(EMPTY);
   const [busy, setBusy] = useState(false);
@@ -90,12 +92,14 @@ export function OrderDialog({ quoteId, color, summary, printPrice, shipping, onC
           style={{ position: "absolute", right: 14, top: 14, width: 40, height: 40, borderRadius: "50%", border: "1px solid var(--line-3)", background: "var(--bg)", color: "var(--text)", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>
           <Icon d={ICONS.close} size={16} stroke={2} />
         </button>
-        <h2 id="order-title" className="step-title" style={{ fontSize: 22, marginTop: 0 }}>Hacer pedido</h2>
+        <h2 id="order-title" className="step-title" style={{ fontSize: 22, marginTop: 0 }}>{request ? "Solicitar cotización" : "Hacer pedido"}</h2>
         <p className="step-sub" style={{ marginBottom: 16 }}>{summary}</p>
 
         <div className="status status-info" style={{ marginBottom: 18 }}>
-          <span aria-hidden="true" style={{ fontSize: 18 }}>💳</span>
-          <span><strong>No pagas nada todavía.</strong> Revisamos tu archivo, te confirmamos el precio final y te enviamos el enlace para pagar con PSE, Nequi o tarjeta.</span>
+          <span aria-hidden="true" style={{ fontSize: 18 }}>{request ? "📋" : "💳"}</span>
+          {request
+            ? <span><strong>No pagas nada.</strong> Revisamos tu archivo y te contactamos por WhatsApp o correo con el precio. Cuando lo confirmes, podrás pagar desde la página de tu pedido.</span>
+            : <span><strong>No pagas nada todavía.</strong> Revisamos tu archivo, te confirmamos el precio final y te enviamos el enlace para pagar con PSE, Nequi o tarjeta.</span>}
         </div>
 
         <fieldset style={fieldset}>
@@ -123,15 +127,21 @@ export function OrderDialog({ quoteId, color, summary, printPrice, shipping, onC
         </fieldset>
 
         <div style={{ borderTop: "1px solid var(--line)", paddingTop: 14, marginTop: 4, fontSize: 14 }}>
-          <Row k="Impresión" v={`$${money(printPrice)}`} />
-          <Row k="Envío" v={ship === null ? "según tu ciudad" : `$${money(ship)}`} />
-          <Row k="Total estimado" v={`$${money(printPrice + (ship ?? 0))}`} strong />
-          <p style={{ margin: "6px 0 0", fontSize: 12, color: "var(--text-4)" }}>Te confirmamos el total antes de pagar.</p>
+          {request ? (
+            <Row k="Precio" v="te lo enviamos al revisar tu archivo" />
+          ) : (
+            <>
+              <Row k="Impresión" v={`$${money(printPrice)}`} />
+              <Row k="Envío" v={ship === null ? "según tu ciudad" : `$${money(ship)}`} />
+              <Row k="Total estimado" v={`$${money(printPrice + (ship ?? 0))}`} strong />
+              <p style={{ margin: "6px 0 0", fontSize: 12, color: "var(--text-4)" }}>Te confirmamos el total antes de pagar.</p>
+            </>
+          )}
         </div>
 
         {error && <p role="alert" style={{ color: "var(--bad)", fontSize: 14, margin: "12px 0 0" }}>{error}</p>}
         <button className="btn btn-primary glow" disabled={busy} style={{ width: "100%", marginTop: 16, padding: 16, borderRadius: 16, fontSize: 16 }}>
-          {busy ? "Enviando…" : "Enviar pedido"}
+          {busy ? "Enviando…" : request ? "Enviar solicitud" : "Enviar pedido"}
         </button>
       </form>
     </div>,

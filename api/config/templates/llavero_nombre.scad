@@ -2,7 +2,7 @@
 // La API lo genera con: openscad -o llavero.stl -D 'name="Ana"' llavero_nombre.scad
 // Medidas en mm.
 
-name = "Capa3D";
+name = "CR3D";
 size = 10;          // alto de las letras
 base_h = 3;         // grosor de la placa
 text_h = 1.6;       // relieve de las letras

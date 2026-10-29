@@ -1,4 +1,4 @@
-# Capa3D
+# CR3D
 
 Sitio de impresión 3D con cotizador en línea. El cliente sube su modelo (STL, OBJ, 3MF o STEP) y lo ve en 3D sobre la cama de la impresora. Elige material, calidad, relleno, color y soportes, y recibe un estimado al instante, que luego se reemplaza por el **precio laminado** con PrusaSlicer en el servidor.
 
@@ -15,6 +15,39 @@ Sitio de impresión 3D con cotizador en línea. El cliente sube su modelo (STL, 
 3. Se abre http://localhost:3000 con el sitio completo. La API queda en http://localhost:8000.
 
 Para apagarlo, cierra las ventanas de la terminal.
+
+## Publicarlo en un servidor (VPS)
+
+Para que clientes y tú entren desde cualquier lugar, con tu dominio y HTTPS. Sirve cualquier VPS con Ubuntu 22.04/24.04 (Hetzner, DigitalOcean, Contabo, AWS Lightsail…); recomendado: 2 núcleos y 4 GB de RAM o más, porque PrusaSlicer usa CPU al laminar.
+
+1. **Dominio:** en tu proveedor de dominio crea un registro **A** de `tudominio.com` (y otro de `www`) hacia la IP del servidor.
+2. **Entra al servidor** por SSH y descarga el proyecto:
+   ```bash
+   git clone https://github.com/AMTBHC/capa3d.git && cd capa3d
+   ```
+3. **Instala:**
+   ```bash
+   sudo bash deploy/instalar.sh
+   ```
+   Te pide el dominio, tu correo, el WhatsApp y la clave del panel (o genera una), instala Docker, abre solo los puertos web y arranca todo. El certificado HTTPS se pide y se renueva solo.
+4. Listo: el sitio queda en `https://tudominio.com` y el **panel en `https://tudominio.com/admin`**, desde tu PC, tu celular o cualquier navegador. Cada navegador recuerda la clave hasta que toques **Salir**; tras 10 claves equivocadas seguidas, esa conexión queda bloqueada unos minutos.
+
+**Si el servidor ya tiene otra app** (otra web, una API…), pueden convivir. El instalador revisa si los puertos 80/443 ya los usa otra cosa:
+
+- **Libres:** CR3D los toma y pone su propio HTTPS.
+- **Ocupados (modo compartido):** CR3D no toca la otra app. Queda escuchando solo en el servidor (`127.0.0.1:8088` o el siguiente puerto libre) y el proxy que ya tienes le pasa tu dominio:
+  - **nginx:** se configura solo. Crea un archivo nuevo, `/etc/nginx/sites-available/capa3d`, lo valida con `nginx -t` antes de recargar (si falla, lo quita) y pide el HTTPS con certbot. Tus otros sitios no se modifican.
+  - **Caddy, Apache o Traefik:** el instalador te muestra las líneas exactas que debes agregar.
+- El firewall no se activa: si ya lo usas, solo se abren los puertos web.
+
+Después:
+
+- **Actualizar** a la última versión: `sudo bash deploy/actualizar.sh` (los pedidos, archivos y catálogo se conservan).
+- **Copia de seguridad:** `sudo bash deploy/respaldo.sh` guarda todo en `deploy/respaldos/`. Para hacerla cada noche, agrégala con `sudo crontab -e` (instrucciones en el archivo). Descarga los respaldos a otro lugar de vez en cuando.
+- **Cambiar la clave, el WhatsApp o activar Wompi:** edita `deploy/.env` y ejecuta `deploy/actualizar.sh`. En Wompi, la URL de eventos es `https://tudominio.com/api/payments/wompi`.
+- **Precios, materiales, perfil y límites:** edita `api/config/catalog.toml` en el servidor y ejecuta `deploy/actualizar.sh`.
+
+Cómo queda armado (`deploy/docker-compose.yml`): **Caddy** recibe todo en los puertos 80/443 con HTTPS, manda `/api/*` a la **API** (FastAPI + PrusaSlicer + OpenSCAD) y lo demás al **sitio** (Next.js). Los datos viven en el volumen `capa3d-data`.
 
 ## Estructura
 
@@ -107,7 +140,7 @@ Tú imprimes → Imprimiendo → Enviado (transportadora + guía) → Entregado 
 ```
 
 **Para el cliente**
-- Al hacer el pedido ve su **número de pedido**, un botón para **enviarlo a Capa3D por WhatsApp** (así le queda el enlace en el chat) y otro para copiar el enlace.
+- Al hacer el pedido ve su **número de pedido**, un botón para **enviarlo a CR3D por WhatsApp** (así le queda el enlace en el chat) y otro para copiar el enlace.
 - **Mis pedidos** (en el menú y en el pie de página) muestra los pedidos hechos desde ese navegador, y permite buscarlos con el **correo y el celular** del pedido.
 - Su página de pedido se actualiza **en vivo**: cuando confirmas el precio, marcas un estado o entra un pago, lo ve en uno o dos segundos sin recargar.
 
@@ -219,7 +252,7 @@ Cada cama se cotiza como una impresión aparte (con su propio calentamiento). El
 
 Los soportes automáticos son en árbol (`support_material_style = organic`, como Bambu Studio): solo se ponen donde hacen falta y se calculan mucho más rápido. Las camas de un archivo se laminan a la vez (`CAPA3D_PLATE_WORKERS`, 3 por defecto) y cada laminado queda guardado: cambiar la cantidad, el color o los varios colores no vuelve a laminar.
 
-**Archivos muy grandes.** Si el archivo tiene más de `max_plates` camas, pesa más de `max_file_mb` o una copia tardaría más de `max_print_hours` en imprimirse (sección `[limits]` de `api/config/catalog.toml`; por defecto 8 camas, 50 MB y 24 horas), el sitio no muestra precio: avisa que se cotiza por WhatsApp y muestra el botón. El archivo queda en el panel, en Cotizaciones, marcado **Cotizar a mano**, para descargarlo y revisarlo.
+**Archivos muy grandes.** Si el archivo tiene más de `max_plates` camas, pesa más de `max_file_mb` o una copia tardaría más de `max_print_hours` en imprimirse (sección `[limits]` de `api/config/catalog.toml`; por defecto 8 camas, 50 MB y 24 horas), no se lamina ni se muestra precio. El cliente envía una **solicitud de cotización** con sus datos y le llega al panel como pedido **Por revisar**, marcado "Solicitud de cotización · pon el precio". Lo contactas, escribes el precio en **Confirmar precio** y desde ahí sigue el flujo normal: el cliente ve el precio en su página y paga.
 
 Cada cotización queda guardada con un número (por ejemplo `Q1A2B3C4D`), su vigencia y el G-code de cada cama, listo para imprimir. El número aparece en el mensaje de WhatsApp. Si el laminado falla, esa cama se cotiza con el estimado y la respuesta lo indica.
 
