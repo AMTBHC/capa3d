@@ -344,7 +344,7 @@ export function orderStreamUrl(id: string, token: string): string {
  * Conexión en vivo del panel. EventSource no permite el encabezado de la clave, así que se
  * lee el flujo con fetch. Se reconecta sola; devuelve una función para cerrarla.
  */
-export function watchAdmin(token: string, onChange: (data: { count: number; by_status: Record<string, number> }) => void, onState: (live: boolean) => void): () => void {
+export function watchAdmin(token: string, onChange: (data: { count: number; by_status: Record<string, number>; designs?: { count: number; by_status: Record<string, number> } }) => void, onState: (live: boolean) => void): () => void {
   let stopped = false;
   let ctrl: AbortController | null = null;
   const run = async () => {
@@ -575,4 +575,101 @@ export function uploadProductImage(token: string, id: string, file: File): Promi
 
 export function deleteProductImage(token: string, id: string, name: string): Promise<AdminProduct> {
   return request(`/api/admin/catalog/products/${id}/images/${name}`, adminJson(token, "DELETE"));
+}
+
+// Diseños a medida
+
+export type DesignStatus = "received" | "designing" | "proposal" | "ordered" | "cancelled";
+export type DesignUse = "decoracion" | "regalo" | "repuesto" | "figura" | "funcional" | "otro";
+
+export interface DesignContact {
+  name: string;
+  phone: string;
+  email: string;
+  city: string;
+  department: string;
+  address: string;
+}
+
+export interface DesignBrief {
+  description: string;
+  use: DesignUse;
+  /** Medida aproximada de lo más largo, en cm. */
+  size_cm: number | null;
+  qty: number;
+  material: string;
+  color: string;
+  /** Fecha límite, AAAA-MM-DD. */
+  deadline: string;
+  budget: number | null;
+}
+
+export interface Design {
+  id: string;
+  status: DesignStatus;
+  status_label: string;
+  status_text: string;
+  created_at: string;
+  brief: DesignBrief;
+  images: string[];
+  contact: Pick<DesignContact, "name" | "city">;
+  /** Pedido creado cuando el diseño quedó listo, para pagarlo. */
+  order: { id: string; token: string } | null;
+}
+
+export interface AdminDesign extends Omit<Design, "contact"> {
+  token: string;
+  contact: DesignContact;
+  note: string;
+  events: { status: DesignStatus; note: string | null; created_at: string }[];
+  design_url: string;
+}
+
+export function createDesign(contact: DesignContact, brief: DesignBrief, images: File[]): Promise<Design & { token: string }> {
+  const body = new FormData();
+  body.append("data", JSON.stringify({ contact, brief }));
+  for (const f of images) body.append("files", f);
+  return request("/api/designs", { method: "POST", body });
+}
+
+export function getDesign(id: string, token: string): Promise<Design> {
+  return request(`/api/designs/${encodeURIComponent(id)}?t=${encodeURIComponent(token)}`);
+}
+
+export const designImageUrl = (id: string, token: string, name: string) =>
+  `${API_URL}/api/designs/${encodeURIComponent(id)}/images/${name}?t=${encodeURIComponent(token)}`;
+
+export function listAdminDesigns(token: string, statuses: DesignStatus[]): Promise<AdminDesign[]> {
+  return request(`/api/admin/designs?status=${statuses.join(",")}`, { headers: auth(token) });
+}
+
+export type DesignActionName = "designing" | "proposal" | "cancel" | "reopen" | "note";
+
+export function adminDesignAction(token: string, id: string, action: DesignActionName, note?: string): Promise<AdminDesign> {
+  return request(`/api/admin/designs/${id}/action`, adminJson(token, "POST", { action, note }));
+}
+
+/** Imagen de referencia para el panel (lleva la clave, así que se baja como blob). */
+export async function adminDesignImage(token: string, id: string, name: string): Promise<Blob> {
+  const res = await fetch(`${API_URL}/api/admin/designs/${id}/images/${name}`, { headers: auth(token) });
+  if (!res.ok) throw new ApiError(res.statusText, res.status);
+  return res.blob();
+}
+
+export interface DesignOrderInput {
+  print_price: number;
+  shipping: number;
+  material: string;
+  quality: string;
+  infill: number;
+  color: string;
+  address: string;
+}
+
+/** Sube el modelo terminado y crea el pedido con el precio, listo para que el cliente pague. */
+export function adminDesignOrder(token: string, id: string, data: DesignOrderInput, model: File): Promise<AdminDesign> {
+  const body = new FormData();
+  body.append("data", JSON.stringify(data));
+  body.append("file", model);
+  return request(`/api/admin/designs/${id}/order`, { method: "POST", headers: auth(token), body });
 }

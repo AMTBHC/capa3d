@@ -90,6 +90,26 @@ CREATE TABLE IF NOT EXISTS payments (
   created_at TEXT NOT NULL,
   updated_at TEXT NOT NULL
 );
+CREATE TABLE IF NOT EXISTS designs (
+  id TEXT PRIMARY KEY,
+  token TEXT NOT NULL,
+  status TEXT NOT NULL,
+  contact TEXT NOT NULL,
+  brief TEXT NOT NULL,
+  images TEXT NOT NULL,
+  note TEXT NOT NULL DEFAULT '',
+  order_id TEXT,
+  version INTEGER NOT NULL DEFAULT 0,
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL
+);
+CREATE TABLE IF NOT EXISTS design_events (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  design_id TEXT NOT NULL REFERENCES designs(id),
+  status TEXT NOT NULL,
+  note TEXT,
+  created_at TEXT NOT NULL
+);
 """
 
 # Columnas agregadas después de la primera versión: (tabla, columna, tipo).
@@ -259,6 +279,54 @@ class Store:
         rows = self._exec("SELECT status, note, created_at FROM order_events WHERE order_id=? ORDER BY id", (order_id,))
         return [dict(r) for r in rows]
 
+    # Diseños a medida
+
+    def add_design(self, d: dict[str, Any]) -> None:
+        r = {
+            **d,
+            **{k: json.dumps(d[k]) for k in ("contact", "brief", "images")},
+            "created_at": now(),
+            "updated_at": now(),
+        }
+        cols = ", ".join(r)
+        self._exec(f"INSERT INTO designs ({cols}) VALUES ({', '.join('?' * len(r))})", tuple(r.values()))
+        self.add_design_event(d["id"], d["status"])
+
+    def get_design(self, id: str) -> dict[str, Any] | None:
+        rows = self._exec("SELECT * FROM designs WHERE id=?", (id,))
+        return _design(rows[0]) if rows else None
+
+    def update_design(self, id: str, **fields: Any) -> None:
+        fields["updated_at"] = now()
+        sets = ", ".join(f"{k}=?" for k in fields)
+        self._exec(f"UPDATE designs SET {sets}, version=version+1 WHERE id=?", (*fields.values(), id))
+
+    def list_designs(self, statuses: list[str] | None, limit: int) -> list[dict[str, Any]]:
+        where = f"WHERE status IN ({', '.join('?' * len(statuses))})" if statuses else ""
+        rows = self._exec(
+            f"SELECT * FROM designs {where} ORDER BY created_at DESC, rowid DESC LIMIT ?", (*(statuses or []), limit)
+        )
+        return [_design(r) for r in rows]
+
+    def designs_version(self) -> tuple[int, int]:
+        r = self._exec("SELECT COUNT(*) AS n, COALESCE(SUM(version), 0) AS v FROM designs")[0]
+        return r["n"], r["v"]
+
+    def designs_by_status(self) -> dict[str, int]:
+        return {r["status"]: r["n"] for r in self._exec("SELECT status, COUNT(*) AS n FROM designs GROUP BY status")}
+
+    def add_design_event(self, design_id: str, status: str, note: str | None = None) -> None:
+        self._exec(
+            "INSERT INTO design_events (design_id, status, note, created_at) VALUES (?,?,?,?)",
+            (design_id, status, note, now()),
+        )
+
+    def design_events(self, design_id: str) -> list[dict[str, Any]]:
+        rows = self._exec(
+            "SELECT status, note, created_at FROM design_events WHERE design_id=? ORDER BY id", (design_id,)
+        )
+        return [dict(r) for r in rows]
+
     # Pagos
 
     def add_payment(self, reference: str, order_id: str, amount: int) -> None:
@@ -371,4 +439,11 @@ def _quote(row: sqlite3.Row) -> dict[str, Any]:
     r = dict(row)
     r["params"] = json.loads(r["params"])
     r["result"] = json.loads(r["result"]) if r["result"] else None
+    return r
+
+
+def _design(row: sqlite3.Row) -> dict[str, Any]:
+    r = dict(row)
+    for k in ("contact", "brief", "images"):
+        r[k] = json.loads(r[k])
     return r

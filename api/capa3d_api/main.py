@@ -9,13 +9,15 @@ from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Annotated
 
-from fastapi import BackgroundTasks, Depends, FastAPI, File, Header, HTTPException, Query, Request, UploadFile
+from fastapi import BackgroundTasks, Depends, FastAPI, File, Form, Header, HTTPException, Query, Request, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, JSONResponse, StreamingResponse
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, ValidationError
 from starlette.concurrency import run_in_threadpool
 
 from .catalog import load_catalog
+from .designs import IMAGE_TYPES as DESIGN_TYPES
+from .designs import MAX_IMAGE_MB, DesignAction, DesignCreate, DesignOrder, DesignService, form_error
 from .openscad import OpenScad
 from .orders import Checkout, Lookup, OrderAction, OrderCreate, OrderError, OrderService
 from .schemas import AdminQuote, FileOut, QuoteOut, QuoteRequest
@@ -32,6 +34,9 @@ ADMIN_FAIL_WINDOW_S = 900
 # Búsqueda de pedidos: máximo de intentos por IP en la ventana de tiempo.
 LOOKUP_MAX = 10
 LOOKUP_WINDOW_S = 600
+# Solicitudes de diseño: máximo por IP en la ventana de tiempo.
+DESIGN_MAX = 5
+DESIGN_WINDOW_S = 3600
 # Cada cuánto revisa cambios una conexión en vivo.
 STREAM_TICK_S = 1.0
 
@@ -49,6 +54,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         settings.wompi_private_key,
     )
     orders = OrderService(settings, catalog, store, service, wompi)
+    designs = DesignService(settings, store, service)
     shop = Shop(store, service, OpenScad(settings.openscad_path))
     shop.seed()
     if settings.catalog_import:
@@ -201,19 +207,56 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         # returns=False: Wompi no devolverá al cliente al sitio (sitio local); la web lo abre en otra pestaña.
         return {"url": url, "returns": returns}
 
+    def rate_limit(hits_by_ip: dict[str, deque], request: Request, limit: int, window_s: int) -> None:
+        ip = request.client.host if request.client else "?"
+        now, hits = time.monotonic(), hits_by_ip[ip]
+        while hits and now - hits[0] > window_s:
+            hits.popleft()
+        if len(hits) >= limit:
+            raise HTTPException(429, "Demasiados intentos; espera unos minutos")
+        hits.append(now)
+
     lookups: dict[str, deque] = defaultdict(deque)
 
     @app.post("/api/orders/lookup")
     def lookup_orders(body: Lookup, request: Request):
         """Pedidos por correo y celular. Limitado por IP para que no se pueda adivinar en masa."""
-        ip = request.client.host if request.client else "?"
-        now, hits = time.monotonic(), lookups[ip]
-        while hits and now - hits[0] > LOOKUP_WINDOW_S:
-            hits.popleft()
-        if len(hits) >= LOOKUP_MAX:
-            raise HTTPException(429, "Demasiados intentos; espera unos minutos")
-        hits.append(now)
+        rate_limit(lookups, request, LOOKUP_MAX, LOOKUP_WINDOW_S)
         return orders.lookup(body)
+
+    # Diseños a medida: el cliente manda referencias; se sigue con el id y su token (?t=).
+
+    design_requests: dict[str, deque] = defaultdict(deque)
+
+    @app.post("/api/designs", status_code=201)
+    async def create_design(
+        request: Request,
+        data: Annotated[str, Form(max_length=20_000)],
+        files: Annotated[list[UploadFile], File()],
+    ):
+        try:
+            body = DesignCreate.model_validate_json(data)
+        except ValidationError as e:
+            raise HTTPException(422, form_error(e)) from None
+        rate_limit(design_requests, request, DESIGN_MAX, DESIGN_WINDOW_S)
+        # Se lee un byte de más para saber si se pasó del límite sin cargar archivos enormes.
+        images = [(f.filename or "imagen", await f.read(MAX_IMAGE_MB * 1024 * 1024 + 1)) for f in files]
+        d = await run_in_threadpool(designs.create, body, images)
+        return {**designs.public(d), "token": d["token"]}
+
+    @app.get("/api/designs/{design_id}")
+    def get_design(design_id: str, t: str = ""):
+        return designs.public(designs.get_for_customer(design_id, t))
+
+    def design_image(d: dict, name: str) -> FileResponse:
+        path = designs.image_path(d, name)
+        return FileResponse(
+            path, media_type=DESIGN_TYPES[path.suffix.lstrip(".")], headers={"Cache-Control": "private, max-age=86400"}
+        )
+
+    @app.get("/api/designs/{design_id}/images/{name}")
+    def get_design_image(design_id: str, name: str, t: str = ""):
+        return design_image(designs.get_for_customer(design_id, t), name)
 
     def sse(event: str, data: object) -> str:
         return f"event: {event}\ndata: {json.dumps(data, ensure_ascii=False)}\n\n"
@@ -314,8 +357,13 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         """Avisa al panel cuando llega un pedido o cambia alguno."""
 
         def read():
-            version = store.orders_version()
-            return version, "orders", {"count": version[0], "by_status": store.count_by_status()}
+            version = (store.orders_version(), store.designs_version())
+            data = {
+                "count": version[0][0],
+                "by_status": store.count_by_status(),
+                "designs": {"count": version[1][0], "by_status": store.designs_by_status()},
+            }
+            return version, "orders", data
 
         return streaming(live(request, read))
 
@@ -338,6 +386,35 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             raise
         background.add_task(tmp.unlink, missing_ok=True)
         return FileResponse(tmp, media_type="application/zip", filename=name)
+
+    # Diseños a medida en el panel
+
+    @app.get("/api/admin/designs", dependencies=[Depends(admin)])
+    def admin_designs(status: str = "", limit: Annotated[int, Query(ge=1, le=500)] = 200):
+        statuses = [x for x in status.split(",") if x] or None
+        return [designs.admin_view(d) for d in store.list_designs(statuses, limit)]
+
+    @app.post("/api/admin/designs/{design_id}/action", dependencies=[Depends(admin)])
+    def admin_design_action(design_id: str, body: DesignAction):
+        return designs.admin_view(designs.act(design_id, body))
+
+    @app.get("/api/admin/designs/{design_id}/images/{name}", dependencies=[Depends(admin)])
+    def admin_design_image(design_id: str, name: str):
+        return design_image(designs.get(design_id), name)
+
+    @app.post("/api/admin/designs/{design_id}/order", dependencies=[Depends(admin)])
+    async def admin_design_order(
+        design_id: str,
+        data: Annotated[str, Form(max_length=5_000)],
+        file: Annotated[UploadFile, File()],
+    ):
+        """Sube el modelo terminado y crea el pedido con el precio, listo para que el cliente pague."""
+        try:
+            body = DesignOrder.model_validate_json(data)
+        except ValidationError as e:
+            raise HTTPException(422, form_error(e)) from None
+        d = await run_in_threadpool(designs.to_order, design_id, body, file.filename or "modelo.stl", file.file)
+        return designs.admin_view(d)
 
     # Catálogo en el panel
 
