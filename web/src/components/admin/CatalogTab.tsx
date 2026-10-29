@@ -10,13 +10,13 @@ import {
 } from "@/lib/api";
 import { COLORS } from "@/lib/catalog";
 import { money } from "@/lib/format";
+import { useModelAccept } from "@/lib/useModelAccept";
 
 interface Props {
   token: string;
   onUnauthorized: () => void;
 }
 
-const MODEL_ACCEPT = ".stl,.obj,.3mf,.step,.stp";
 const IMAGE_ACCEPT = "image/jpeg,image/png,image/webp";
 const DEFAULT_SIZES = [{ label: "S", scale: 75 }, { label: "M", scale: 100 }, { label: "L", scale: 150 }];
 
@@ -241,6 +241,7 @@ function ProductEditor({ token, p, collectionId, collections, onSaved, onDeleted
   onClose: () => void;
   onError: (e: unknown) => void;
 }) {
+  const modelAccept = useModelAccept();
   const [f, setF] = useState<ProductInput>({
     collection_id: p?.collection_id ?? collectionId,
     name: p?.name ?? "",
@@ -345,7 +346,7 @@ function ProductEditor({ token, p, collectionId, collections, onSaved, onDeleted
               </div>
               <label className="chip-btn" style={{ display: "inline-block" }}>
                 {busy === "model" ? "Subiendo y revisando…" : p.file_id ? "Reemplazar archivo" : "Subir STL / 3MF / OBJ / STEP"}
-                <input type="file" accept={MODEL_ACCEPT} hidden disabled={!!busy} onChange={(e) => { const file = e.target.files?.[0]; if (file) run("model", () => uploadProductModel(token, p.id, file)); }} />
+                <input type="file" accept={modelAccept} hidden disabled={!!busy} onChange={(e) => { const file = e.target.files?.[0]; if (file) run("model", () => uploadProductModel(token, p.id, file)); }} />
               </label>
             </div>
           ) : (
