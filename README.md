@@ -43,6 +43,7 @@ Para que clientes y tú entren desde cualquier lugar, con tu dominio y HTTPS. Si
 Después:
 
 - **Actualizar** a la última versión: `sudo bash deploy/actualizar.sh` (los pedidos, archivos y catálogo se conservan).
+- **Pasar tus datos del PC al servidor** (catálogo con fotos, pedidos, cotizaciones y archivos): en tu PC, con el sitio apagado, `tar -czf datos.tar.gz -C api\data .`; súbelo con `scp datos.tar.gz usuario@IP:~/` y en el servidor `sudo bash deploy/importar-datos.sh ~/datos.tar.gz`. Antes de reemplazar, guarda un respaldo de lo que haya.
 - **Copia de seguridad:** `sudo bash deploy/respaldo.sh` guarda todo en `deploy/respaldos/`. Para hacerla cada noche, agrégala con `sudo crontab -e` (instrucciones en el archivo). Descarga los respaldos a otro lugar de vez en cuando.
 - **Cambiar la clave, el WhatsApp o activar Wompi:** edita `deploy/.env` y ejecuta `deploy/actualizar.sh`. En Wompi, la URL de eventos es `https://tudominio.com/api/payments/wompi`.
 - **Precios, materiales, perfil y límites:** edita `api/config/catalog.toml` en el servidor y ejecuta `deploy/actualizar.sh`.
