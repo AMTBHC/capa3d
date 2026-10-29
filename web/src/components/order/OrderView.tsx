@@ -9,6 +9,7 @@ import { QUALITIES } from "@/lib/catalog";
 import { money } from "@/lib/format";
 import { orderPath, saveOrder } from "@/lib/myOrders";
 import { Logo } from "../brand/Logo";
+import { WhatsAppIcon } from "../WhatsAppIcon";
 
 /** Respaldo si la conexión en vivo no está disponible. */
 const POLL_MS = 20_000;
@@ -117,8 +118,8 @@ export function OrderView({ id, token, transactionId, isNew }: { id: string; tok
         <div style={{ display: "flex", gap: 8 }}>
           <Link className="chip-btn" href="/mis-pedidos" style={{ textDecoration: "none" }}>Mis pedidos</Link>
           {order && (
-            <a className="chip-btn" href={whatsappUrl(`Hola CR3D, tengo una pregunta sobre mi pedido ${order.id}: ${link}`)} target="_blank" rel="noopener noreferrer" style={{ textDecoration: "none" }}>
-              WhatsApp
+            <a className="chip-btn" href={whatsappUrl(`Hola CR3D, tengo una pregunta sobre mi pedido ${order.id}: ${link}`)} target="_blank" rel="noopener noreferrer" style={{ textDecoration: "none", display: "inline-flex", alignItems: "center", gap: 6 }}>
+              <WhatsAppIcon size={16} />WhatsApp
             </a>
           )}
         </div>
@@ -238,8 +239,8 @@ function Welcome({ order, link, onClose }: { order: Order; link: string; onClose
       <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
         {!order.price_pending && (
           <a className="btn" href={whatsappUrl(`Hola CR3D, acabo de hacer el pedido ${order.id}. Lo sigo aquí: ${link}`)} target="_blank" rel="noopener noreferrer"
-            style={{ padding: "10px 16px", borderRadius: 12, fontWeight: 600, fontSize: 14, background: "#25D366", color: "#06210F" }}>
-            Enviar el pedido a CR3D por WhatsApp
+            style={{ display: "inline-flex", alignItems: "center", gap: 8, padding: "10px 16px", borderRadius: 12, fontWeight: 600, fontSize: 14, background: "#25D366", color: "#06210F" }}>
+            <WhatsAppIcon size={18} />Enviar el pedido a CR3D por WhatsApp
           </a>
         )}
         <button className="chip-btn" onClick={copy}>{copied ? "¡Enlace copiado!" : "Copiar enlace"}</button>
@@ -291,8 +292,8 @@ function PayBox({ order, paying, inOtherTab, onPay, error }: {
       ) : (
         <a className="btn btn-primary" target="_blank" rel="noopener noreferrer"
           href={whatsappUrl(`Hola CR3D, quiero pagar ${plan === "deposit" ? `el abono de $${money(amount)}` : `$${money(amount)}`} de mi pedido ${order.id}.`)}
-          style={{ display: "block", textAlign: "center", marginTop: 14, padding: 15, borderRadius: 14 }}>
-          Pagar ${money(amount)} por WhatsApp
+          style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 10, marginTop: 14, padding: 15, borderRadius: 14 }}>
+          <WhatsAppIcon size={20} />Pagar ${money(amount)} por WhatsApp
         </a>
       )}
       {error && <p role="alert" style={{ color: "var(--bad)", fontSize: 13, margin: "10px 0 0" }}>{error}</p>}

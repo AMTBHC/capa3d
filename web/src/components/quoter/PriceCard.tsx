@@ -11,6 +11,7 @@ import { Icon, ICONS } from "../Icon";
 import type { QuoteOptions } from "./Quoter";
 import type { LoadedModel, UploadStatus } from "./useModelFile";
 import type { ServerQuoteState } from "./useServer";
+import { WhatsAppIcon } from "../WhatsAppIcon";
 
 export type PriceStage = "example" | "estimate" | "uploading" | "slicing" | "exact" | "failed" | "nofit" | "review";
 
@@ -189,7 +190,7 @@ export function PriceCard({ fileName, model, opts, supports, dims, quote, server
           <a className="btn btn-ghost" href={whatsappUrl(msg)} target="_blank" rel="noopener noreferrer"
             onClick={() => markRequested(quoteId, colorName)}
             style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8, marginTop: 10, padding: 12, borderRadius: 14, fontSize: 14 }}>
-            <Icon d={ICONS.chat} size={18} stroke={2} />
+            <WhatsAppIcon size={18} />
             Preguntar por WhatsApp
           </a>
         </>
@@ -197,7 +198,7 @@ export function PriceCard({ fileName, model, opts, supports, dims, quote, server
         <>
           <a className="btn btn-primary glow" href={whatsappUrl(msg)} target="_blank" rel="noopener noreferrer"
             style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 10, marginTop: 16, padding: 15, borderRadius: 16, fontSize: 16 }}>
-            <Icon d={ICONS.chat} size={20} stroke={2} />
+            <WhatsAppIcon size={20} />
             {model ? "Pedir por WhatsApp" : "Cotizar por WhatsApp"}
           </a>
           <p style={{ fontSize: 12, color: "var(--text-4)", margin: "8px 0 0", textAlign: "center" }}>
