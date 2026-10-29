@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { ACCEPT } from "@/lib/mesh/load";
+import { useModelAccept } from "@/lib/useModelAccept";
 import { API_URL, printer } from "@/lib/config";
 import { Icon, ICONS } from "../Icon";
 import type { FileStatus, UploadStatus } from "./useModelFile";
@@ -26,6 +26,7 @@ interface Props {
 
 /** Zona para soltar o elegir el archivo; con archivo cargado queda como una fila compacta. */
 export function FileDrop({ fileName, status, upload, onFile }: Props) {
+  const accept = useModelAccept();
   const [over, setOver] = useState(false);
   const loaded = status === "ok" || status === "reading";
   const bad = status === "error" || status === "big" || status === "manual";
@@ -46,7 +47,7 @@ export function FileDrop({ fileName, status, upload, onFile }: Props) {
       <input
         id={FILE_INPUT_ID}
         type="file"
-        accept={ACCEPT}
+        accept={accept}
         aria-label="Subir archivo 3D"
         onChange={(e) => {
           const f = e.target.files?.[0];
