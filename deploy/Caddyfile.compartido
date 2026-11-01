@@ -21,7 +21,17 @@
 		}
 	}
 
-	handle {
+	# Archivos del sitio con nombre único por versión: se guardan para siempre.
+	handle /_next/static/* {
 		reverse_proxy web:3000
+	}
+
+	# Las páginas: Next las marca para guardarse un año (s-maxage) y algunos navegadores, como
+	# el de Instagram o Facebook, siguen mostrando la versión vieja. Que siempre pregunten si hay
+	# una nueva (con el ETag, si no cambió no se vuelve a descargar).
+	handle {
+		reverse_proxy web:3000 {
+			header_down Cache-Control "no-cache"
+		}
 	}
 }
