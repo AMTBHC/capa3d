@@ -11,5 +11,7 @@ else
   git -C .. pull --ff-only
 fi
 docker compose up -d --build
+# Caddy lee su configuración al arrancar; se reinicia (un par de segundos) por si cambió.
+docker compose restart caddy
 docker image prune -f >/dev/null
 echo "✔ Actualizado."
