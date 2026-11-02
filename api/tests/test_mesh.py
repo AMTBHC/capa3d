@@ -172,3 +172,23 @@ def test_colores_de_prusaslicer():
 def test_cambios_de_color_por_altura():
     plate = parse_3mf(layer_change_3mf(), BED).plates[0]
     assert plate.layer_color_changes == 2  # la pausa no cuenta
+
+
+def test_3mf_camino_rapido_igual_al_general():
+    """Las etiquetas como las escriben los slicers se leen de una vez; con otros atributos, una por una."""
+    from capa3d_api.mesh.threemf import _numbers
+
+    plain = (
+        '<vertices><vertex x="0" y="0.5" z="-1e-3"/><vertex x="10" y="0" z="0"/>'
+        '<vertex x="0" y="10" z="0"/></vertices><triangles><triangle v1="0" v2="1" v3="2"/></triangles>'
+    )
+    odd = (
+        '<vertices><vertex z="-1e-3" y="0.5" x="0" /><vertex x="10" y="0" z="0"/>'
+        '<vertex x="0" y="10" z="0"/></vertices>'
+        '<triangles><triangle v1="0" v2="1" v3="2" paint_color="4"/></triangles>'
+    )
+    for body in (plain, odd):
+        v = _numbers(body, "vertex", ("x", "y", "z"), np.float64)
+        t = _numbers(body, "triangle", ("v1", "v2", "v3"), np.int64)
+        assert v.tolist() == [[0, 0.5, -0.001], [10, 0, 0], [0, 10, 0]]
+        assert t.tolist() == [[0, 1, 2]] and t.dtype == np.int64

@@ -8,6 +8,7 @@ que resolver.
 
 import json
 import re
+import warnings
 import zipfile
 from dataclasses import dataclass, field
 from html import unescape
@@ -90,15 +91,71 @@ _FAST = {
 }
 
 
+# Camino más rápido, para etiquetas escritas tal cual por los slicers: se quita el marcado con
+# reemplazos de texto y numpy lee los números de una vez, en C.
+_PLAIN = {
+    "vertex": ("vertices", ('<vertex x="', '" y="', '" z="', '"/>')),
+    "triangle": ("triangles", ('<triangle v1="', '" v2="', '" v3="', '"/>')),
+}
+
+
+def _plain_numbers(body: str, kind: str, total: int, dtype: type) -> np.ndarray | None:
+    container, marks = _PLAIN[kind]
+    a, b = body.find(f"<{container}>"), body.find(f"</{container}>")
+    if a < 0 or b < 0:
+        return None
+    text = body[a + len(container) + 2 : b]
+    for m in marks:
+        text = text.replace(m, " ")
+    with warnings.catch_warnings():
+        # Si queda otro texto (atributos extra, otro orden), numpy avisa y se usa el camino general.
+        warnings.simplefilter("error")
+        try:
+            nums = np.fromstring(text, dtype=dtype, sep=" ")
+        except (ValueError, DeprecationWarning):
+            return None
+    return nums.reshape(-1, 3) if nums.size == total * 3 else None
+
+
 def _numbers(body: str, kind: str, keys: tuple[str, str, str], dtype: type) -> np.ndarray:
+    # Cuántas etiquetas hay, sin contar el contenedor (<triangles> también empieza con "<triangle").
+    total = body.count(f"<{kind}") - body.count(f"<{kind}s")
+    if not total:
+        return np.zeros((0, 3), dtype=dtype)
+    # Modelos de IA o escaneados traen millones de triángulos.
+    fast = _plain_numbers(body, kind, total, dtype)
+    if fast is not None:
+        return fast
     tag = _VERTEX if kind == "vertex" else _TRIANGLE
     rows = _FAST[kind].findall(body)
-    if len(rows) != len(tag.findall(body)):
+    if len(rows) != total:
         rows = []
         for m in tag.finditer(body):
             attrs = m.group(1)
             rows.append([(n.group(1) if (n := _NUM[k].search(attrs)) else "0") for k in keys])
     return np.array(rows, dtype=np.float64).astype(dtype).reshape(-1, 3)
+
+
+_OPEN = {tag: re.compile(rf"<{tag}\b([^>]*)>") for tag in ("object", "mesh", "build")}
+
+
+def _blocks(xml: str, tag: str, start: int = 0, end: int | None = None):
+    """
+    (atributos, inicio, fin) del contenido de cada <tag>…</tag>. Busca el cierre con str.find:
+    una expresión regular perezosa sobre cientos de MB de malla tarda varios segundos.
+    """
+    end = len(xml) if end is None else end
+    opener, close = _OPEN[tag], f"</{tag}>"
+    while (m := opener.search(xml, start, end)) is not None:
+        if m.group(1).rstrip().endswith("/"):
+            yield m.group(1), m.end(), m.end()
+            start = m.end()
+            continue
+        stop = xml.find(close, m.end(), end)
+        if stop < 0:
+            return
+        yield m.group(1), m.end(), stop
+        start = stop + len(close)
 
 
 _PAINT = re.compile(r'\b(?:paint_color|slic3rpe:mmu_segmentation)="([^"]*)"')
@@ -139,26 +196,30 @@ def _paint(body: str) -> np.ndarray | None:
 def _parse_model(xml: str) -> _Model:
     unit = UNIT_MM.get((re.search(r'<model\b[^>]*\bunit="([^"]+)"', xml) or [None, "millimeter"])[1], 1.0)
     objects: dict[str, _Obj] = {}
-    for om in re.finditer(r"<object\b([^>]*)>([\s\S]*?)</object>", xml):
-        oid = _attr(om.group(1), "id")
+    for attrs, a, b in _blocks(xml, "object"):
+        oid = _attr(attrs, "id")
         if not oid:
             continue
-        obj = _Obj(name=_attr(om.group(1), "name"))
-        mesh = re.search(r"<mesh\b[^>]*>([\s\S]*?)</mesh>", om.group(2))
+        obj = _Obj(name=_attr(attrs, "name"))
+        rest = xml[a:b]
+        mesh = next(_blocks(xml, "mesh", a, b), None)
         if mesh:
-            obj.vertices = _numbers(mesh.group(1), "vertex", ("x", "y", "z"), np.float64)
-            obj.triangles = _numbers(mesh.group(1), "triangle", ("v1", "v2", "v3"), np.int64)
-            obj.paint = _paint(mesh.group(1))
-        for cm in re.finditer(r"<component\b([^>]*)>", om.group(2)):
+            body = xml[mesh[1] : mesh[2]]
+            obj.vertices = _numbers(body, "vertex", ("x", "y", "z"), np.float64)
+            obj.triangles = _numbers(body, "triangle", ("v1", "v2", "v3"), np.int64)
+            obj.paint = _paint(body)
+            # Los componentes están fuera de la malla: no hace falta recorrerla otra vez.
+            rest = xml[a : mesh[1]] + xml[mesh[2] : b]
+        for cm in re.finditer(r"<component\b([^>]*)>", rest):
             cid = _attr(cm.group(1), "objectid")
             if cid:
                 path = _attr(cm.group(1), "path")
                 obj.components.append((_norm(path) if path else None, cid, _mat(_attr(cm.group(1), "transform"))))
         objects[oid] = obj
     items = []
-    build = re.search(r"<build\b[^>]*>([\s\S]*?)</build>", xml)
+    build = next(_blocks(xml, "build"), None)
     if build:
-        for im in re.finditer(r"<item\b([^>]*)>", build.group(1)):
+        for im in re.finditer(r"<item\b([^>]*)>", xml[build[1] : build[2]]):
             iid = _attr(im.group(1), "objectid")
             if iid:
                 path = _attr(im.group(1), "path")
