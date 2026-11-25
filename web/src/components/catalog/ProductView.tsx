@@ -9,9 +9,12 @@ import { COLORS, MATERIALS } from "@/lib/catalog";
 import { whatsappUrl } from "@/lib/config";
 import { money, num1 } from "@/lib/format";
 import { loadServerModel, type ServerPlateMesh } from "@/lib/serverModel";
-import { SiteHeader } from "../SiteHeader";
-import { grid, ProductCard } from "./Cards";
-import { ColorMode, FilamentPicker } from "../quoter/Options";
+import { addItem, openCart } from "@/lib/cart";
+import { FINISHES, sizeName } from "@/lib/content";
+import { ProductCard } from "./ProductCard";
+import { ColorPicker, FinishPicker, OptionGroup, QtyStepper } from "./Pickers";
+import { ColorMode } from "../quoter/Options";
+import { Icon, ICONS } from "../Icon";
 import { OrderDialog } from "../quoter/OrderDialog";
 import { useCatalog, useServerQuote } from "../quoter/useServer";
 import { WhatsAppIcon } from "../WhatsAppIcon";
@@ -22,9 +25,7 @@ const ModelViewer = dynamic(() => import("../quoter/ModelViewer"), { ssr: false 
 const SAMPLE_NAME = "Ana";
 const NAME_DEBOUNCE_MS = 600;
 /** Color inicial si el producto no sugiere uno. */
-const DEFAULT_COLOR = "Naranja";
-
-const box = { background: "var(--surface)", border: "1px solid var(--line)", borderRadius: 20, padding: 20 } as const;
+const DEFAULT_COLOR = "Blanco";
 
 export function ProductView({ id }: { id: string }) {
   const [p, setP] = useState<CatalogProduct | null>(null);
@@ -39,7 +40,6 @@ export function ProductView({ id }: { id: string }) {
 
   return (
     <main className="wrap" style={{ paddingTop: 24, paddingBottom: 80 }}>
-      <SiteHeader />
       <nav aria-label="Ruta" style={{ fontSize: 13, color: "var(--text-3)", marginBottom: 12 }}>
         <Link href="/catalogo" style={{ color: "var(--text-3)" }}>Catálogo</Link>
         {p?.collection && <> › <Link href={`/catalogo?c=${p.collection.id}`} style={{ color: "var(--text-3)" }}>{p.collection.name}</Link></>}
@@ -62,6 +62,7 @@ function Product({ p }: { p: CatalogProduct }) {
     return Math.max(0, i);
   });
   const [qty, setQty] = useState(1);
+  const [finish, setFinish] = useState(FINISHES[0] ?? "");
   const [name, setName] = useState("");
   const [nameFile, setNameFile] = useState<{ text: string; id: string } | null>(null);
   const [nameError, setNameError] = useState("");
@@ -148,7 +149,18 @@ function Product({ p }: { p: CatalogProduct }) {
   // Pieza muy grande para dar precio en línea: se cotiza por WhatsApp.
   const review = server.status === "failed" ? (server.quote?.review ?? null) : null;
   const label = p.personalize ? `${p.name} "${text}"` : p.name;
-  const summary = `${label} · ${s.label} · ${MATERIALS[material].id} ${colorName}${qty > 1 ? ` · ${qty} unidades` : ""}`;
+  const summary = `${label} · ${sizeName(s.label)} · ${MATERIALS[material].id} ${colorName}${finish ? ` ${finish.toLowerCase()}` : ""}${qty > 1 ? ` · ${qty} unidades` : ""}`;
+  const colorForOrder = finish ? `${colorName} · ${finish}` : colorName;
+
+  const addToOrder = () => {
+    if (needsName) return;
+    addItem({
+      productId: p.id, name: p.name, image: p.images[0] ? imageUrl(p.images[0]) : null, emoji: p.personalize ? "🔑" : p.collection?.emoji ?? "🧩",
+      size: p.sizes.length > 1 ? sizeName(s.label) : "", color: colors > 1 ? "Multicolor, como la foto" : COLORS[color].name,
+      finish, text: p.personalize ? name.trim() : "", qty,
+      priceFrom: quote ? quote.unit_price : p.price_from,
+    });
+  };
   const closeOrder = useCallback(() => setOrdering(false), []);
 
   return (
@@ -162,87 +174,99 @@ function Product({ p }: { p: CatalogProduct }) {
         {p.description && <p className="lead" style={{ margin: 0, whiteSpace: "pre-line" }}>{p.description}</p>}
       </div>
 
-      <aside style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-        <div style={box}>
-          <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 8 }}>
-            {p.badges.map((b) => <span key={b} className="chip">{BADGE_LABEL[b]}</span>)}
-          </div>
-          <h1 className="h2" style={{ margin: "0 0 6px", fontSize: 30 }}>{p.name}</h1>
-          {p.subsection && <div style={{ fontSize: 13, color: "var(--text-3)" }}>{p.subsection}</div>}
-
-          {p.personalize && (
-            <div className="field" style={{ marginTop: 18 }}>
-              <label className="field-label" htmlFor="name-text">Nombre del llavero <span className="muted">máx. {p.personalize.max_length} letras</span></label>
-              <input id="name-text" className="input" value={name} maxLength={p.personalize.max_length} placeholder={`Ej: ${SAMPLE_NAME}`}
-                onChange={(e) => setName(e.target.value)} autoComplete="off" />
-              {nameError && <div className="status status-warn" style={{ marginTop: 8 }}>{nameError}</div>}
-              {generating && !nameError && <div style={{ fontSize: 12, color: "var(--text-3)", marginTop: 6 }}>Generando tu llavero…</div>}
+      <aside className="buy-col">
+        <div className="buy-box">
+          {p.badges.length > 0 && (
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 10 }}>
+              {p.badges.map((b) => <span key={b} className="badge">{BADGE_LABEL[b]}</span>)}
             </div>
           )}
-
-          <div className="field" style={{ marginTop: 18 }}>
-            <div className="field-label">Tamaño</div>
-            <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
-              {p.sizes.map((x, i) => (
-                <button key={x.label} className="chip-btn" aria-pressed={i === size} onClick={() => setSize(i)}>
-                  {x.label}
-                  {first && <span style={{ fontSize: 11, opacity: 0.7, marginLeft: 6 }}>{num1(first.dx * x.scale / 100)}×{num1(first.dy * x.scale / 100)}×{num1(first.dz * x.scale / 100)} mm</span>}
-                </button>
-              ))}
-            </div>
+          {p.subsection && <div className="pc-cat">{p.subsection}</div>}
+          <h1 className="buy-title">{p.name}</h1>
+          <div className="buy-price" aria-live="polite">
+            {quote ? <><strong>${money(quote.total)}</strong>{qty > 1 && <span> · ${money(quote.unit_price)} c/u</span>}</>
+              : server.status === "failed" || prepareError ? (p.price_from ? <>Desde <strong>${money(p.price_from)}</strong></> : "Te cotizamos el precio")
+              : <span className="indeterminate" style={{ display: "inline-block", width: 140, height: 8, borderRadius: 99 }} />}
           </div>
-        </div>
+          {!fileId && !prepareError && !p.personalize && <div className="field-hint">Calculando el precio exacto…</div>}
 
-        <div style={box}>
+          {p.personalize && (
+            <OptionGroup label="Nombre del llavero" value={<span className="muted">máx. {p.personalize.max_length} letras</span>}>
+              <input id="name-text" className="input" value={name} maxLength={p.personalize.max_length} placeholder={`Ej.: ${SAMPLE_NAME}`}
+                onChange={(e) => setName(e.target.value)} autoComplete="off" aria-label="Nombre del llavero" />
+              {nameError && <div className="status status-warn" style={{ marginTop: 8 }}>{nameError}</div>}
+              {generating && !nameError && <div className="field-hint">Generando tu llavero…</div>}
+            </OptionGroup>
+          )}
+
+          {p.sizes.length > 1 && (
+            <OptionGroup label="Tamaño">
+              <div className="opt-row">
+                {p.sizes.map((x, i) => (
+                  <button key={x.label} type="button" className="opt-chip opt-chip-col" aria-pressed={i === size} onClick={() => setSize(i)}>
+                    {sizeName(x.label)}
+                    {first && <span className="opt-chip-hint">{num1(first.dx * x.scale / 1000)} × {num1(first.dy * x.scale / 1000)} × {num1(first.dz * x.scale / 1000)} cm</span>}
+                  </button>
+                ))}
+              </div>
+            </OptionGroup>
+          )}
+
           {fileColors > 1 && (
             <ColorMode colors={fileColors} filaments={fileInfo?.info.filaments ?? []} multicolor={multicolor} onChange={setMulticolor} />
           )}
-          <FilamentPicker material={material} color={color} onMaterial={setMaterial} onColor={setColor} showColors={colors === 1} />
-          <div className="field">
-            <div className="field-label">Cantidad</div>
-            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-              <button className="chip-btn" aria-label="Menos" onClick={() => setQty((q) => Math.max(1, q - 1))}>−</button>
-              <strong style={{ minWidth: 28, textAlign: "center", fontSize: 18 }}>{qty}</strong>
-              <button className="chip-btn" aria-label="Más" onClick={() => setQty((q) => Math.min(50, q + 1))}>+</button>
-            </div>
-          </div>
-        </div>
-
-        <div style={box}>
-          <div style={{ fontSize: 13, color: "var(--text-3)" }}>Precio de impresión</div>
-          <div className="display" style={{ fontSize: 34, fontWeight: 700, margin: "4px 0 2px" }} aria-live="polite">
-            {quote ? `$${money(quote.total)}` : server.status === "failed" || prepareError ? "—" : <span className="indeterminate" style={{ display: "inline-block", width: 140, height: 8, borderRadius: 99 }} />}
-          </div>
-          {quote && qty > 1 && <div style={{ fontSize: 13, color: "var(--text-3)" }}>${money(quote.unit_price)} c/u</div>}
-          {!!quote?.color_changes && (
-            <div style={{ fontSize: 12, color: "var(--text-3)", marginTop: 4 }}>
-              Incluye {quote.color_changes} cambios de color ({num1(quote.purge_grams ?? 0)} g de purga). En un solo color sale más económico.
-            </div>
+          {colors === 1 && (
+            <ColorPicker value={COLORS[color].name} onChange={(n) => setColor(Math.max(0, COLORS.findIndex((c) => c.name === n)))} />
           )}
+          <FinishPicker value={finish} onChange={setFinish} />
+          <QtyStepper value={qty} onChange={setQty} />
+
+          <details className="more-box">
+            <summary>Opciones avanzadas <span className="muted">(material)</span></summary>
+            <OptionGroup label="Material" value={MATERIALS[material].id}>
+              <div className="opt-row">
+                {MATERIALS.map((m, i) => (
+                  <button key={m.id} type="button" className="opt-chip opt-chip-col" aria-pressed={i === material} onClick={() => setMaterial(i)}>
+                    {m.id}<span className="opt-chip-hint">{m.tag}</span>
+                  </button>
+                ))}
+              </div>
+            </OptionGroup>
+            <p className="field-hint">Si no estás seguro, déjalo en PLA: sirve para casi todo.</p>
+          </details>
+
           {prepareError
-            ? <div className="status status-warn" style={{ marginTop: 8 }}>{prepareError}</div>
+            ? <div className="status status-warn" style={{ marginTop: 12 }}>{prepareError}</div>
             : review
-              ? <div className="status status-info" role="status" style={{ marginTop: 8 }}><span><strong>Esta pieza la cotizamos personalmente.</strong> Es muy grande para darte el precio en línea: {review}. Envíanos la solicitud y te contactamos con el precio.</span></div>
-              : server.status === "failed" && <div className="status status-warn" style={{ marginTop: 8 }}>No pudimos calcular el precio. Escríbenos por WhatsApp.</div>}
-          {!fileId && !prepareError && !p.personalize && <div style={{ fontSize: 12, color: "var(--text-3)", marginTop: 6 }}>Preparando el modelo para cotizarlo…</div>}
-          <div style={{ fontSize: 12, color: "var(--text-4)", marginTop: 6 }}>El envío se calcula con tu ciudad. Confirmamos antes de que pagues.</div>
-          <button className="btn btn-primary glow" style={{ width: "100%", marginTop: 14, padding: 15, borderRadius: 16, fontSize: 16 }} disabled={!canOrder && !review} onClick={() => setOrdering(true)}>
-            {review ? "Solicitar cotización" : needsName ? "Escribe el nombre para pedirlo" : "Pedirlo"}
-          </button>
-          <a className="btn btn-ghost" target="_blank" rel="noopener noreferrer"
-            style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8, marginTop: 10, padding: 12, borderRadius: 14, fontSize: 14 }}
-            href={whatsappUrl(`Hola, quiero ${summary}${quote ? ` ($${money(quote.total)})` : ""}`)}>
-            <WhatsAppIcon size={18} />
-            Preguntar por WhatsApp
-          </a>
+              ? <div className="status status-info" role="status" style={{ marginTop: 12 }}><span><strong>Esta pieza la cotizamos personalmente.</strong> Es muy grande para darte el precio en línea: {review}.</span></div>
+              : server.status === "failed" && <div className="status status-warn" style={{ marginTop: 12 }}>No pudimos calcular el precio exacto. Agrégalo a tu pedido y te lo confirmamos por WhatsApp.</div>}
+
+          <div className="buy-ctas" data-hide-fab="">
+            <button type="button" className="btn btn-primary btn-lg btn-block" disabled={needsName || generating} onClick={addToOrder}>
+              <Icon d={ICONS.bag} size={20} stroke={2} />
+              {needsName ? "Escribe el nombre para pedirlo" : "Agregar a mi pedido"}
+            </button>
+            {(canOrder || review) && (
+              <button type="button" className="btn btn-outline btn-lg btn-block" onClick={() => setOrdering(true)}>
+                {review ? "Solicitar cotización en línea" : "Comprar ahora y pagar en línea"}
+              </button>
+            )}
+            <a className="btn btn-ghost btn-block" target="_blank" rel="noopener noreferrer"
+              href={whatsappUrl(`Hola, quiero ${summary}${quote ? ` ($${money(quote.total)})` : ""}`)}>
+              <WhatsAppIcon size={18} />Preguntar por WhatsApp
+            </a>
+          </div>
+          <p className="field-hint" style={{ textAlign: "center" }}>
+            El envío depende de tu ciudad. Te lo confirmamos antes de que pagues. <button type="button" className="link-btn" onClick={openCart}>Ver mi pedido</button>
+          </p>
         </div>
       </aside>
 
       {ordering && server.status === "done" && quote && (
-        <OrderDialog quoteId={server.quote.id} color={colorName} summary={summary} printPrice={quote.total} shipping={catalog.shipping} onClose={closeOrder} />
+        <OrderDialog quoteId={server.quote.id} color={colorForOrder} summary={summary} printPrice={quote.total} shipping={catalog.shipping} onClose={closeOrder} />
       )}
       {ordering && review && server.status === "failed" && server.quote && (
-        <OrderDialog request quoteId={server.quote.id} color={colorName} summary={summary} printPrice={0} shipping={catalog.shipping} onClose={closeOrder} />
+        <OrderDialog request quoteId={server.quote.id} color={colorForOrder} summary={summary} printPrice={0} shipping={catalog.shipping} onClose={closeOrder} />
       )}
     </div>
   );
@@ -295,7 +319,7 @@ function Related({ p }: { p: CatalogProduct }) {
         <h2 style={{ fontSize: 22, margin: 0 }}>También te puede gustar</h2>
         <Link href={`/catalogo?c=${p.collection_id}`} style={{ fontSize: 14 }}>Ver todo {p.collection?.name ?? "la colección"} →</Link>
       </div>
-      <div style={grid}>{items.map((x) => <ProductCard key={x.id} p={x} emoji={p.collection?.emoji ?? ""} />)}</div>
+      <div className="product-grid">{items.map((x) => <ProductCard key={x.id} p={x} emoji={p.collection?.emoji ?? "🧩"} />)}</div>
     </section>
   );
 }

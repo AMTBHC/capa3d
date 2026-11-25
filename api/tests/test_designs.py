@@ -29,7 +29,16 @@ def client(tmp_path):
 
 def send(c, images=(("perro.jpg", JPG),), contact=None, brief=None):
     data = json.dumps({"contact": contact or CONTACT, "brief": brief or BRIEF})
-    return c.post("/api/designs", data={"data": data}, files=[("files", img) for img in images])
+    return c.post("/api/designs", data={"data": data}, files=[("files", img) for img in images] or None)
+
+
+def make_order(c, design_id, body):
+    return c.post(
+        f"/api/admin/designs/{design_id}/order",
+        data={"data": json.dumps(body)},
+        files={"file": ("perro.stl", binary_stl(cube(20)))},
+        headers=ADMIN,
+    )
 
 
 def test_tipos_de_imagen():
@@ -57,6 +66,26 @@ def test_solicitud_y_seguimiento(client):
     assert client.get(f"/api/designs/{d['id']}?t=otro").status_code == 404
     assert client.get(f"/api/designs/{d['id']}/images/1.jpg?t=otro").status_code == 404
     assert client.get(f"/api/designs/{d['id']}/images/..%2Fcapa3d.db?t={d['token']}").status_code == 404
+
+
+def test_solo_descripcion_y_whatsapp(client):
+    """Sin fotos ni correo: basta con contar qué necesita y dejar el WhatsApp."""
+    r = send(client, [], contact={"name": "Luis", "phone": "+57 310 555 1234"}, brief={**BRIEF, "use": "maqueta"})
+    assert r.status_code == 201, r.text
+    d = r.json()
+    assert d["images"] == [] and d["brief"]["use"] == "maqueta"
+    row = client.get("/api/admin/designs", headers=ADMIN).json()[0]
+    assert row["contact"] | {} == {**row["contact"], "email": "", "city": "", "department": "", "phone": "573105551234"}
+
+    # El taller completa los datos de envío que faltan al crear el pedido.
+    base = {"print_price": 50000, "address": "Calle 1 # 2-3"}
+    assert make_order(client, d["id"], base).json()["detail"] == "Falta el correo del cliente"
+    with_email = {**base, "email": "luis@correo.co"}
+    assert make_order(client, d["id"], with_email).json()["detail"] == "Falta la ciudad del cliente"
+    full = {**base, "email": "luis@correo.co", "city": "Pasto", "department": "Nariño"}
+    v = make_order(client, d["id"], full).json()
+    o = client.get(f"/api/orders/{v['order']['id']}?t={v['order']['token']}").json()
+    assert o["customer"]["city"] == "Pasto" and o["customer"]["department"] == "Nariño"
 
 
 def test_validaciones(client):
@@ -89,12 +118,7 @@ def test_panel_estados_y_pedido(client):
     assert act(action="reopen").status_code == 409
     assert act(action="proposal").json()["status_label"] == "Propuesta enviada"
 
-    order = lambda body: client.post(  # noqa: E731
-        f"/api/admin/designs/{d['id']}/order",
-        data={"data": json.dumps(body)},
-        files={"file": ("perro.stl", binary_stl(cube(20)))},
-        headers=ADMIN,
-    )
+    order = lambda body: make_order(client, d["id"], body)  # noqa: E731
     # Sin dirección del cliente no se puede crear el pedido.
     assert order({"print_price": 80000}).status_code == 422
     assert order({"print_price": 0, "address": "Calle 1 # 2-3"}).status_code == 422
@@ -127,4 +151,6 @@ def test_panel_en_vivo_cuenta_disenos(client):
 def test_mensajes_legibles(client):
     assert send(client, contact={**CONTACT, "email": "malo"}).json()["detail"] == "Correo inválido"
     assert send(client, brief={"description": "corto"}).json()["detail"] == "Cuéntanos un poco más en la descripción"
-    assert send(client, contact={**CONTACT, "city": ""}).json()["detail"] == "Revisa el campo ciudad"
+    # Lo único obligatorio para contactarlo: nombre y WhatsApp.
+    assert send(client, contact={**CONTACT, "phone": "12"}).json()["detail"] == "Revisa el campo celular"
+    assert send(client, contact={**CONTACT, "name": ""}).json()["detail"] == "Revisa el campo nombre"

@@ -25,8 +25,6 @@ export interface Material {
   profile: Profile;
 }
 
-export const METER_LABELS = ["RESISTENCIA", "FLEXIBILIDAD", "CALOR"] as const;
-
 export const MATERIALS: Material[] = [
   {
     id: "PLA",
@@ -123,54 +121,4 @@ export const COLORS: FilamentColor[] = [
   { name: "Verde", spool: "#3DDC84", render: "#3DDC84" },
   { name: "Rojo", spool: "#E5383B", render: "#EF4F52" },
   { name: "Amarillo", spool: "#FFD23F", render: "#FFD23F" },
-];
-
-export const GALLERY_CATEGORIES = ["Prototipos", "Miniaturas", "Funcionales", "Arte y decoración"] as const;
-export type GalleryCategory = (typeof GALLERY_CATEGORIES)[number];
-
-export interface Work {
-  name: string;
-  category: GalleryCategory;
-  /** Ruta en /public. Sin imagen se dibuja una pieza por capas con `profile`. */
-  img?: string;
-  material: string;
-  desc: string;
-  profile: Profile;
-  color: string;
-  radius: string;
-}
-
-/** Reemplaza `img` por fotos reales de tus trabajos en /public/gallery. */
-export const WORKS: Work[] = [
-  { name: "Carcasa electrónica", category: "Prototipos", material: "PLA blanco", desc: "Caja con tapa a presión para proyectos de electrónica y sensores.", profile: () => 120, color: "#F2F2EE", radius: "12px" },
-  { name: "Figura de colección", category: "Miniaturas", material: "PLA gris", desc: "Miniatura de 28 mm lista para pintar, con base integrada.", profile: (u) => (u < 0.15 ? 120 : 50 + 40 * Math.sin(Math.PI * u)), color: "#8A8F98", radius: "50%" },
-  { name: "Engranaje de transmisión", category: "Funcionales", img: "/img/engranaje.svg", material: "PETG o ABS", desc: "Repuesto funcional con dientes precisos para mecanismos.", profile: () => 130, color: "#C9C9C3", radius: "50%" },
-  { name: "Jarrón en espiral", category: "Arte y decoración", img: "/img/jarron.svg", material: "PLA azul", desc: "Pieza decorativa de pared continua, ligera y llamativa.", profile: vase(70, 96, 36), color: "#4F82FF", radius: "50%" },
-  { name: "Clip de sujeción", category: "Prototipos", material: "TPU", desc: "Prototipo flexible que encaja y suelta sin romperse.", profile: (u) => 112 + 24 * Math.sin(u * Math.PI * 4), color: "#3DDC84", radius: "50%" },
-  { name: "Torre de ajedrez", category: "Miniaturas", material: "PLA grafito", desc: "Pieza de juego con detalle en almenas y base estable.", profile: (u) => (u < 0.12 ? 130 : u > 0.85 ? 110 : 80), color: "#4A4A52", radius: "50%" },
-  { name: "Soporte de montaje", category: "Funcionales", material: "ABS", desc: "Escuadra con perforaciones para tornillos, resistente al calor.", profile: (u) => (u < 0.2 ? 140 : 60), color: "#C9C9C3", radius: "8px" },
-  { name: "Relieve decorativo", category: "Arte y decoración", material: "PLA rojo", desc: "Pieza de pared con anillos concéntricos para decoración.", profile: (u) => 150 - 110 * u, color: "#EF4F52", radius: "50%" },
-];
-
-export interface Step {
-  n: string;
-  title: string;
-  text: string;
-  icon: string;
-}
-
-export const STEPS: Step[] = [
-  { n: "01", title: "Sube tu archivo", text: "Carga tu STL, OBJ, 3MF o STEP desde el cotizador.", icon: "M12 16V4 M7 9l5-5 5 5 M4 16v4h16v-4" },
-  { n: "02", title: "Personaliza", text: "Elige material, calidad, relleno y color.", icon: "M4 6h10 M18 6h2 M4 12h4 M12 12h8 M4 18h12 M20 18h0 M14 4v4 M8 10v4 M16 16v4" },
-  { n: "03", title: "Revisión e impresión", text: "Confirmas el precio, revisamos el archivo e imprimimos.", icon: "M5 18h14 M6.5 14h11 M8 10h8 M9.5 6h5" },
-  { n: "04", title: "Entrega", text: "Pieza posprocesada, empacada y enviada.", icon: "M3 7l9-4 9 4v10l-9 4-9-4z M3 7l9 4 9-4 M12 11v10" },
-];
-
-export const FAQS: [string, string][] = [
-  ["¿Qué formatos de archivo aceptan?", "Aceptamos .STL, .OBJ, .3MF y .STEP. Si todavía no tienes el modelo, escríbenos y vemos cómo ayudarte."],
-  ["¿Qué material me conviene?", "PLA para prototipos y decoración, PETG para piezas funcionales, ABS para piezas que soportan calor y TPU para piezas flexibles."],
-  ["¿Revisan mi archivo antes de imprimir?", "Sí. Revisamos que el modelo sea imprimible y te avisamos si hace falta ajustar algo antes de empezar."],
-  ["¿Puedo pedir varias unidades?", "Sí. Para lotes el precio por unidad baja con la cantidad. Escríbenos por WhatsApp con tu archivo y cuántas necesitas."],
-  ["¿Cuánto tarda y cómo envían?", "[TUS TIEMPOS DE PRODUCCIÓN Y ENVÍO]"],
-  ["¿Cómo pago?", "[TUS MEDIOS DE PAGO]"],
 ];

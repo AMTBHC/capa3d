@@ -6,7 +6,6 @@ import { API_URL, whatsappUrl } from "@/lib/config";
 import { designImageUrl, getDesign, type Design, type DesignStatus } from "@/lib/api";
 import { money } from "@/lib/format";
 import { orderPath, saveDesign } from "@/lib/myOrders";
-import { SiteHeader } from "../SiteHeader";
 import { WhatsAppIcon } from "../WhatsAppIcon";
 
 const POLL_MS = 20_000;
@@ -19,7 +18,7 @@ const FLOW: [DesignStatus, string][] = [
 ];
 
 const USE_LABEL: Record<string, string> = {
-  figura: "Figura o personaje", regalo: "Regalo", decoracion: "Decoración", repuesto: "Repuesto o pieza", funcional: "Algo funcional", otro: "Otro",
+  figura: "Figura o personaje", regalo: "Regalo", decoracion: "Decoración", repuesto: "Repuesto o pieza", maqueta: "Maqueta o prototipo", funcional: "Algo funcional", otro: "Otro",
 };
 
 /** Página del cliente para seguir su solicitud de diseño a medida. */
@@ -62,7 +61,6 @@ export function DesignView({ id, token, isNew }: { id: string; token: string; is
 
   return (
     <main style={{ maxWidth: 760, margin: "0 auto", padding: "24px 16px 80px" }}>
-      <SiteHeader />
       {error && !d && <div className="status status-warn">{error}</div>}
       {d && (
         <>

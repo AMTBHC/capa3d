@@ -3,9 +3,10 @@
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
-import { listCollections, listProducts, type CatalogCollection, type CatalogProduct } from "@/lib/api";
-import { SiteHeader } from "../SiteHeader";
-import { grid, ProductCard } from "./Cards";
+import type { CatalogProduct } from "@/lib/api";
+import { whatsappUrl } from "@/lib/config";
+import { productEmoji, useShop } from "@/lib/shop";
+import { ProductCard } from "./ProductCard";
 
 const PAGE = 36;
 
@@ -29,18 +30,13 @@ export function CatalogBrowser() {
   const q = params.get("q") ?? "";
   const sort = (params.get("o") ?? "destacados") as Sort;
 
-  const [collections, setCollections] = useState<CatalogCollection[] | null>(null);
-  const [products, setProducts] = useState<CatalogProduct[] | null>(null);
-  const [failed, setFailed] = useState(false);
+  const shop = useShop();
+  const collections = shop.status === "loading" ? null : shop.collections;
+  const products = shop.status === "loading" ? null : shop.products;
+  const failed = shop.status === "failed";
   const [search, setSearch] = useState(q);
   const [limit, setLimit] = useState(PAGE);
 
-  useEffect(() => {
-    Promise.all([listCollections(), listProducts()]).then(([cs, ps]) => {
-      setCollections(cs);
-      setProducts(ps);
-    }, () => setFailed(true));
-  }, []);
 
   const update = (patch: Record<string, string>) => {
     const next = new URLSearchParams(params);
@@ -89,18 +85,20 @@ export function CatalogBrowser() {
   }, [products, collections, c, s, q, sort]);
 
   const active = collections?.find((x) => x.id === c);
-  const emoji = (id: string) => collections?.find((x) => x.id === id)?.emoji ?? "";
 
   return (
     <main className="wrap" style={{ paddingTop: 24, paddingBottom: 80 }}>
-      <SiteHeader />
       <nav aria-label="Ruta" style={{ fontSize: 13, color: "var(--text-3)", marginBottom: 10 }}>
         <Link href="/" style={{ color: "var(--text-3)" }}>Inicio</Link> › {active ? <><Link href="/catalogo" style={{ color: "var(--text-3)" }}>Catálogo</Link> › {active.name}</> : "Catálogo"}
       </nav>
       <h1 className="h2" style={{ margin: "0 0 6px" }}>{active ? active.name : "Catálogo"}</h1>
       <p className="lead" style={{ margin: "0 0 24px" }}>{active?.description || "Piezas listas para imprimir en el color y tamaño que elijas."}</p>
 
-      {failed && <div className="status status-warn">No pudimos cargar el catálogo. Intenta de nuevo en un momento.</div>}
+      {failed && (
+        <div className="status status-warn" style={{ marginBottom: 16 }}>
+          <span>No pudimos cargar el catálogo. Intenta de nuevo en un momento o <a href={whatsappUrl("Hola, quiero ver el catálogo de piezas.")} target="_blank" rel="noopener noreferrer">pídelo por WhatsApp</a>.</span>
+        </div>
+      )}
 
       <div className="browse">
         <aside className="browse-side" aria-label="Colecciones">
@@ -158,10 +156,10 @@ export function CatalogBrowser() {
           {products && shown.length === 0 && (
             <div className="status status-info" style={{ flexDirection: "column" }}>
               <strong>No encontramos productos con esos filtros.</strong>
-              <span>Prueba otra palabra o <button className="link-btn" onClick={() => { setSearch(""); update({ c: "", s: "", q: "" }); }}>mira todo el catálogo</button>. Si tienes tu propio archivo, <Link href="/#quote">cotízalo aquí</Link>.</span>
+              <span>Prueba otra palabra o <button className="link-btn" onClick={() => { setSearch(""); update({ c: "", s: "", q: "" }); }}>mira todo el catálogo</button>. ¿No está? <Link href="/#a-medida">Mándanos una foto</Link> y lo hacemos a tu medida.</span>
             </div>
           )}
-          <div style={grid}>{shown.slice(0, limit).map((p) => <ProductCard key={p.id} p={p} emoji={emoji(p.collection_id)} />)}</div>
+          <div className="product-grid">{shown.slice(0, limit).map((p) => <ProductCard key={p.id} p={p} emoji={productEmoji(p, collections ?? [])} />)}</div>
           {shown.length > limit && (
             <div style={{ display: "flex", justifyContent: "center", marginTop: 28 }}>
               <button className="btn btn-ghost" onClick={() => setLimit((l) => l + PAGE)} style={{ padding: "12px 22px", borderRadius: 12 }}>

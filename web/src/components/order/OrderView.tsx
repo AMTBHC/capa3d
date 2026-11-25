@@ -8,7 +8,6 @@ import { checkoutOrder, confirmPayment, getOrder, orderStreamUrl, type Order } f
 import { QUALITIES } from "@/lib/catalog";
 import { money } from "@/lib/format";
 import { orderPath, saveOrder } from "@/lib/myOrders";
-import { Logo } from "../brand/Logo";
 import { WhatsAppIcon } from "../WhatsAppIcon";
 
 /** Respaldo si la conexión en vivo no está disponible. */
@@ -111,10 +110,7 @@ export function OrderView({ id, token, transactionId, isNew }: { id: string; tok
 
   return (
     <main style={{ maxWidth: 760, margin: "0 auto", padding: "24px 16px 80px" }}>
-      <header style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, marginBottom: 24 }}>
-        <Link href="/" style={{ display: "flex", alignItems: "center", gap: 10, textDecoration: "none" }}>
-          <Logo height={22} />
-        </Link>
+      <header style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 12, marginBottom: 24 }}>
         <div style={{ display: "flex", gap: 8 }}>
           <Link className="chip-btn" href="/mis-pedidos" style={{ textDecoration: "none" }}>Mis pedidos</Link>
           {order && (

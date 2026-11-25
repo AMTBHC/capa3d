@@ -11,6 +11,7 @@ import { money } from "@/lib/format";
 import { orderPath } from "@/lib/myOrders";
 import { useModelAccept } from "@/lib/useModelAccept";
 import { actionBtn, Box, field, Line, Money, Text, waPhone } from "./OrdersTab";
+import { DEPARTMENTS } from "../quoter/OrderDialog";
 
 const REFRESH_MS = 30_000;
 
@@ -31,7 +32,7 @@ const STATUS_COLOR: Record<DesignStatus, string> = {
 };
 
 const USE_LABEL: Record<string, string> = {
-  figura: "Figura o personaje", regalo: "Regalo", decoracion: "Decoración", repuesto: "Repuesto o pieza", funcional: "Funcional", otro: "Otro",
+  figura: "Figura o personaje", regalo: "Regalo", decoracion: "Decoración", repuesto: "Repuesto o pieza", maqueta: "Maqueta o prototipo", funcional: "Funcional", otro: "Otro",
 };
 
 function message(d: AdminDesign): string {
@@ -111,7 +112,7 @@ export function DesignsTab({ token, onUnauthorized }: { token: string; onUnautho
                 <span style={{ fontSize: 12, fontWeight: 600, padding: "3px 10px", borderRadius: 99, color, background: `color-mix(in srgb, ${color} 14%, transparent)` }}>{d.status_label}</span>
                 <span style={{ flex: "1 1 220px", minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                   <strong style={{ fontWeight: 600 }}>{d.contact.name}</strong>
-                  <span style={{ color: "var(--text-3)", fontSize: 13 }}> · {d.contact.city} · {d.brief.description}</span>
+                  <span style={{ color: "var(--text-3)", fontSize: 13 }}> · {[d.contact.city, d.brief.description].filter(Boolean).join(" · ")}</span>
                 </span>
                 <span style={{ fontSize: 13, color: "var(--text-3)" }}>{d.images.length} {d.images.length === 1 ? "imagen" : "imágenes"}</span>
                 <span style={{ fontSize: 13, color: "var(--text-3)" }}>{new Date(d.created_at).toLocaleDateString("es-CO", { day: "numeric", month: "short" })}</span>
@@ -175,8 +176,11 @@ function DesignDetail({ d, token, onChange }: { d: AdminDesign; token: string; o
 
       <Box title="Cliente">
         <Line>{c.name}</Line>
-        <Line><a href={`https://wa.me/${waPhone(c.phone)}`} target="_blank" rel="noopener noreferrer">{c.phone}</a> · <a href={`mailto:${c.email}`}>{c.email}</a></Line>
-        <Line>{c.address ? `${c.address}, ` : ""}{c.city} ({c.department})</Line>
+        <Line>
+          <a href={`https://wa.me/${waPhone(c.phone)}`} target="_blank" rel="noopener noreferrer">{c.phone}</a>
+          {c.email ? <> · <a href={`mailto:${c.email}`}>{c.email}</a></> : <span style={{ color: "var(--text-3)" }}> · sin correo</span>}
+        </Line>
+        <Line muted>{[c.address, c.city, c.department && `(${c.department})`].filter(Boolean).join(", ") || "Sin datos de envío todavía: pídelos por WhatsApp."}</Line>
         <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginTop: 10 }}>
           <a className="btn" href={notify} target="_blank" rel="noopener noreferrer"
             style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "9px 14px", borderRadius: 12, fontSize: 13, fontWeight: 600, background: "#25D366", color: "#06210F" }}>
@@ -250,6 +254,7 @@ function Images({ d, token }: { d: AdminDesign; token: string }) {
     };
   }, [d.id, names, token]);
 
+  if (!d.images.length) return <Line muted>Sin fotos: el cliente solo dejó la descripción.</Line>;
   return (
     <div className="ref-grid" style={{ gridTemplateColumns: "repeat(auto-fill, minmax(96px, 1fr))" }}>
       {d.images.map((name) => (
@@ -276,6 +281,12 @@ function MakeOrder({ d, token, onChange }: { d: AdminDesign; token: string; onCh
   const [infill, setInfill] = useState("20");
   const [color, setColor] = useState(d.brief.color);
   const [address, setAddress] = useState(d.contact.address);
+  // La solicitud solo exige nombre y WhatsApp: lo que falte para el envío se completa aquí.
+  const [email, setEmail] = useState(d.contact.email);
+  const [city, setCity] = useState(d.contact.city);
+  const [department, setDepartment] = useState(d.contact.department);
+  const missing = { email: !d.contact.email, city: !d.contact.city, department: !d.contact.department };
+  const shippingOk = address.trim().length >= 5 && /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email.trim()) && city.trim().length >= 2 && department.length >= 2;
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
 
@@ -287,7 +298,7 @@ function MakeOrder({ d, token, onChange }: { d: AdminDesign; token: string; onCh
     try {
       onChange(await adminDesignOrder(token, d.id, {
         print_price: Math.round(+price || 0), shipping: Math.round(+shipping || 0), material, quality,
-        infill: Math.round(+infill || 0), color, address,
+        infill: Math.round(+infill || 0), color, address, email, city, department,
       }, file));
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
@@ -331,8 +342,23 @@ function MakeOrder({ d, token, onChange }: { d: AdminDesign; token: string; onCh
       <div style={{ marginTop: 8 }}>
         <Text label="Dirección de envío" value={address} onChange={setAddress} placeholder="Calle 10 # 20-30, barrio" />
       </div>
+      {(missing.email || missing.city || missing.department) && (
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginTop: 8 }}>
+          {missing.email && <Text label="Correo del cliente" value={email} onChange={setEmail} placeholder="para el pago y el seguimiento" />}
+          {missing.city && <Text label="Ciudad" value={city} onChange={setCity} />}
+          {missing.department && (
+            <label style={{ fontSize: 12, color: "var(--text-3)", display: "flex", flexDirection: "column", gap: 4 }}>
+              Departamento
+              <select value={department} onChange={(e) => setDepartment(e.target.value)} style={field}>
+                <option value="">Elige…</option>
+                {DEPARTMENTS.map((x) => <option key={x}>{x}</option>)}
+              </select>
+            </label>
+          )}
+        </div>
+      )}
       <Line muted>Total para el cliente: ${money((+price || 0) + (+shipping || 0))}</Line>
-      <button className="btn btn-primary" disabled={busy || !file || !(+price > 0) || address.trim().length < 5} style={actionBtn} onClick={submit}>
+      <button className="btn btn-primary" disabled={busy || !file || !(+price > 0) || !shippingOk} style={actionBtn} onClick={submit}>
         {busy ? "Subiendo modelo…" : "Crear pedido para pagar"}
       </button>
       {error && <p role="alert" style={{ color: "var(--bad)", fontSize: 13, margin: "10px 0 0" }}>{error}</p>}
