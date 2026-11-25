@@ -50,21 +50,28 @@ ACTIONS: dict[str, tuple[set[str], str]] = {
     "reopen": ({"cancelled"}, "received"),
 }
 
-Use = Literal["decoracion", "regalo", "repuesto", "figura", "funcional", "otro"]
+Use = Literal["decoracion", "regalo", "repuesto", "figura", "maqueta", "funcional", "otro"]
 
 
 class DesignContact(BaseModel):
-    """Datos para contactar al cliente; la dirección puede llegar después, al hacer el pedido."""
+    """
+    Lo mínimo para contactar al cliente: nombre y WhatsApp. El correo, la ciudad y la dirección
+    pueden llegar después (el taller los completa al crear el pedido).
+    """
 
     name: str = Field(min_length=2, max_length=80)
     phone: str = Field(min_length=7, max_length=20)
-    email: str = Field(max_length=120)
-    city: str = Field(min_length=2, max_length=60)
-    department: str = Field(min_length=2, max_length=60)
+    email: str = Field(default="", max_length=120)
+    city: str = Field(default="", max_length=60)
+    department: str = Field(default="", max_length=60)
     address: str = Field(default="", max_length=200)
 
     _phone = field_validator("phone")(Customer.phone_digits.__func__)  # type: ignore[attr-defined]
-    _email = field_validator("email")(Customer.email_format.__func__)  # type: ignore[attr-defined]
+
+    @field_validator("email")
+    @classmethod
+    def optional_email(cls, v: str) -> str:
+        return Customer.email_format(v) if v.strip() else ""
 
     @field_validator("name", "city", "department", "address")
     @classmethod
@@ -115,8 +122,19 @@ class DesignOrder(BaseModel):
     quality: str = "estandar"
     infill: int = Field(default=20, ge=0, le=100)
     color: str = Field(default="", max_length=40)
+    # Datos de envío que el cliente no dejó en la solicitud (vacío = los de la solicitud).
     address: str = Field(default="", max_length=200)
+    email: str = Field(default="", max_length=120)
+    city: str = Field(default="", max_length=60)
+    department: str = Field(default="", max_length=60)
 
+
+SHIPPING_LABEL = {
+    "address": "la dirección de envío",
+    "email": "el correo",
+    "city": "la ciudad",
+    "department": "el departamento",
+}
 
 FIELD_LABEL = {
     "name": "nombre",
@@ -169,8 +187,7 @@ class DesignService:
         self.dir = settings.data_dir / "designs"
 
     def create(self, req: DesignCreate, images: list[tuple[str, bytes]]) -> dict:
-        if not images:
-            raise OrderError("Sube al menos una foto o boceto de referencia", 422)
+        # Las fotos ayudan, pero no son obligatorias: basta con la descripción.
         if len(images) > MAX_IMAGES:
             raise OrderError(f"Puedes subir hasta {MAX_IMAGES} imágenes", 422)
         kinds = []
@@ -253,12 +270,12 @@ class DesignService:
         d = self.get(design_id)
         if d["status"] in ("ordered", "cancelled"):
             raise OrderError("Esta solicitud ya no admite pedidos", 409)
-        c = d["contact"]
-        address = data.address.strip() or c.get("address", "")
+        given = {k: v.strip() for k in ("address", "email", "city", "department") if (v := getattr(data, k)).strip()}
         try:
-            customer = Customer(**{**c, "address": address, "notes": f"Diseño a medida {d['id']}"})
-        except ValueError as e:
-            raise OrderError("Falta la dirección de envío del cliente", 422) from e
+            customer = Customer(**{**d["contact"], **given, "notes": f"Diseño a medida {d['id']}"})
+        except ValidationError as e:
+            field = next((x for x in e.errors()[0]["loc"] if x in SHIPPING_LABEL), None)
+            raise OrderError(f"Falta {SHIPPING_LABEL.get(field, 'un dato de envío')} del cliente", 422) from e
         try:
             f = self.quotes.save_upload(filename, stream)
             q = self.quotes.create_quote(

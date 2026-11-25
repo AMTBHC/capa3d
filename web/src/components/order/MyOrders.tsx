@@ -6,7 +6,6 @@ import { API_URL } from "@/lib/config";
 import { lookupOrders, type FoundOrder } from "@/lib/api";
 import { money } from "@/lib/format";
 import { designPath, orderPath, savedDesigns, savedOrders, type SavedDesign, type SavedOrder } from "@/lib/myOrders";
-import { Logo } from "../brand/Logo";
 
 /** Mis pedidos: los de este navegador y búsqueda por correo y celular. */
 export function MyOrders() {
@@ -40,13 +39,10 @@ export function MyOrders() {
 
   return (
     <main style={{ maxWidth: 720, margin: "0 auto", padding: "24px 16px 80px" }}>
-      <header style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 24 }}>
-        <Link href="/" style={{ display: "flex", alignItems: "center", gap: 10, textDecoration: "none" }}>
-          <Logo height={22} />
-        </Link>
-        <Link className="chip-btn" href="/#quote" style={{ textDecoration: "none" }}>Cotizar otra pieza</Link>
-      </header>
-      <h1 className="h2" style={{ marginBottom: 20 }}>Mis pedidos</h1>
+      <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", justifyContent: "space-between", gap: 12, marginBottom: 20 }}>
+        <h1 className="h2" style={{ margin: 0 }}>Mis pedidos</h1>
+        <Link className="chip-btn" href="/catalogo" style={{ textDecoration: "none" }}>Pedir otra pieza</Link>
+      </div>
 
       {saved && saved.length > 0 && (
         <section className="step" style={{ marginBottom: 16 }}>

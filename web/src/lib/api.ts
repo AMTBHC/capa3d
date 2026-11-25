@@ -580,7 +580,7 @@ export function deleteProductImage(token: string, id: string, name: string): Pro
 // Diseños a medida
 
 export type DesignStatus = "received" | "designing" | "proposal" | "ordered" | "cancelled";
-export type DesignUse = "decoracion" | "regalo" | "repuesto" | "figura" | "funcional" | "otro";
+export type DesignUse = "decoracion" | "regalo" | "repuesto" | "figura" | "maqueta" | "funcional" | "otro";
 
 export interface DesignContact {
   name: string;
@@ -664,6 +664,10 @@ export interface DesignOrderInput {
   infill: number;
   color: string;
   address: string;
+  /** Datos que el cliente no dejó en la solicitud (vacío = los de la solicitud). */
+  email?: string;
+  city?: string;
+  department?: string;
 }
 
 /** Sube el modelo terminado y crea el pedido con el precio, listo para que el cliente pague. */

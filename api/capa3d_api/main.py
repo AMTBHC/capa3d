@@ -232,7 +232,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     async def create_design(
         request: Request,
         data: Annotated[str, Form(max_length=20_000)],
-        files: Annotated[list[UploadFile], File()],
+        files: Annotated[list[UploadFile] | None, File()] = None,
     ):
         try:
             body = DesignCreate.model_validate_json(data)
@@ -240,7 +240,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             raise HTTPException(422, form_error(e)) from None
         rate_limit(design_requests, request, DESIGN_MAX, DESIGN_WINDOW_S)
         # Se lee un byte de más para saber si se pasó del límite sin cargar archivos enormes.
-        images = [(f.filename or "imagen", await f.read(MAX_IMAGE_MB * 1024 * 1024 + 1)) for f in files]
+        images = [(f.filename or "imagen", await f.read(MAX_IMAGE_MB * 1024 * 1024 + 1)) for f in files or []]
         d = await run_in_threadpool(designs.create, body, images)
         return {**designs.public(d), "token": d["token"]}
 

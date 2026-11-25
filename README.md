@@ -1,6 +1,11 @@
 # CR3D
 
-Sitio de impresión 3D con cotizador en línea. El cliente sube su modelo (STL, OBJ, 3MF o STEP) y lo ve en 3D sobre la cama de la impresora. Elige material, calidad, relleno, color y soportes, y recibe un estimado al instante, que luego se reemplaza por el **precio laminado** con PrusaSlicer en el servidor.
+Tienda de impresión 3D pensada para clientes sin conocimientos técnicos. La portada ofrece dos caminos, sin archivos 3D ni términos de slicer:
+
+1. **Elegir del catálogo**: cada producto se agrega a **Mi pedido** con tamaño, color, acabado y cantidad, y el pedido completo se envía por WhatsApp con el resumen.
+2. **Pedir algo con una foto**: un formulario guiado de 3 pasos (qué necesita, tamaño y color, datos de contacto). Las fotos son opcionales y solo se piden nombre y WhatsApp.
+
+Para quien ya tiene su modelo, el **cotizador de archivos** (STL, OBJ, 3MF o STEP) sigue en `/cotizar`: lo ve en 3D, elige material, calidad, relleno, color y soportes, y recibe el **precio laminado** con PrusaSlicer en el servidor. La arquitectura de la información, los flujos y los componentes están en [`design/REDISENO.md`](design/REDISENO.md).
 
 ## Probarlo en tu computador
 
@@ -68,12 +73,21 @@ api/                 API de cotización (Python + FastAPI + PrusaSlicer)
     pricing.py       Fórmula de precio
     store.py         SQLite: archivos y cotizaciones
 web/                 Sitio (Next.js 16 + TypeScript + Three.js)
-  src/app/           Layout, página y estilos globales (tokens de diseño)
-  src/components/    Secciones de la página
-    quoter/          Cotizador: carga de archivo, visor 3D, análisis y precio
+  src/app/           Layout, páginas y estilos globales (tokens de diseño: paleta morado y blanco)
+  src/components/
+    site/            Encabezado, pie, botones flotantes (WhatsApp y "Mi pedido")
+    home/            Secciones de la portada: hero, catálogo, pedido a medida, cómo funciona, trabajos, preguntas
+    catalog/         Tarjeta de producto, "Agregar" con opciones, catálogo completo, página de producto
+    cart/            Panel "Mi pedido" que termina en WhatsApp
+    design/          Formulario guiado "Mándanos tu foto o idea" y seguimiento de la solicitud
+    quoter/          Cotizador avanzado (/cotizar): carga de archivo, visor 3D, análisis y precio
+    ui/              Ventana accesible (Sheet) y encabezado de sección
   src/lib/
+    content.ts       ← Textos de la portada, pasos, preguntas frecuentes, acabados, medidas aproximadas
+    cart.ts          "Mi pedido" (en el navegador) y el mensaje de WhatsApp
+    shop.ts          Catálogo desde la API (o de muestra si el sitio corre sin ella)
     config.ts        ← Precios, tarifas, volumen de la impresora, WhatsApp
-    catalog.ts       ← Materiales, calidades, colores, galería, FAQ
+    catalog.ts       ← Materiales, calidades y colores
     pricing.ts       Fórmula de cotización (pura, con pruebas)
     checks.ts        Revisión de imprimibilidad (malla cerrada, cabe en la cama…)
     mesh/            Lectura de STL/OBJ/3MF y análisis geométrico (en un Web Worker)
@@ -126,8 +140,8 @@ Con Docker, sitio y API juntos: `docker compose up --build` (sitio en :3000, API
 | Temperaturas y densidad de cada material | `api/config/catalog.toml` → `[materials.*]` |
 | Orígenes permitidos (CORS), carpeta de datos, límites, clave del panel | `api/.env` (ver `api/.env.example`) |
 | Materiales, calidades (altura de capa y velocidad), colores | `web/src/lib/catalog.ts` |
-| Galería (fotos en `web/public/`), FAQ, pasos | `web/src/lib/catalog.ts` |
-| Precios de los planes | `web/src/components/Plans.tsx` |
+| Textos de la portada, "¿Cómo funciona?", preguntas frecuentes, acabados, medidas aproximadas | `web/src/lib/content.ts` |
+| Fotos de trabajos reales (sección de confianza) | `web/public/trabajos/` y `REAL_WORKS` en `web/src/lib/content.ts`. Sin fotos propias se usan las del catálogo |
 
 Textos pendientes de completar: busca `[TU` en `web/src`.
 
@@ -182,23 +196,32 @@ La clave del panel la genera `iniciar` la primera vez, la muestra al arrancar y 
 
 ## Diseños a medida
 
-Para quien no tiene el archivo 3D. En `/disenos` (enlace «Diseño a medida» en el menú y sección en la portada) el cliente sube hasta 6 fotos, bocetos o un PDF (JPG, PNG, WEBP, HEIC, máx. 10 MB c/u). También escribe una descripción, la medida, la cantidad, la fecha y el presupuesto, y deja sus datos. Recibe un enlace `/diseno/<id>?t=…` para seguir la solicitud, que también aparece en «Mis pedidos».
+Para quien no tiene el archivo 3D. Está en la portada (sección «Pedido a medida», `/#a-medida`) y en `/disenos`. Es un formulario guiado de 3 pasos:
+
+1. **¿Qué necesitas?** Tipo (repuesto, figura o regalo, maqueta, decoración u otra idea), fotos opcionales (hasta 6 fotos, bocetos o un PDF; JPG, PNG, WEBP, HEIC, máx. 10 MB c/u) y una descripción.
+2. **Tamaño y color.** Medida aproximada con objetos conocidos («cabe en la mano», «como un celular»…) o en centímetros, color y cantidad. En «Más detalles» (opcional): si debe aguantar sol, calor o ser flexible (sugiere el material), fecha y presupuesto.
+3. **Tus datos.** Solo nombre y WhatsApp son obligatorios; correo y ciudad son opcionales.
+
+El cliente recibe un enlace `/diseno/<id>?t=…` para seguir la solicitud, que también aparece en «Mis pedidos». Sin la API (`NEXT_PUBLIC_API_URL` vacío), la solicitud se envía por WhatsApp con el resumen y el cliente adjunta las fotos en el chat.
 
 En el panel, pestaña **Diseños**:
 
 1. Ves las referencias y los datos del cliente, con un botón para escribirle por WhatsApp.
 2. Marcas «Empezar diseño» y luego «Envié la propuesta». También puedes guardar notas internas.
-3. Cuando el cliente aprueba, en **Crear pedido con el modelo** subes el STL/3MF, pones el precio (diseño + impresión), el envío y la dirección. Se crea un pedido ya **Por pagar**, el cliente lo ve en su página y lo paga como cualquier otro.
+3. Cuando el cliente aprueba, en **Crear pedido con el modelo** subes el STL/3MF, pones el precio (diseño + impresión), el envío y la dirección. Si el cliente no dejó correo, ciudad o departamento, el panel los pide ahí mismo. Se crea un pedido ya **Por pagar**, el cliente lo ve en su página y lo paga como cualquier otro.
 
 Las imágenes quedan en `data/designs/<id>/` (entran en el respaldo). Cada IP puede enviar hasta 5 solicitudes por hora.
 
 ## Catálogo
 
-Además del cotizador, el sitio tiene una tienda de productos listos para imprimir:
+La tienda de productos listos para imprimir es el camino principal de la portada:
 
-- `/catalogo`: las colecciones **Lo más pedido**, **Novedades virales**, **Virales de redes sociales**, **Llaveros** y **Personajes y figuras**. En la página de inicio aparece la sección **Elige algo listo para imprimir**.
-- `/catalogo/<colección>`: los productos, filtrables por subsección (Juguetes y antiestrés, Hogar y cocina, Animales articulados, Decoración y lámparas…).
-- `/producto/<producto>`: fotos, vista 3D, tamaño, material, color y cantidad. El precio se calcula laminando el modelo, y **Pedirlo** usa el mismo flujo de pedido y pago del cotizador.
+- **Portada** (`/#catalogo`): hasta 8 productos (primero los que tienen foto y los más pedidos), con filtros por colección. Cada tarjeta tiene **Agregar**, que abre una ventana para elegir tamaño (Pequeño, Mediano, Grande), color, acabado y cantidad sin salir de la página.
+- `/catalogo`: todas las colecciones, filtrables por subsección (Juguetes y antiestrés, Hogar y cocina, Animales articulados, Decoración y lámparas…) y con búsqueda.
+- `/producto/<producto>`: fotos, tamaño en centímetros, color, acabado y cantidad; el material queda en **Opciones avanzadas**. El precio se calcula laminando el modelo. **Agregar a mi pedido** lo suma a la lista; **Comprar ahora y pagar en línea** usa el mismo flujo de pedido y pago del cotizador.
+- **Mi pedido**: la lista vive en el navegador del cliente (botón de la bolsa en el menú y barra flotante). **Enviar pedido por WhatsApp** abre el chat con cada producto, sus opciones, el precio de referencia, el enlace al producto y la nota del cliente.
+
+Los acabados que se ofrecen se editan en `FINISHES` de `web/src/lib/content.ts` (lista vacía = no se muestra la opción). Sin la API, el sitio muestra un catálogo **de muestra** con precios de ejemplo (`web/src/lib/shop.ts`), útil para revisar el diseño; en el servidor siempre se usa tu catálogo real.
 
 ### Productos importados
 
